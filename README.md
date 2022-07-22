@@ -20,6 +20,25 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 - **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us. The progress of this project would be updated at arxiv frequently.
 
 Welcome to watch this project!
+
+## Quick start on the mini dataset
+
+## Data setup and preprocess
+0. If you only want to run a demo and try out your scene reconstruction method, please download the mini version of Waymo Block-NeRF dataset provided by us. You do not need to run this procedure.
+1. Download data from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. 
+2. Symbol link the downloaded dataset to the "data" folder. The Waymo official files (e.g., v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder.
+
+
+## Installation
+1. Create conda environment.
+    ```bash
+    conda create -n nerf-block python=3.7
+    ```
+2. Install tensorflow, our version: tensorflow with CUDA11.7.
+    ```bash
+    pip install tensorflow
+    ```
+
 ## Citations
 
 The original paper Block-NeRF can be cited as:
