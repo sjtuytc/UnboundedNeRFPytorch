@@ -1,5 +1,11 @@
 import tensorflow as tf
-import pdb
+import datetime, os
+from google.colab import drive
+from base64 import decodestring
+
+drive.mount("/content/drive")
+import cv2
+import matplotlib.pyplot as plt
 
 demo_data_p = "data/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063"
 filenames = [demo_data_p]
@@ -49,5 +55,13 @@ def decode_fn(record_bytes):
     )
 
 
-for batch in dataset.map(decode_fn):
-    print(batch)
+dataset_map = dataset.map(decode_fn)
+
+i = 0
+for batch in dataset_map:
+    i += 1
+    imagestr = batch["image"]
+    image = tf.io.decode_png(imagestr, channels=0, dtype=tf.dtypes.uint8, name=None)
+    print(image.shape)
+    plt.imshow(image)
+    break
