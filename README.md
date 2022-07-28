@@ -22,6 +22,10 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 Welcome to watch this project!
 
+## News
+- [2022.7.28] The data preprocess script is finished!
+- [2022.7.20] This project started!
+
 ## Quick start on the Colab
 
 This part is still under construction.
@@ -32,9 +36,9 @@ This part is still under construction.
    ```bash
    conda create -n nerf-block python=3.9
    ```
-2. Install tensorflow, our version: tensorflow with CUDA11.7.
+2. Install tensorflow and other libs. Our version: tensorflow with CUDA11.7.
    ```bash
-   pip install tensorflow
+   pip install tensorflow opencv-python matplotlib
    ```
 
 ## Data setup and preprocess
@@ -69,7 +73,11 @@ cd ..
 
 You may otherwise symbol link the downloaded dataset ("v1.0") under the "data" folder. The Waymo official files (e.g., v1.0/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder.
 
-2.
+2. Transfer the tensorflow version of data to the Pytorch version via the following command:
+
+```bash
+python data_preprocess/load_data.py
+```
 
 ## Citations
 

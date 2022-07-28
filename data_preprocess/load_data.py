@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import datetime, os
 from base64 import decodestring
@@ -7,35 +6,32 @@ import os
 import matplotlib.pyplot as plt
 import json
 import torch
-
-demo_data_p = "/content/drive/MyDrive/blocknerf/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00002-of-01063"
-result_root_folder = "./pytorch_block_nerf_dataset"
-train_meta, val_meta = {}, {}
+import glob
+import pdb
+import tensorflow as tf
 
 
 def handle_one_record(record_p):
     train_or_val = "train" if "train" in record_p else "val"
-    filenames = [record_p]
     dataset = tf.data.TFRecordDataset(
-        filenames[0],
+        record_p,
         compression_type="GZIP",
     )
     dataset_map = dataset.map(decode_fn)
     
-    os.makedirs(root_folder, exist_ok=True)
-    meta_folder = os.path.join(root_folder, "gt")
-    image_folder = os.path.join(root_folder, "images")
+    os.makedirs(result_root_folder, exist_ok=True)
+    meta_folder = os.path.join(result_root_folder, "gt")
+    image_folder = os.path.join(result_root_folder, "images")
     cur_meta_file = os.path.join(meta_folder, train_or_val + ".json")
     os.makedirs(meta_folder, exist_ok=True)
     os.makedirs(image_folder, exist_ok=True)
 
     for idx, batch in enumerate(dataset_map):
+        print("Iterating:", idx, "...", end="\r")
         imagestr = batch["image"]
         image_hash = batch["image_hash"]
         image = tf.io.decode_png(imagestr, channels=0, dtype=tf.dtypes.uint8, name=None)
-        print("Processing, ", idx, ".")
         image = np.array(image)
-        # plt.imshow(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_hash = str(int(image_hash))
         cam_idx = int(batch["cam_idx"])
@@ -60,10 +56,12 @@ def handle_one_record(record_p):
             train_meta[image_hash] = cur_data_dict
             with open(cur_meta_file, "w") as fp:
                 json.dump(train_meta, fp)
+                fp.close()
         else:
             val_meta[image_hash] = cur_data_dict
             with open(cur_meta_file, "w") as fp:
                 json.dump(val_meta, fp)
+                fp.close()
         # save image and meta data
         cv2.imwrite(os.path.join(image_folder, image_hash + "_rgb.png"), image)
         with open(
@@ -92,3 +90,14 @@ def decode_fn(record_bytes):
             "intrinsics": tf.io.VarLenFeature(tf.float32),
         },
     )
+
+
+if __name__ == '__main__':
+    waymo_root_p = "data/v1.0"
+    result_root_folder = "data/pytorch_block_nerf_dataset"
+    ori_waymo_data = sorted(glob.glob(os.path.join(waymo_root_p, "*")))
+    train_meta, val_meta = {}, {}
+
+    for idx, record_p in enumerate(ori_waymo_data):
+        print("Handling", idx, "/", len(ori_waymo_data), ".")
+        handle_one_record(record_p)
