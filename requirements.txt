@@ -1,0 +1,12 @@
+numpy
+scipy
+tqdm
+lpips
+mmcv
+imageio
+imageio-ffmpeg
+opencv-python
+torch_efficient_distloss
+scikit-image
+ninja
+einops
