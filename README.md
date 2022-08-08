@@ -20,7 +20,7 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 - **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us. The progress of this project would be updated at arxiv frequently.
 
-The results you can get in this repository:
+You are expected to get the following results in this repository:
 
 1. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos.
 
@@ -62,7 +62,7 @@ Welcome to watch this project!
 
 <details>
 <summary>Expand / collapse steps for data setup and preprocess.</summary>
-You don't need this step if you want to get results on your custom data.
+You don't need this step if you only want to get results on your custom data.
 
 1. After signing the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/), download the Waymo Block dataset via the following command:
 
@@ -73,8 +73,8 @@ You don't need this step if you want to get results on your custom data.
 	unzip v1.0.zip
 	cd ../
 	```
-The Google cloud may [limit the download speed in this operation](https://stackoverflow.com/questions/16856102/google-drive-limit-number-of-download). You can instead:
-(1) Downloading in your browser can avoid this issue. (2) Alternatively, you can directly download from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. However, this download may needs the sudo access to install the [gsutil tool](https://cloud.google.com/storage/docs/gsutil_install#deb) (if you don't have sudo access, you can download from your local laptop and then transport it to your server). The reference script is as follows:
+   The Google cloud may [limit the download speed in this operation](https://stackoverflow.com/questions/16856102/google-drive-limit-number-of-download). You can instead:
+   (1) Downloading in your browser can avoid this issue. (2) Alternatively, you can directly download from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. However, this download may needs the sudo access to install the [gsutil tool](https://cloud.google.com/storage/docs/gsutil_install#deb) (if you don't have sudo access, you can download from your local laptop and then transport it to your server). The reference script is as follows:
 
 	```bash
 	# install gsutil tool
@@ -90,12 +90,12 @@ The Google cloud may [limit the download speed in this operation](https://stacko
 	unzip v1.0.zip
 	cd ..
 	```
-You may otherwise symbol link the downloaded dataset ("v1.0") under the "data" folder. The Waymo official files (e.g., v1.0/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder. 
-Then transfer the tensorflow version of data to the Pytorch version via the following command:
+   You may otherwise symbol link the downloaded dataset ("v1.0") under the "data" folder. The Waymo official files (e.g., v1.0/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder. 
+   Then transfer the tensorflow version of data to the Pytorch version via the following command:
 
-```bash
-python data_preprocess/load_data.py
-```
+   ```bash
+   python data_preprocess/load_data.py
+   ```
 </details>
 
 ## 5. Build custom NeRF world
@@ -113,27 +113,26 @@ python data_preprocess/load_data.py
 	   |                 └——————---|2.png
 	   |                 └——————---|...
 	```
-The sample data is provided in [our Google drive folder](https://drive.google.com/drive/folders/1JyX0VNf0R58s46Abj8HDO1NwZqmGOVRS?usp=sharing). The Madoka and Otobai can be found [at this link](https://sunset1995.github.io/dvgo/tutor_forward_facing.html). 
+   The sample data is provided in [our Google drive folder](https://drive.google.com/drive/folders/1JyX0VNf0R58s46Abj8HDO1NwZqmGOVRS?usp=sharing). The Madoka and Otobai can be found [at this link](https://sunset1995.github.io/dvgo/tutor_forward_facing.html). 
 
 2. Run COLMAP to reconstruct scenes. This would probably cost a long time.
 
 	```bash
 	python tools/imgs2poses.py data/Madoka
 	```
-You can replace data/Madoka by your data folder.
-If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in Ln67 of colmap_wrapper.py.
+   You can replace data/Madoka by your data folder.
+   If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in Ln67 of colmap_wrapper.py.
 
 3. Training NeRF scenes.
 
 	```bash
 	python run.py --config configs/custom/Madoka.py
 	```
-
+   You can replace configs/custom/Madoka.py by other configs.
 4. Validating the training results to generate a fly-through video.
 
 	```bash
 	python run.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
-	
 	```
 </details>
 
