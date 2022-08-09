@@ -1,3 +1,5 @@
+# We track weekly NeRF papers [here](docs/weekly_nerf.md) and the Chinese version is [here](docs/weekly_nerf_cn.md).
+
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 
 ## 1. Introduction
