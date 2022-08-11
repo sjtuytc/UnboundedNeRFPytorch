@@ -1,4 +1,4 @@
-# Weekly Neural Radiance Fields [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome)
+# Weekly Neural Radiance Fields ![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)
 
 ## Jul31 - Aug6, 2022
 - [NFOMP: Neural Field for Optimal Motion Planner of Differential Drive Robots With Nonholonomic Constraints, IEEE Robotics and Automation Letters](https://ieeexplore.ieee.org/abstract/document/9851532/) | [code]

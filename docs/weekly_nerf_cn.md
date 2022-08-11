@@ -1,4 +1,4 @@
-# 每周神经辐射场 [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome)
+# 每周神经辐射场 ![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)
 # 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。
 
 ## 2022 年 7 月 31 日 - 8 月 6 日
