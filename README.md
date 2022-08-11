@@ -20,7 +20,7 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 - **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us. The progress of this project would be updated at arxiv frequently.
+- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The progress of this project would be updated at arxiv frequently.
 
 You are expected to get the following results in this repository:
 
