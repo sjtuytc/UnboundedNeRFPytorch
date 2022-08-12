@@ -1,4 +1,7 @@
 # We track weekly NeRF papers [here](docs/weekly_nerf.md) and the Chinese version is [here](docs/weekly_nerf_cn.md).
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 
@@ -155,3 +158,22 @@ The original paper Block-NeRF can be cited as:
 ```
 
 We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO) and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/SEUleaderYang"><img src="https://avatars.githubusercontent.com/u/55042050?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EZ-Yang</b></sub></a><br /><a href="https://github.com/dvlab-research/BlockNeRFPytorch/commits?author=SEUleaderYang" title="Code">💻</a></td>
+  </tr>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
