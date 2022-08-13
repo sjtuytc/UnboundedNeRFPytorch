@@ -35,6 +35,8 @@ You are expected to get the following results in this repository:
 Welcome to watch this project!
 
 ## 2. News
+- [2022.8.13] Add estimated camera pose and release a better dataset.
+- [2022.8.12] Add weekly NeRF functions.
 - [2022.8.8] Add the NeRF reconstruction code and doc for custom purposes.
 - [2022.7.28] The data preprocess script is finished.
 - [2022.7.20] This project started!
@@ -51,7 +53,7 @@ Welcome to watch this project!
    ```bash
    pip install tensorflow opencv-python matplotlib
    ```
-3. Install other libs used for reconstructing custom scenes, this is only needed when you need to build your scenes.
+3. Install other libs used for reconstructing custom scenes, which is only needed when you need to build your scenes.
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
