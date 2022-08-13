@@ -1,10 +1,8 @@
 # We track weekly NeRF papers [here](docs/weekly_nerf.md) and the Chinese version is [here](docs/weekly_nerf_cn.md).
+# [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
-
-# [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
-
 ## 1. Introduction
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco. The abstract of the Block-NeRF paper is as follows:
@@ -23,7 +21,7 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 - **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The progress of this project would be updated at arxiv frequently.
+- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
 
 You are expected to get the following results in this repository:
 
@@ -143,6 +141,20 @@ You don't need this step if you only want to get results on your custom data.
 
 
 ## 6. Citations & acknowledgements
+
+If this repo helps you, please cite it as:
+```bash
+@software{Zhao_PytorchBlockNeRF_2022,
+author = {Zhao, Zelin and Jia, Jiaya},
+month = {8},
+title = {{PytorchBlockNeRF}},
+url = {https://github.com/dvlab-research/BlockNeRFPytorch},
+version = {0.0.1},
+year = {2022}
+}
+```
+
+You may cite this repo to better convince the reviewers about the reproducibility of your paper.
 
 The original paper Block-NeRF can be cited as:
 
