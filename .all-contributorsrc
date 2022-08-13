@@ -1,0 +1,34 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "SEUleaderYang",
+      "name": "EZ-Yang",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55042050?v=4",
+      "profile": "https://github.com/SEUleaderYang",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "sjtuytc",
+      "name": "Zelin Zhao",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31123348?v=4",
+      "profile": "https://sjtuytc.github.io/",
+      "contributions": [
+        "code",
+        "maintenance"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "BlockNeRFPytorch",
+  "projectOwner": "dvlab-research",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
