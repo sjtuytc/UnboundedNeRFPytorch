@@ -93,7 +93,7 @@ def get_rotate_one_image(cam_ray_dir, world_ray_dir):
 
 if __name__ == "__main__":
     root_dir = "data/pytorch_block_nerf_dataset"
-    pose_save_dir = "data/c2w_poses.json"
+    pose_save_dir = "data/pytorch_block_nerf_dataset/c2w_poses.json"
 
     with open(os.path.join(root_dir, 'json/train.json'), 'r') as fp:
         meta = json.load(fp)
@@ -105,7 +105,6 @@ if __name__ == "__main__":
         img_info = meta[img_name]
         img_w = img_info['width']
         img_h = img_info['height']
-        # 首先构建K
         K = {}
         K = np.zeros((3, 3), dtype=np.float32)
         # fx=focal,fy=focal,cx=img_w/2,cy=img_h/2
@@ -115,7 +114,7 @@ if __name__ == "__main__":
         K[1, 2] = img_h * 0.5
         K[2, 2] = 1
 
-        cam_ray_dir = get_cam_rays(img_h, img_w, K) # 归一化后的相机坐标系光线方向向量
+        cam_ray_dir = get_cam_rays(img_h, img_w, K) # get normalized rays
         world_ray_dir = np.array(np.load(os.path.join(root_dir, "images", f"{img_name}_ray_dirs.npy"), mmap_mode='r'))
         pose = get_rotate_one_image(cam_ray_dir, world_ray_dir)
         poses[img_name] = pose

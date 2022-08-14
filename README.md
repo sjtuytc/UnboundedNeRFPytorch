@@ -63,44 +63,33 @@ Welcome to watch this project!
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
 
-## 4. Data setup and preprocess
+## 4. Data preprocess, training and eval
 
 <details>
-<summary>Expand / collapse steps for data setup and preprocess.</summary>
-You don't need this step if you only want to get results on your custom data.
+<summary>Expand / collapse steps for the pipeline of Block-NeRF.</summary>
+You don't need these steps if you only want to get results on your custom data.
 
-1. After signing the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/), download the Waymo Block dataset via the following command:
+1. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the data.
 
-	```bash
-	pip install gdown # download google drive download.
-	cd data
-	gdown --id 1iRqO4-GMqZAYFNvHLlBfjTcXY-l3qMN5 --no-cache 
-	unzip v1.0.zip
-	cd ../
-	```
-   The Google cloud may [limit the download speed in this operation](https://stackoverflow.com/questions/16856102/google-drive-limit-number-of-download). You can instead:
-   (1) Downloading in your browser can avoid this issue. (2) Alternatively, you can directly download from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. However, this download may needs the sudo access to install the [gsutil tool](https://cloud.google.com/storage/docs/gsutil_install#deb) (if you don't have sudo access, you can download from your local laptop and then transport it to your server). The reference script is as follows:
-
-	```bash
-	# install gsutil tool
-	sudo apt-get install apt-transport-https ca-certificates gnupg # needs sudo access
-	echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-	curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-	sudo apt-get update && sudo apt-get install google-cloud-cli # needs sudo access
-	gcloud init # login your google account then
-	cd data
-	gsutil -m cp -r \
-	  "gs://waymo-block-nerf/v1.0" \
-	  .
-	unzip v1.0.zip
-	cd ..
-	```
-   You may otherwise symbol link the downloaded dataset ("v1.0") under the "data" folder. The Waymo official files (e.g., v1.0/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder. 
-   Then transfer the tensorflow version of data to the Pytorch version via the following command:
-
+2. You can download our processed data directly at [this link](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing). Our processed data is significantly smaller than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
+   You can download the processed data via the following commands as well:
    ```bash
-   python data_preprocess/load_data.py
+   gdown --id 1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd
+   unzip pytorch_block_nerf_dataset.zip
    ```
+   The format of our processed data is:
+   ```bash
+	pytorch_block_nerf_dataset
+	   |——————images          // storing all images.
+	   |        └——————1158877890.png
+	   |        └——————1480726106.png    
+	   |        └——————2133100402.png
+	   |——————json          // storing camera poses and other information
+	   |        └——————c2w_poses.json // a dict of camera poses of all images
+	   |        └——————train.json  // a dict of image_name, cam_idx, intrinsics, ....
+	```
+   If you are interested in creating the data by your own, please refer to [this page](docs/get_pytorch_block_nerf.md). 
+
 </details>
 
 ## 5. Build custom NeRF world
