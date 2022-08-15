@@ -63,7 +63,7 @@ Welcome to watch this project!
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
 
-## 4. Large-scale NeRF on the official datasets
+## 4. Large-scale NeRF on the public datasets
 
 <details>
 <summary>Expand / collapse steps for the pipeline of Block-NeRF.</summary>

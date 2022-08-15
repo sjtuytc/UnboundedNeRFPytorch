@@ -1,11 +1,27 @@
-The format of our processed data is:
-```bash
-pytorch_block_nerf_dataset
-    |——————images          // storing all images.
-    |        └——————1158877890.png
-    |        └——————1480726106.png    
-    |        └——————2133100402.png
-    |——————json          // storing camera poses and other information
-    |        └——————c2w_poses.json // a dict of camera poses of all images
-    |        └——————train.json  // a dict of image_name, cam_idx, intrinsics, ....
+# The Mega standard format (MSF) explained.
+
+> The MSF is a data format for large-scale NeRFs, which is proposed by Mega-NeRF.
+
+The format of the final data with trained weights should be like:
+```
+data
+  |——————building
+  |         |——————building-pixsfm // the source data folder
+  |         |        └——————train
+  |         |        |        └——————metadata
+  |         |        |        |         └——————000001.pt   
+  |         |        |        └——————rgbs
+  |         |        |        |         └——————000001.jpg   
+  |         |        └——————val
+  |         |        |        └——————metadata
+  |         |        |        |         └——————000001.pt   
+  |         |        |        └——————rgbs
+  |         |        |                  └——————000001.jpg    
+  |         |        └——————coordinates.pt
+  |         |        └——————mappings.txt
+  |         └——————building-pixsfm-grid-8 // masks
+  |         |        |        └——————0
+  |         |        |        |         └——————000001.pt  
+  |         |        |        └——————params.pt
+  |         └——————building-pixsfm-grid-8.pt  //final model
 ```
