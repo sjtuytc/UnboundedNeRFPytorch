@@ -63,36 +63,45 @@ Welcome to watch this project!
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
 
-## 4. Data preprocess, training and eval
+## 4. Large-scale NeRF on the official datasets
 
 <details>
 <summary>Expand / collapse steps for the pipeline of Block-NeRF.</summary>
-You don't need these steps if you only want to get results on your custom data.
 
-1. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the data.
+What you should know before downloading the data:
 
-2. You can download our processed data directly at [this link](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing). Our processed data is significantly smaller than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
-   You can download the processed data via the following commands as well:
-   ```bash
-   gdown --id 1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd
-   unzip pytorch_block_nerf_dataset.zip
-   ```
-   The format of our processed data is:
-   ```bash
-	pytorch_block_nerf_dataset
-	   |——————images          // storing all images.
-	   |        └——————1158877890.png
-	   |        └——————1480726106.png    
-	   |        └——————2133100402.png
-	   |——————json          // storing camera poses and other information
-	   |        └——————c2w_poses.json // a dict of camera poses of all images
-	   |        └——————train.json  // a dict of image_name, cam_idx, intrinsics, ....
-	```
-   If you are interested in creating the data by your own, please refer to [this page](docs/get_pytorch_block_nerf.md). 
+   (1) You don't need these steps if you only want to get results on your custom data.
+
+   (2) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
+
+   (3) Our processed waymo data is significantly smaller than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
+
+You can also download and preprocess all of the data and pretrained models via the following commands:
+```
+bash data_proprocess/download_waymo.sh
+bash data_preprocess/download_mega.sh
+```
+
+You can also download selected data from this table:
+
+| Dataset name | Images & poses | Masks | Pretrained models |
+|---|---|---|---|
+| Waymo | [waymo\_image\_poses](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing) | Not ready | Not ready |
+| Building | [building-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm.tgz) | [building-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-grid-8.tgz) | [building-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-8.pt) |
+| Rubble | [rubble-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm.tgz) | [rubble-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-grid-8.tgz) | [rubble-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-8.pt) |
+| Quad | [ArtsQuad_dataset](http://vision.soic.indiana.edu/disco_files/ArtsQuad_dataset.tar) [quad-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm.tgz) | [quad-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-grid-8.tgz) | [quad-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-8.pt) |
+| Residence | [UrbanScene3D](https://vcc.tech/UrbanScene3D/)[residence-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm.tgz) | [residence-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-grid-8.tgz) | [residence-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-8.pt) |
+| Sci-Art | [sci-art-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm.tgz) | [sci-art-pixsfm-grid-25](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-grid-25.tgz) | [sci-art-pixsfm-25-w-512.pt](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt) |
+| Campus | [campus-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm.tgz) | [campus-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz) | [campus-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt) |
+
+
+The data structures follow the Mega-NeRF standards. We provide detailed explanations with examples for each data structure in [this doc](docs/mega_format_explained.md).
+
+If you are interested in making the waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md). 
 
 </details>
 
-## 5. Build custom NeRF world
+## 5. Build your custom large-scale NeRF
 
 <details>
 <summary>Expand / collapse steps for building custom NeRF world.</summary>
@@ -133,7 +142,7 @@ You don't need these steps if you only want to get results on your custom data.
 
 ## 6. Citations & acknowledgements
 
-If this repo helps you, please cite it as:
+You may cite this repo to better convince the reviewers about the reproducibility of your paper. If this repo helps you, please cite it as:
 ```bash
 @software{Zhao_PytorchBlockNeRF_2022,
 author = {Zhao, Zelin and Jia, Jiaya},
@@ -145,9 +154,7 @@ year = {2022}
 }
 ```
 
-You may cite this repo to better convince the reviewers about the reproducibility of your paper.
-
-The original paper Block-NeRF can be cited as:
+The original paper Block-NeRF and Mega-NeRF can be cited as:
 
 ```bash
  @InProceedings{Tancik_2022_CVPR,
@@ -158,9 +165,17 @@ The original paper Block-NeRF can be cited as:
     year      = {2022},
     pages     = {8248-8258}
 }
+
+@inproceedings{turki2022mega,
+  title={Mega-NeRF: Scalable Construction of Large-Scale NeRFs for Virtual Fly-Throughs},
+  author={Turki, Haithem and Ramanan, Deva and Satyanarayanan, Mahadev},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={12922--12931},
+  year={2022}
+}
 ```
 
-We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO) and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
+We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO), [Mega-NeRF](https://github.com/cmusatyalab/mega-nerf), and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
