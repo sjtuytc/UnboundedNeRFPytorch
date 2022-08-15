@@ -25,14 +25,15 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 You are expected to get the following results in this repository:
 
-1. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos.
+1. **Large-scale NeRF training.** The current results are as follows:
 
-   <img src="figs/sm01_04.gif" alt="drawing" width="200"/>
+https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
 
+2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
 
-2. **Block NeRF training.** Training BlockNeRFs. The results will be released here in the next commit. Stay tuned!
+https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
 
-Welcome to watch this project!
+Welcome to star and watch this project, thank you very much!
 
 ## 2. News
 - [2022.8.13] Add estimated camera pose and release a better dataset.
