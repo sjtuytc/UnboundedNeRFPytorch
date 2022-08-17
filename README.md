@@ -16,23 +16,30 @@ https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-
 This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
 
 - **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
-- **Better data preprocessing.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts.
+
+- **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
+
+- **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
+
 - **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
 - **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+- **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+
+- **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
 You are expected to get the following results in this repository:
 
-1. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos.
+1. **Large-scale NeRF training.** The current results are as follows:
 
-   <img src="figs/sm01_04.gif" alt="drawing" width="200"/>
+https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
 
+2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
 
-2. **Block NeRF training.** Training BlockNeRFs. The results will be released here in the next commit. Stay tuned!
+https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
 
-Welcome to watch this project!
+Welcome to star and watch this project, thank you very much!
 
 ## 2. News
 - [2022.8.13] Add estimated camera pose and release a better dataset.
@@ -51,7 +58,8 @@ Welcome to watch this project!
    ```
 2. Install tensorflow and other libs. You don't need to install tensorflow if you download our processed data. Our version: tensorflow with CUDA11.7.
    ```bash
-   pip install tensorflow opencv-python matplotlib
+   pip install --upgrade pip
+   pip install tensorflow opencv-python matplotlib configargparse
    ```
 3. Install other libs used for reconstructing custom scenes, which is only needed when you need to build your scenes.
    ```bash
@@ -63,36 +71,85 @@ Welcome to watch this project!
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
 
-## 4. Data preprocess, training and eval
+## 4. Large-scale NeRF on the public datasets
+
+Click the following sub-section titles to expand / collapse steps. 
+
+**Note we provide useful commands for debugging purposes in many scripts.** Debug commands require a single GPU card only and may run slowly without using multi-processing. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
+
+```bash
+# arguments
+ARGUMENTS HERE  # we provide you sampled arguments with explanations and options here.
+# for debugging, uncomment the following line when debugging
+# DEBUG COMMAND HERE
+# for standard training, comment the following line when debugging
+STANDARD TRAINING COMMAND HERE
+```
 
 <details>
-<summary>Expand / collapse steps for the pipeline of Block-NeRF.</summary>
-You don't need these steps if you only want to get results on your custom data.
+<summary> 4.1 Download processed data.</summary>
 
-1. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the data.
+What you should know before downloading the data:
 
-2. You can download our processed data directly at [this link](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing). Our processed data is significantly smaller than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
-   You can download the processed data via the following commands as well:
-   ```bash
-   gdown --id 1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd
-   unzip pytorch_block_nerf_dataset.zip
-   ```
-   The format of our processed data is:
-   ```bash
-	pytorch_block_nerf_dataset
-	   |——————images          // storing all images.
-	   |        └——————1158877890.png
-	   |        └——————1480726106.png    
-	   |        └——————2133100402.png
-	   |——————json          // storing camera poses and other information
-	   |        └——————c2w_poses.json // a dict of camera poses of all images
-	   |        └——————train.json  // a dict of image_name, cam_idx, intrinsics, ....
-	```
-   If you are interested in creating the data by your own, please refer to [this page](docs/get_pytorch_block_nerf.md). 
+   (1) You don't need these steps if you only want to get results on your custom data but we recommand you to run on public datasets first.
+
+   (2) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
+
+   (3) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
+
+You can download and preprocess all of the data and pretrained models via the following commands:
+```
+bash data_proprocess/download_waymo.sh  // download waymo datasets
+bash data_preprocess/download_mega.sh   // download mega datasets
+```
+
+You may also download selected data from this table:
+
+| Dataset name | Images & poses | Masks | Pretrained models |
+|---|---|---|---|
+| Waymo | [waymo\_image\_poses](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing) | Not ready | Not ready |
+| Building | [building-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm.tgz) | [building-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-grid-8.tgz) | [building-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-8.pt) |
+| Rubble | [rubble-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm.tgz) | [rubble-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-grid-8.tgz) | [rubble-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-8.pt) |
+| Quad | [ArtsQuad_dataset](http://vision.soic.indiana.edu/disco_files/ArtsQuad_dataset.tar) [quad-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm.tgz) | [quad-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-grid-8.tgz) | [quad-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-8.pt) |
+| Residence | [UrbanScene3D](https://vcc.tech/UrbanScene3D/)[residence-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm.tgz) | [residence-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-grid-8.tgz) | [residence-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-8.pt) |
+| Sci-Art | [sci-art-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm.tgz) | [sci-art-pixsfm-grid-25](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-grid-25.tgz) | [sci-art-pixsfm-25-w-512.pt](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt) |
+| Campus | [campus](https://storage.cmusatyalab.org/mega-nerf-data/campus.tgz) | [campus-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz) | [campus-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt) |
+
+The data structures follow the Mega-NeRF standards. We provide detailed explanations with examples for each data structure in [this doc](docs/mega_format_explained.md). If you are interested in making the waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md).
+</details>
+
+<details>
+<summary> 4.2 Run pretrained models.</summary>
+
+We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models.
+
+```bash
+bash scripts/eval_trained_models.sh
+```
+
+The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
 
 </details>
 
-## 5. Build custom NeRF world
+<details>
+<summary> 4.3 Generate masks.</summary>
+
+Why should we generate masks? (1) Masks help us transfer camera poses + images to ray-based data. In this way, we can download the raw datasets quickly and train quickly as well. (2) Masks helps us manage the boundary of rays.
+
+Run the following script to create masks:
+
+
+</details>
+
+<details>
+<summary> 4.4 Train models.</summary>
+
+Run the following commands to train the models:
+
+</details>
+
+
+## 5. Build your custom large-scale NeRF
 
 <details>
 <summary>Expand / collapse steps for building custom NeRF world.</summary>
@@ -133,7 +190,7 @@ You don't need these steps if you only want to get results on your custom data.
 
 ## 6. Citations & acknowledgements
 
-If this repo helps you, please cite it as:
+You may cite this repo to better convince the reviewers about the reproducibility of your paper. If this repo helps you, please cite it as:
 ```bash
 @software{Zhao_PytorchBlockNeRF_2022,
 author = {Zhao, Zelin and Jia, Jiaya},
@@ -145,9 +202,7 @@ year = {2022}
 }
 ```
 
-You may cite this repo to better convince the reviewers about the reproducibility of your paper.
-
-The original paper Block-NeRF can be cited as:
+The original paper Block-NeRF and Mega-NeRF can be cited as:
 
 ```bash
  @InProceedings{Tancik_2022_CVPR,
@@ -158,9 +213,17 @@ The original paper Block-NeRF can be cited as:
     year      = {2022},
     pages     = {8248-8258}
 }
+
+@inproceedings{turki2022mega,
+  title={Mega-NeRF: Scalable Construction of Large-Scale NeRFs for Virtual Fly-Throughs},
+  author={Turki, Haithem and Ramanan, Deva and Satyanarayanan, Mahadev},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={12922--12931},
+  year={2022}
+}
 ```
 
-We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO) and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
+We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO), [Mega-NeRF](https://github.com/cmusatyalab/mega-nerf), and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
