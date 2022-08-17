@@ -1,4 +1,4 @@
-# We track weekly NeRF papers and classify them: [English](docs/weekly_nerf.md) and [Chinese](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
+# We track weekly NeRF papers and classify them. We provide an [English version](docs/weekly_nerf.md) and an [Chinese version](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
