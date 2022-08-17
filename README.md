@@ -1,4 +1,4 @@
-# We track weekly NeRF papers [here](docs/weekly_nerf.md) and the Chinese version is [here](docs/weekly_nerf_cn.md).
+# We track weekly NeRF papers and classify them: [English](docs/weekly_nerf.md) and [Chinese](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
@@ -42,6 +42,8 @@ https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.17] Support classification in weekly NeRF.
+- [2022.8.16] Support evaluation scripts and data format standard. Getting some results.
 - [2022.8.13] Add estimated camera pose and release a better dataset.
 - [2022.8.12] Add weekly NeRF functions.
 - [2022.8.8] Add the NeRF reconstruction code and doc for custom purposes.
@@ -75,7 +77,7 @@ Welcome to star and watch this project, thank you very much!
 
 Click the following sub-section titles to expand / collapse steps. 
 
-**Note we provide useful commands for debugging purposes in many scripts.** Debug commands require a single GPU card only and may run slowly without using multi-processing. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
+**Note we provide useful debugging commands in many scripts.** Debug commands require a single GPU card only and may run slower than the standard commands. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
 
 ```bash
 # arguments
@@ -91,7 +93,7 @@ STANDARD TRAINING COMMAND HERE
 
 What you should know before downloading the data:
 
-   (1) You don't need these steps if you only want to get results on your custom data but we recommand you to run on public datasets first.
+   (1) You don't need these steps if you only want to get results on your custom data (in other words, you can directly go to [Section 5](#5-build-your-custom-large-scale-nerf)) but we recommand you to run on public datasets first.
 
    (2) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
 
@@ -127,7 +129,7 @@ We recommand you to eval the pretrained models first before you train the models
 bash scripts/eval_trained_models.sh
 ```
 
-The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
+The rendered images would be placed under \${EXP_FOLDER}, which is set to data/mega/\${DATASET_NAME}/exp\_logs by default.
 
 </details>
 
