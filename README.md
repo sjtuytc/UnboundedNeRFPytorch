@@ -16,12 +16,18 @@ https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-
 This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
 
 - **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
-- **Better data preprocessing.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts.
+
+- **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
+
+- **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
+
 - **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
 - **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Open research and better community.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+- **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+
+- **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
 You are expected to get the following results in this repository:
 
@@ -52,7 +58,8 @@ Welcome to star and watch this project, thank you very much!
    ```
 2. Install tensorflow and other libs. You don't need to install tensorflow if you download our processed data. Our version: tensorflow with CUDA11.7.
    ```bash
-   pip install tensorflow opencv-python matplotlib
+   pip install --upgrade pip
+   pip install tensorflow opencv-python matplotlib configargparse
    ```
 3. Install other libs used for reconstructing custom scenes, which is only needed when you need to build your scenes.
    ```bash
@@ -66,24 +73,37 @@ Welcome to star and watch this project, thank you very much!
 
 ## 4. Large-scale NeRF on the public datasets
 
+Click the following sub-section titles to expand / collapse steps. 
+
+**Note we provide useful commands for debugging purposes in many scripts.** Debug commands require a single GPU card only and may run slowly without using multi-processing. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
+
+```bash
+# arguments
+ARGUMENTS HERE  # we provide you sampled arguments with explanations and options here.
+# for debugging, uncomment the following line when debugging
+# DEBUG COMMAND HERE
+# for standard training, comment the following line when debugging
+STANDARD TRAINING COMMAND HERE
+```
+
 <details>
-<summary>Expand / collapse steps for the pipeline of Block-NeRF.</summary>
+<summary> 4.1 Download processed data.</summary>
 
 What you should know before downloading the data:
 
-   (1) You don't need these steps if you only want to get results on your custom data.
+   (1) You don't need these steps if you only want to get results on your custom data but we recommand you to run on public datasets first.
 
    (2) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
 
-   (3) Our processed waymo data is significantly smaller than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
+   (3) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
 
-You can also download and preprocess all of the data and pretrained models via the following commands:
+You can download and preprocess all of the data and pretrained models via the following commands:
 ```
-bash data_proprocess/download_waymo.sh
-bash data_preprocess/download_mega.sh
+bash data_proprocess/download_waymo.sh  // download waymo datasets
+bash data_preprocess/download_mega.sh   // download mega datasets
 ```
 
-You can also download selected data from this table:
+You may also download selected data from this table:
 
 | Dataset name | Images & poses | Masks | Pretrained models |
 |---|---|---|---|
@@ -93,14 +113,41 @@ You can also download selected data from this table:
 | Quad | [ArtsQuad_dataset](http://vision.soic.indiana.edu/disco_files/ArtsQuad_dataset.tar) [quad-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm.tgz) | [quad-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-grid-8.tgz) | [quad-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-8.pt) |
 | Residence | [UrbanScene3D](https://vcc.tech/UrbanScene3D/)[residence-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm.tgz) | [residence-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-grid-8.tgz) | [residence-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-8.pt) |
 | Sci-Art | [sci-art-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm.tgz) | [sci-art-pixsfm-grid-25](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-grid-25.tgz) | [sci-art-pixsfm-25-w-512.pt](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt) |
-| Campus | [campus-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm.tgz) | [campus-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz) | [campus-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt) |
+| Campus | [campus](https://storage.cmusatyalab.org/mega-nerf-data/campus.tgz) | [campus-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz) | [campus-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt) |
 
+The data structures follow the Mega-NeRF standards. We provide detailed explanations with examples for each data structure in [this doc](docs/mega_format_explained.md). If you are interested in making the waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md).
+</details>
 
-The data structures follow the Mega-NeRF standards. We provide detailed explanations with examples for each data structure in [this doc](docs/mega_format_explained.md).
+<details>
+<summary> 4.2 Run pretrained models.</summary>
 
-If you are interested in making the waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md). 
+We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models.
+
+```bash
+bash scripts/eval_trained_models.sh
+```
+
+The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
 
 </details>
+
+<details>
+<summary> 4.3 Generate masks.</summary>
+
+Why should we generate masks? (1) Masks help us transfer camera poses + images to ray-based data. In this way, we can download the raw datasets quickly and train quickly as well. (2) Masks helps us manage the boundary of rays.
+
+Run the following script to create masks:
+
+
+</details>
+
+<details>
+<summary> 4.4 Train models.</summary>
+
+Run the following commands to train the models:
+
+</details>
+
 
 ## 5. Build your custom large-scale NeRF
 
