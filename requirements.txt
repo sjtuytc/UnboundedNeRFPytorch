@@ -10,3 +10,4 @@ torch_efficient_distloss
 scikit-image
 ninja
 einops
+pyarrow==8.0.0
