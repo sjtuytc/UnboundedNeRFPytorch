@@ -1,4 +1,4 @@
-# We track weekly NeRF papers and classify them. We provide an [English version](docs/weekly_nerf.md) and an [Chinese version](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
+# Weekly classified NeRF: we track weekly NeRF papers and classify them. All previous published NeRF papers have been added to the list. We provide an [English version](docs/weekly_nerf.md) and an [Chinese version](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
@@ -42,6 +42,7 @@ https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.
 - [2022.8.16] Support evaluation scripts and data format standard. Getting some results.
 - [2022.8.13] Add estimated camera pose and release a better dataset.
@@ -127,9 +128,9 @@ We recommand you to eval the pretrained models first before you train the models
 
 ```bash
 bash scripts/eval_trained_models.sh
+# The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
 ```
-
-The rendered images would be placed under \${EXP_FOLDER}, which is set to data/mega/\${DATASET_NAME}/exp\_logs by default.
+The sample output log by running this script can be found at [docs/sample_logs/eval_trained_models.log](docs/sample_logs/eval_trained_models.log).
 
 </details>
 

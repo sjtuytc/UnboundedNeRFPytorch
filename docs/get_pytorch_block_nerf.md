@@ -10,7 +10,7 @@
 	cd ../
 	```
    The Google cloud may [limit the download speed in this operation](https://stackoverflow.com/questions/16856102/google-drive-limit-number-of-download). You can instead:
-   (1) Downloading in your browser can avoid this issue. (2) Alternatively, you can directly download from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. However, this download may needs the sudo access to install the [gsutil tool](https://cloud.google.com/storage/docs/gsutil_install#deb) (if you don't have sudo access, you can download from your local laptop and then transport it to your server). The reference script is as follows:
+   (1) Downloading in your browser by clicking [this link](https://drive.google.com/file/d/1iRqO4-GMqZAYFNvHLlBfjTcXY-l3qMN5/view). (2) Alternatively, you can directly download from the official [Waymo](https://waymo.com/research/block-nerf/licensing/) website. However, this download may needs the sudo access to install the [gsutil tool](https://cloud.google.com/storage/docs/gsutil_install#deb) (if you don't have sudo access, you can download from your local laptop and then transport it to your server). The reference script is as follows:
 
 	```bash
 	# install gsutil tool

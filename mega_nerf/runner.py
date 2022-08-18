@@ -340,7 +340,7 @@ class Runner:
                 f.write(' '.join(sys.argv))
                 f.write('\n')
 
-            self.model_path.mkdir(parents=True)
+            self.model_path.mkdir(parents=True, exist_ok=True)
 
             with (self.experiment_path / 'image_indices.txt').open('w') as f:
                 for i, metadata_item in enumerate(self.train_items):
@@ -394,16 +394,17 @@ class Runner:
             base_tmp_path = None
             try:
                 if 'RANK' in os.environ:
-                    base_tmp_path = Path(self.hparams.exp_name) / os.environ['TORCHELASTIC_RUN_ID']
+                    # base_tmp_path = Path(self.hparams.exp_name) / os.environ['TORCHELASTIC_RUN_ID']
+                    base_tmp_path = Path(self.hparams.exp_name) / '0' # a workaround to avoid str problem
                     metric_path = base_tmp_path / 'tmp_val_metrics'
                     image_path = base_tmp_path / 'tmp_val_images'
 
                     world_size = int(os.environ['WORLD_SIZE'])
                     indices_to_eval = np.arange(int(os.environ['RANK']), len(self.val_items), world_size)
                     if self.is_master:
-                        base_tmp_path.mkdir()
-                        metric_path.mkdir()
-                        image_path.mkdir()
+                        base_tmp_path.mkdir(exist_ok=True)
+                        metric_path.mkdir(exist_ok=True)
+                        image_path.mkdir(exist_ok=True)
                     dist.barrier()
                 else:
                     indices_to_eval = np.arange(len(self.val_items))
@@ -418,7 +419,7 @@ class Runner:
 
                     eval_rgbs = viz_rgbs[:, viz_rgbs.shape[1] // 2:].contiguous()
                     eval_result_rgbs = viz_result_rgbs[:, viz_rgbs.shape[1] // 2:].contiguous()
-                    if self.is_master is not None:
+                    if self.is_master:
                         gt_img_fn = os.path.join(self.gt_img_path, f'{train_index}_{i}_eval_gt_rgbs.jpg')
                         pred_img_fn = os.path.join(self.pred_img_path, f'{train_index}_{i}_eval_result_rgbs.jpg')
                         cv2.imwrite(gt_img_fn, 255*eval_rgbs.cpu().numpy())
