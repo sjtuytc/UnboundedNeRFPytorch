@@ -134,7 +134,7 @@ We recommand you to eval the pretrained models first before you train the models
 bash scripts/eval_trained_models.sh
 # The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
 ```
-The sample output log by running this script can be found at [docs/sample_logs/eval_trained_models.log](docs/sample_logs/eval_trained_models.log).
+The sample output log by running this script can be found at [docs/sample_logs/eval_trained_models.txt](docs/sample_logs/eval_trained_models.txt).
 
 </details>
 
