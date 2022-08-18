@@ -70,8 +70,8 @@ def render_main_doc(meta_data_path="docs/weekly_nerf_meta_data.xlsx", cn=False):
     all_md.write(cls_head)
     all_md.write(cls_head2)
 
-    if cn:
-        all_md.write("## 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。\n")
+    # if cn:
+        # all_md.write("## 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。\n")
     # note this is different from above because the following is used in classified NeRFs
     if not cn:
         cls_head = "## Filter by classes: \n [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | "
@@ -82,8 +82,8 @@ def render_main_doc(meta_data_path="docs/weekly_nerf_meta_data.xlsx", cn=False):
     for cls in cls_md:
         cls_md[cls].write(cls_head)
         cls_md[cls].write(cls_head2)
-        if cn:
-            cls_md[cls].write("## 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。\n")
+        # if cn:
+        #     cls_md[cls].write("## 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。\n")
     data_len = len(data['week'])
     week = ""
     for idx in range(data_len):

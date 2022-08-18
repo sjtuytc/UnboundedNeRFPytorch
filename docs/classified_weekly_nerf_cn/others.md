@@ -3,7 +3,6 @@
 ===================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
-## 大部分为机器翻译，少数论文手动翻译，有翻译错误可以PR修复。
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
   - [DoF-NeRF：景深与神经辐射场相遇, ACMMM2022](https://arxiv.org/pdf/2208.00945) | [***``[code]``***](https://github.com/zijinwuzijin/DoF-NeRF)
