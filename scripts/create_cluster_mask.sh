@@ -1,4 +1,9 @@
+# arguments
+export DATASET_NAME=building
+export MASK_PATH=data/mega/${DATASET_NAME}/building-pixsfm-grid-8  # output would be put at this folder
+export DATASET_PATH=./data/mega/${DATASET_NAME}/${DATASET_NAME}-pixsfm  # raw image folder with poses
+export NUM_GPUS=4 # number of GPUs
 # for debugging
-python create_cluster_masks.py --config configs/mega-nerf/building.yaml --dataset_path data/mega/building/building-pixsfm --output data/mega/building/building-pixsfm-grid-8-debug --grid_dim 2 4
-# official
-# python -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node 8 --max_restarts 0 scripts/create_cluster_masks.py --config configs/mega-nerf/building.yaml --dataset_path ./data/building/building-pixsfm --output ./data/building/building-pixsfm-mask --grid_dim 2 4
+# python create_cluster_masks.py --config configs/mega-nerf/${DATASET_NAME}.yaml --dataset_path ${DATASET_PATH} --output ${MASK_PATH} --grid_dim 2 4
+# for standard training, comment the following line when debugging
+python -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node ${NUM_GPUS} --max_restarts 0 create_cluster_masks.py --config configs/mega-nerf/${DATASET_NAME}.yaml --dataset_path ${DATASET_PATH} --output ${MASK_PATH} --grid_dim 2 4

@@ -17,6 +17,6 @@ wget https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-8.pt
 wget https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-grid-25.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt
-wget https://storage.cmusatyalab.org/mega-nerf-data/campus.tgz
+wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt
