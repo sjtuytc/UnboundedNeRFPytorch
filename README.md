@@ -19,19 +19,19 @@ https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-
 
 This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
 
-- **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
+- [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
 
-- **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
+- [x] **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
 
-- **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
+- [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
 
-- **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
+- [ ] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
-- **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
+- [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
 
-- **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
+- [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
 You are expected to get the following results in this repository:
 
