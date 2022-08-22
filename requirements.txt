@@ -10,4 +10,5 @@ torch_efficient_distloss
 scikit-image
 ninja
 einops
+parscript
 pyarrow==8.0.0

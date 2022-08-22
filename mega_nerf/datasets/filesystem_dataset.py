@@ -5,13 +5,13 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from itertools import cycle
 from pathlib import Path
 from typing import List, Optional, Dict, Tuple, Union, Type
-
+import pdb
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import torch
 from torch.utils.data import Dataset
-
+import shutil
 from mega_nerf.datasets.dataset_utils import get_rgb_index_mask
 from mega_nerf.image_metadata import ImageMetadata
 from mega_nerf.misc_utils import main_tqdm, main_print
@@ -50,7 +50,6 @@ class FilesystemDataset(Dataset):
         else:
             main_print('Differing intrinsics')
             self._directions = None
-
         parquet_paths = self._check_existing_paths(chunk_paths, center_pixels, scale_factor,
                                                    len(metadata_items))
         if parquet_paths is not None:
@@ -258,7 +257,6 @@ class FilesystemDataset(Dataset):
                 chunk_metadata['far'] = self._far
                 chunk_metadata['center_pixels'] = center_pixels
                 chunk_metadata['ray_altitude_range'] = self._ray_altitude_range
-
             torch.save(chunk_metadata, chunk_path / 'metadata.pt')
 
         for parquet_writer in parquet_writers:
@@ -273,27 +271,28 @@ class FilesystemDataset(Dataset):
         num_exist = 0
         for chunk_path in chunk_paths:
             if chunk_path.exists():
-                assert (chunk_path / 'metadata.pt').exists(), \
-                    "Could not find metadata file (did previous writing to this directory not complete successfully?)"
-                dataset_metadata = torch.load(chunk_path / 'metadata.pt', map_location='cpu')
-                assert dataset_metadata['images'] == images
-                assert dataset_metadata['scale_factor'] == scale_factor
+                shutil.rmtree(chunk_path)  # clean the chunk path every exp time.
+                # assert (chunk_path / 'metadata.pt').exists(), \
+                #     "Could not find metadata file (did previous writing to this directory not complete successfully?)"
+                # dataset_metadata = torch.load(chunk_path / 'metadata.pt', map_location='cpu')
+                # assert dataset_metadata['images'] == images
+                # assert dataset_metadata['scale_factor'] == scale_factor
 
-                if self._directions is None:
-                    assert dataset_metadata['near'] == self._near
-                    assert dataset_metadata['far'] == self._far
-                    assert dataset_metadata['center_pixels'] == center_pixels
+                # if self._directions is None:
+                #     assert dataset_metadata['near'] == self._near
+                #     assert dataset_metadata['far'] == self._far
+                #     assert dataset_metadata['center_pixels'] == center_pixels
 
-                    if self._ray_altitude_range is not None:
-                        assert (torch.allclose(torch.FloatTensor(dataset_metadata['ray_altitude_range']),
-                                               torch.FloatTensor(self._ray_altitude_range)))
-                    else:
-                        assert dataset_metadata['ray_altitude_range'] is None
+                #     if self._ray_altitude_range is not None:
+                #         assert (torch.allclose(torch.FloatTensor(dataset_metadata['ray_altitude_range']),
+                #                                torch.FloatTensor(self._ray_altitude_range)))
+                #     else:
+                #         assert dataset_metadata['ray_altitude_range'] is None
 
-                for child in list(chunk_path.iterdir()):
-                    if child.name != 'metadata.pt':
-                        parquet_files.append(child)
-                num_exist += 1
+                # for child in list(chunk_path.iterdir()):
+                #     if child.name != 'metadata.pt':
+                #         parquet_files.append(child)
+                # num_exist += 1
 
         if num_exist > 0:
             assert num_exist == len(chunk_paths)

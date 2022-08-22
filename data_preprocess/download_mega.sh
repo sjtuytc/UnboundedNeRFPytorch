@@ -20,3 +20,4 @@ wget https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt
 wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz
 wget https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt
+cd ../../  # return to project root
