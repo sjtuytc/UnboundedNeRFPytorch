@@ -12,3 +12,4 @@ ninja
 einops
 parscript
 pyarrow==8.0.0
+open3d # for visualization
