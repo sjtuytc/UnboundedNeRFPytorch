@@ -3,6 +3,10 @@ Weekly Classified Neural Radiance Fields - human ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Aug14 - Aug20, 2022
+## Aug7 - Aug13, 2022
+  - [Progressive Multi-scale Light Field Networks, 3DV2022](https://arxiv.org/abs/2208.06710) | [code]
+    > Neural representations have shown great promise in their ability to represent radiance and light fields while being very compact compared to the image set representation. However, current representations are not well suited for streaming as decoding can only be done at a single level of detail and requires downloading the entire neural network model. Furthermore, high-resolution light field networks can exhibit flickering and aliasing as neural networks are sampled without appropriate filtering. To resolve these issues, we present a progressive multi-scale light field network that encodes a light field with multiple levels of detail. Lower levels of detail are encoded using fewer neural network weights enabling progressive streaming and reducing rendering time. Our progressive multi-scale light field network addresses aliasing by encoding smaller anti-aliased representations at its lower levels of detail. Additionally, per-pixel level of detail enables our representation to support dithered transitions and foveated rendering.
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
   - [Neural Strands: Learning Hair Geometry and Appearance from Multi-View Images, ECCV2022](https://arxiv.org/pdf/2207.14067) | [***``[code]``***](https://radualexandru.github.io/neural_strands/)
