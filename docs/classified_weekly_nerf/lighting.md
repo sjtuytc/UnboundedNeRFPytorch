@@ -3,6 +3,10 @@ Weekly Classified Neural Radiance Fields - lighting ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Aug14 - Aug20, 2022
+  - [HDR-Plenoxels: Self-Calibrating High Dynamic Range Radiance Fields, ECCV2022](https://arxiv.org/abs/2208.06787) | [code]
+    > We propose high dynamic range radiance (HDR) fields, HDR-Plenoxels, that learn a plenoptic function of 3D HDR radiance fields, geometry information, and varying camera settings inherent in 2D low dynamic range (LDR) images. Our voxel-based volume rendering pipeline reconstructs HDR radiance fields with only multi-view LDR images taken from varying camera settings in an end-to-end manner and has a fast convergence speed. To deal with various cameras in real-world scenarios, we introduce a tone mapping module that models the digital in-camera imaging pipeline (ISP) and disentangles radiometric settings. Our tone mapping module allows us to render by controlling the radiometric settings of each novel view. Finally, we build a multi-view dataset with varying camera conditions, which fits our problem setting. Our experiments show that HDR-Plenoxels can express detail and high-quality HDR novel views from only LDR images with various cameras.
+## Aug7 - Aug13, 2022
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
   - [Neural Radiance Transfer Fields for Relightable Novel-view Synthesis with Global Illumination](https://arxiv.org/abs/2207.13607) | [code]

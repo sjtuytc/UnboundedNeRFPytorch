@@ -3,6 +3,8 @@
 ====================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
+## Aug14 - Aug20, 2022
+## Aug7 - Aug13, 2022
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
   - [ShAPO：多对象形状、外观和姿势优化的隐式表示, ECCV2022](https://arxiv.org/abs/2207.13691) | [***``[code]``***](https://zubair-irshad.github.io/projects/ShAPO.html)
