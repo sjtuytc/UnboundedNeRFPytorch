@@ -21,7 +21,9 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 - [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
 
-- [x] **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
+- [x] **GPU efficient.** We ensure that almost all our experiments can be carried on eight NVIDIA 2080Ti GPUs.
+
+- [x] **Quick download.** We host many datasets on Google drive so that downloading becomes much faster.
 
 - [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
 
@@ -220,7 +222,7 @@ After that, you can go to 4.1 to run trained modules again.
 ## 6. Citations & acknowledgements
 
 You may cite this repo to better convince the reviewers about the reproducibility of your paper. If this repo helps you, please cite it as:
-```bash
+```
 @software{Zhao_PytorchBlockNeRF_2022,
 author = {Zhao, Zelin and Jia, Jiaya},
 month = {8},
@@ -233,7 +235,7 @@ year = {2022}
 
 The original paper Block-NeRF and Mega-NeRF can be cited as:
 
-```bash
+```
  @InProceedings{Tancik_2022_CVPR,
     author    = {Tancik, Matthew and Casser, Vincent and Yan, Xinchen and Pradhan, Sabeek and Mildenhall, Ben and Srinivasan, Pratul P. and Barron, Jonathan T. and Kretzschmar, Henrik},
     title     = {Block-NeRF: Scalable Large Scene Neural View Synthesis},
