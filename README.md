@@ -164,7 +164,7 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 <summary> 4.4 Train sub-modules.</summary>
 
 Run the following commands to train the sub-module (the block):
-```
+```bash
 bash scripts/train_sub_modules.sh SUBMODULE_INDEX # SUBMODULE_INDEX is the index of the submodule.
 ```
 The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/train_sub_modules.txt). You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
@@ -174,10 +174,10 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 <summary> 4.5 Merge modules.</summary>
 
 Run the following commands to merge the trained modules to a unified model:
-<!-- ```
-
-``` -->
-After that, you can go to 4.1 to run trained modules again.
+```bash
+bash scripts/merge_sub_modules.sh
+```
+After that, you can go to 4.1 to eval your trained modules. The sample log can be found at [docs/sample_logs/merge_sub_modules.txt](docs/sample_logs/merge_sub_modules.txt).
 </details>
 
 ## 5. Build your custom large-scale NeRF

@@ -5,5 +5,5 @@ export DATASET_PATH=./data/mega/${DATASET_NAME}/${DATASET_NAME}-pixsfm  # raw im
 export NUM_GPUS=4 # number of GPUs
 # for debugging only, this is slow.
 python create_cluster_masks.py --config configs/mega-nerf/${DATASET_NAME}.yaml --dataset_path ${DATASET_PATH} --output ${MASK_PATH}-debug --grid_dim 2 4
-# for standard training, comment the following line when debugging
+# for a standard run, comment the following line when debugging
 # python -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node ${NUM_GPUS} --max_restarts 0 create_cluster_masks.py --config configs/mega-nerf/${DATASET_NAME}.yaml --dataset_path ${DATASET_PATH} --output ${MASK_PATH} --grid_dim 2 4
