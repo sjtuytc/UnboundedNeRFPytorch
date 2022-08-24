@@ -4,9 +4,11 @@ We track weekly NeRF papers and classify them. All previous published NeRF paper
 We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta data) of all NeRF papers, you can add your own comments or make your own paper analysis tools based on the structured meta data.
 
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
+
 ## 1. Introduction
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco. The abstract of the Block-NeRF paper is as follows:
@@ -27,7 +29,7 @@ https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-
 
 https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
 
-3. **Google Colab support.** Run trained Block-NeRF on Google Colab with detailed visualizations:
+3. **Google Colab support.** Run trained Block-NeRF on Google Colab with detailed visualizations (unfinished yet):
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1PkzjTlXmGYhovqy68y57LejGmr4XBGrb?usp=sharing)
 
@@ -216,6 +218,7 @@ After that, you can go to 4.1 to eval your trained modules. The sample log can b
 	python run.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
+
 4. Validating the training results to generate a fly-through video.
 
 	```bash
