@@ -27,7 +27,7 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 
 - [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
 
-- [ ] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
+- [x] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
 - [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
@@ -48,6 +48,7 @@ https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.
 - [2022.8.16] Support evaluation scripts and data format standard. Getting some results.
