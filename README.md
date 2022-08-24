@@ -17,7 +17,21 @@ The official results of Block-NeRF:
 
 https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-9287-5c2073d018bf.mp4
 
-This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
+This project is the **non-official** implementation of Block-NeRF. You are expected to get the following results in this repository:
+
+1. **Large-scale NeRF training.** The current results are as follows:
+
+https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
+
+2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
+
+https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
+
+3. **Google Colab support.** Run trained Block-NeRF on Google Colab with detailed visualizations:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1PkzjTlXmGYhovqy68y57LejGmr4XBGrb?usp=sharing)
+
+The other features of this project would be:
 
 - [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
 
@@ -34,16 +48,6 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 - [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
 
 - [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
-
-You are expected to get the following results in this repository:
-
-1. **Large-scale NeRF training.** The current results are as follows:
-
-https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
-
-2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
-
-https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
 
 Welcome to star and watch this project, thank you very much!
 
