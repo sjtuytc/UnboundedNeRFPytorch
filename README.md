@@ -4,9 +4,11 @@ We track weekly NeRF papers and classify them. All previous published NeRF paper
 We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta data) of all NeRF papers, you can add your own comments or make your own paper analysis tools based on the structured meta data.
 
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
+
 ## 1. Introduction
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco. The abstract of the Block-NeRF paper is as follows:
@@ -17,7 +19,21 @@ The official results of Block-NeRF:
 
 https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-9287-5c2073d018bf.mp4
 
-This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
+This project is the **non-official** implementation of Block-NeRF. You are expected to get the following results in this repository:
+
+1. **Large-scale NeRF training.** The current results are as follows:
+
+https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
+
+2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
+
+https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
+
+3. **Google Colab support.** Run trained Block-NeRF on Google Colab with detailed visualizations (unfinished yet):
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1PkzjTlXmGYhovqy68y57LejGmr4XBGrb?usp=sharing)
+
+The other features of this project would be:
 
 - [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
 
@@ -34,16 +50,6 @@ This project is the **non-official** implementation of Block-NeRF. Ideally, the 
 - [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
 
 - [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
-
-You are expected to get the following results in this repository:
-
-1. **Large-scale NeRF training.** The current results are as follows:
-
-https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
-
-2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
-
-https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
 
 Welcome to star and watch this project, thank you very much!
 
@@ -212,6 +218,7 @@ After that, you can go to 4.1 to eval your trained modules. The sample log can b
 	python run.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
+
 4. Validating the training results to generate a fly-through video.
 
 	```bash
