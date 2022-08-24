@@ -19,19 +19,21 @@ https://user-images.githubusercontent.com/31123348/184521599-1b30dea1-a709-4ddd-
 
 This project is the **non-official** implementation of Block-NeRF. Ideally, the features of this project would be:
 
-- **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
+- [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
 
-- **Quick download.** We host many datasets on our server and on Google drive so that downloading becomes much faster.
+- [x] **GPU efficient.** We ensure that almost all our experiments can be carried on eight NVIDIA 2080Ti GPUs.
 
-- **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
+- [x] **Quick download.** We host many datasets on Google drive so that downloading becomes much faster.
 
-- **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
+- [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
 
-- **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
+- [x] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
-- **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+- [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
+- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+
+- [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
 You are expected to get the following results in this repository:
 
@@ -46,6 +48,7 @@ https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.
 - [2022.8.16] Support evaluation scripts and data format standard. Getting some results.
@@ -162,7 +165,7 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 <summary> 4.4 Train sub-modules.</summary>
 
 Run the following commands to train the sub-module (the block):
-```
+```bash
 bash scripts/train_sub_modules.sh SUBMODULE_INDEX # SUBMODULE_INDEX is the index of the submodule.
 ```
 The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/train_sub_modules.txt). You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
@@ -172,10 +175,10 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 <summary> 4.5 Merge modules.</summary>
 
 Run the following commands to merge the trained modules to a unified model:
-<!-- ```
-
-``` -->
-After that, you can go to 4.1 to run trained modules again.
+```bash
+bash scripts/merge_sub_modules.sh
+```
+After that, you can go to 4.1 to eval your trained modules. The sample log can be found at [docs/sample_logs/merge_sub_modules.txt](docs/sample_logs/merge_sub_modules.txt).
 </details>
 
 ## 5. Build your custom large-scale NeRF
@@ -220,7 +223,7 @@ After that, you can go to 4.1 to run trained modules again.
 ## 6. Citations & acknowledgements
 
 You may cite this repo to better convince the reviewers about the reproducibility of your paper. If this repo helps you, please cite it as:
-```bash
+```
 @software{Zhao_PytorchBlockNeRF_2022,
 author = {Zhao, Zelin and Jia, Jiaya},
 month = {8},
@@ -233,7 +236,7 @@ year = {2022}
 
 The original paper Block-NeRF and Mega-NeRF can be cited as:
 
-```bash
+```
  @InProceedings{Tancik_2022_CVPR,
     author    = {Tancik, Matthew and Casser, Vincent and Yan, Xinchen and Pradhan, Sabeek and Mildenhall, Ben and Srinivasan, Pratul P. and Barron, Jonathan T. and Kretzschmar, Henrik},
     title     = {Block-NeRF: Scalable Large Scene Neural View Synthesis},

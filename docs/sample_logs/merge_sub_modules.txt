@@ -1,0 +1,2 @@
+fg test eval: tensor([[0.6409, 0.6197, 0.5834, 0.5288]], device='cuda:0')
+bg test eval: tensor([[ 0.2126,  0.2257,  0.1091, 55.9907]], device='cuda:0')

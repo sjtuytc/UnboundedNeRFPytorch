@@ -37,7 +37,6 @@ def _get_mask_opts() -> Namespace:
 def main(hparams: Namespace) -> None:
     assert hparams.ray_altitude_range is not None
     output_path = Path(hparams.output)
-
     if 'RANK' in os.environ:
         dist.init_process_group(backend='nccl', timeout=datetime.timedelta(0, hours=24))
         torch.cuda.set_device(int(os.environ['LOCAL_RANK']))
