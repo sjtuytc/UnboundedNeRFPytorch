@@ -137,7 +137,7 @@ The data structures follow the Mega-NeRF standards. We provide detailed explanat
 bash data_preprocess/process_mega.sh
 ```
 
-If you are interested in processing the raw waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md).
+If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_block_nerf.md).
 </details>
 
 <details>
