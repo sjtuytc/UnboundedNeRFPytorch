@@ -3,6 +3,7 @@ Weekly Classified Neural Radiance Fields - texture ![Awesome](https://cdn.rawgit
 ===================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
 ## Aug7 - Aug13, 2022
 ## Jul31 - Aug6, 2022
