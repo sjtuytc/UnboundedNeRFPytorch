@@ -109,7 +109,7 @@ STANDARD TRAINING COMMAND HERE
 ```
 
 <details>
-<summary> 4.1 Download processed data.</summary>
+<summary> 4.1 Download processed data and pre-trained models.</summary>
 
 What you should know before downloading the data:
 
@@ -149,7 +149,7 @@ If you are interested in processing the raw waymo data on your own, please refer
 <details>
 <summary> 4.2 Run pretrained models.</summary>
 
-We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models.
+We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models. The pre-trained models should be downloaded from the previous section 4.1.
 
 ```bash
 bash scripts/eval_trained_models.sh
