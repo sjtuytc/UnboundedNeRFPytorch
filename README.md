@@ -11,6 +11,8 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 ## 1. Introduction
 
+This project aims for benchmarking several state-of-the-art large-scale neural fields algorithms, not restricted to the original Block-NeRF algorithms. The title of this repo is BlockNeRFPytorch because it is memorizable and short.
+
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco. The abstract of the Block-NeRF paper is as follows:
 
 > We present Block-NeRF, a variant of Neural Radiance Fields that can represent large-scale environments. Specifically, we demonstrate that when scaling NeRF to render city-scale scenes spanning multiple blocks, it is vital to decompose the scene into individually trained NeRFs. This decomposition decouples rendering time from scene size, enables rendering to scale to arbitrarily large environments, and allows per-block updates of the environment. We adopt several architectural changes to make NeRF robust to data captured over months under different environmental conditions. We add appearance embeddings, learned pose refinement, and controllable exposure to each individual NeRF, and introduce a procedure for aligning appearance between adjacent NeRFs so that they can be seamlessly combined. We build a grid of Block-NeRFs from 2.8 million images to create the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
@@ -54,6 +56,7 @@ The other features of this project would be:
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.31] Training Mega-NeRF on the Waymo dataset.
 - [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.
@@ -72,10 +75,13 @@ Welcome to star and watch this project, thank you very much!
    ```bash
    conda create -n nerf-block python=3.9
    ```
-2. Install tensorflow and other libs. You don't need to install tensorflow if you download our processed data. Our version: tensorflow with CUDA11.7.
+2. Install tensorflow, pytorch and other libs. Our version: tensorflow with CUDA11.7.
    ```bash
    pip install --upgrade pip
-   pip install tensorflow opencv-python matplotlib configargparse
+   pip install -r requirements.txt
+   pip install tensorflow 
+   pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+   conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
    ```
 3. Install other libs used for reconstructing custom scenes, which is only needed when you need to build your scenes.
    ```bash
@@ -137,7 +143,7 @@ The data structures follow the Mega-NeRF standards. We provide detailed explanat
 bash data_preprocess/process_mega.sh
 ```
 
-If you are interested in processing the raw waymo data on your own, please refer to [this doc](docs/get_pytorch_block_nerf.md).
+If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_block_nerf.md).
 </details>
 
 <details>
@@ -158,10 +164,11 @@ The sample output log by running this script can be found at [docs/sample_logs/e
 
 Why should we generate masks? (1) Masks help us transfer camera poses + images to ray-based data. In this way, we can download the raw datasets quickly and train quickly as well. (2) Masks helps us manage the boundary of rays.
 
-Run the following script to create masks:
+Run the following script (choose one of the following two cmmands) to create masks:
 
 ```bash
-bash scripts/create_cluster_mask.sh
+bash scripts/create_cluster_mask.sh                      # for the mega dataset
+bash scripts/waymo_create_cluster_mask.sh                # for the waymo dataset
 # The output would be placed under the ${MASK_PATH}, which is set to data/mega/${DATASET_NAME}/building-pixsfm-grid-8 by default.
 ```
 The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/create_cluster_mask.txt). The middle parts of the log have been deleted to save space.
@@ -172,7 +179,9 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 
 Run the following commands to train the sub-module (the block):
 ```bash
-bash scripts/train_sub_modules.sh SUBMODULE_INDEX # SUBMODULE_INDEX is the index of the submodule.
+bash scripts/train_sub_modules.sh SUBMODULE_INDEX         # for the mega dataset
+bash scripts/waymo_train_sub_modules.sh SUBMODULE_INDEX   # for the waymo dataset
+# SUBMODULE_INDEX is the index of the submodule.
 ```
 The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/train_sub_modules.txt). You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
 </details>

@@ -79,7 +79,6 @@ def main(hparams: Namespace) -> None:
     centroids[:, :, 1] += offsets[0].unsqueeze(1)
     centroids[:, :, 2] += offsets[1]
     centroids = centroids.view(-1, 3)
-
     main_print('Centroids shape: {}'.format(centroids.shape))
 
     near = hparams.near / pose_scale_factor

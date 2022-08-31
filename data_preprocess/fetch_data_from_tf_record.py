@@ -1,12 +1,26 @@
+from turtle import exitonclick
 import numpy as np
 import datetime, os
 from base64 import decodestring
 import cv2
 import os
 import json
+import pdb
 import glob
 import tensorflow as tf
 import torch
+import glob
+import os
+import json
+import numpy as np
+import torch
+from kornia import create_meshgrid
+from typing import Tuple
+from numpy.linalg import tensorsolve
+import pdb
+import numpy.linalg as la
+import scipy.linalg as spla
+from tqdm import tqdm
 
 
 def test_rays_dir_radii(ray_dirs):
@@ -36,29 +50,65 @@ def decode_fn(record_bytes):
     )
 
 
-def handle_one_record(tfrecord, exist_imgs, index):
+def get_cam_rays(H, W, K):
+    grid = create_meshgrid(H, W, normalized_coordinates=False)[0]
+    i, j = grid.unbind(-1)
+    # the direction here is without +0.5 pixel centering as calibration is not so accurate
+    # see https://github.com/bmild/nerf/issues/24
+    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
+    directions = \
+        torch.stack([(i - cx) / fx, -(j - cy) / fy, -torch.ones_like(i)], -1)  # (H, W, 3)
+    directions = directions / torch.norm(directions, dim=-1, keepdim=True)
+    return directions.numpy()
+
+
+def get_rotate_one_image(cam_ray_dir, world_ray_dir):
+    b_matrix = cam_ray_dir = cam_ray_dir.reshape(-1, 3)
+    A_matrix = world_ray_dir = world_ray_dir.reshape(-1, 3)
+
+    world_r123 = np.mat(world_ray_dir[:, :1]).reshape(-1, 1)
+    world_r456 = np.mat(world_ray_dir[:, 1:2]).reshape(-1, 1)
+    world_r789 = np.mat(world_ray_dir[:, 2:3]).reshape(-1, 1)
+
+    cam_dir = np.mat(cam_ray_dir)
+    r123 = np.linalg.lstsq(cam_dir, world_r123, rcond=None)[0]
+    r456 = np.linalg.lstsq(cam_dir, world_r456, rcond=None)[0]
+    r789 = np.linalg.lstsq(cam_dir, world_r789, rcond=None)[0]
+
+    R = np.zeros([3, 3])
+    R[0:1, :] = r123.T
+    R[1:2, :] = r456.T
+    R[2:3, :] = r789.T
+
+    R_loss = world_ray_dir - cam_ray_dir @ R.T
+    print(f"Pose loss:\t{np.absolute(R_loss).mean()}")
+    return R.tolist()
+
+
+def handle_one_record(tfrecord, train_index, val_index):
     dataset = tf.data.TFRecordDataset(
         tfrecord,
         compression_type="GZIP",
     )
     dataset_map = dataset.map(decode_fn)
 
-    os.makedirs(result_root_folder, exist_ok=True)
-    meta_folder = os.path.join(result_root_folder, 'json')
-    image_folder = os.path.join(result_root_folder, "images")
-    json_path = os.path.join(meta_folder, "train.json")
-    os.makedirs(meta_folder, exist_ok=True)
-    os.makedirs(image_folder, exist_ok=True)
-
+    train_or_val = 'train' in tfrecord
+    
+    if train_or_val:
+        image_folder = train_img_folder
+        meta_folder = train_meta_folder
+        index = train_index
+        train_index += 1
+    else:
+        image_folder = val_img_folder
+        meta_folder = val_meta_folder
+        index = val_index
+        val_index += 1
+    
     for idx, batch in enumerate(dataset_map):
         print(f"\tLoading the {idx + 1}th image...")
         image_name = str(int(batch["image_hash"]))
 
-        if image_name + ".png" in exist_imgs:
-            print(f"\t{image_name}.png has been loaded!")
-            continue
-
-        index += 1
         imagestr = batch["image"]
         image = tf.io.decode_png(imagestr, channels=0, dtype=tf.dtypes.uint8, name=None)
         image = np.array(image)
@@ -68,55 +118,71 @@ def handle_one_record(tfrecord, exist_imgs, index):
         cam_idx = int(batch["cam_idx"])
         equivalent_exposure = float(batch["equivalent_exposure"])
         height, width = int(batch["height"]), int(batch["width"])
-        intrinsics = tf.sparse.to_dense(batch["intrinsics"]).numpy()
+        intrinsics = tf.sparse.to_dense(batch["intrinsics"]).numpy().tolist()
 
         ray_origins = tf.sparse.to_dense(batch["ray_origins"]).numpy().reshape(height, width, 3)
         ray_dirs = tf.sparse.to_dense(batch["ray_dirs"]).numpy().reshape(height, width, 3)
-        with open(os.path.join(image_folder, f"{image_name}_ray_origins.npy"), "wb") as f:
-            np.save(f, ray_origins)
-        with open(os.path.join(image_folder, f"{image_name}_ray_dirs.npy"), "wb") as f:
-            np.save(f, ray_dirs)
 
-        cur_data_dict = {
-            "image_name": image_name + ".png",
+        K = np.zeros((3, 3), dtype=np.float32)
+        # fx=focal,fy=focal,cx=img_w/2,cy=img_h/2
+        K[0, 0] = intrinsics[0]
+        K[1, 1] = intrinsics[1]
+        K[0, 2] = width * 0.5
+        K[1, 2] = height * 0.5
+        K[2, 2] = 1
+        cam_ray_dir = get_cam_rays(height, width, K) # get normalized rays
+        world_ray_dir = np.array(ray_dirs)
+        rotate_m = get_rotate_one_image(cam_ray_dir, world_ray_dir)
+        c2w_matrix = np.zeros([3, 4])
+        c2w_matrix[:, :3] = rotate_m
+        # average the origin as the final origin
+        cur_origin = torch.mean(torch.mean(torch.tensor(ray_origins), dim=0), dim=0).tolist()
+        c2w_matrix[:, 3:] = np.array(cur_origin).reshape(3, 1)
+
+        meta_data_dict = {
+            'W': width,
+            'H': height,
+            "intrinsics": torch.tensor(intrinsics + [width * 0.5, height * 0.5]),
+            "c2w": torch.tensor(c2w_matrix),
+            'image_name': image_name,
             "cam_idx": cam_idx,
             "equivalent_exposure": equivalent_exposure,
-            "height": height,
-            "width": width,
-            "intrinsics": intrinsics.tolist(),
-            "origin_pos": ray_origins[0][0].tolist(),
+            "origin_pos": torch.tensor(ray_origins[0][0].tolist()),
             "index": index
         }
 
-        train_meta[image_name] = cur_data_dict
-        with open(json_path, "w") as fp:
-            json.dump(train_meta, fp)
-            fp.close()
-
-    return index
-
-def get_the_current_index(root_dir):
-    if os.path.exists(os.path.join(root_dir, 'json/train.json')):
-        with open(os.path.join(root_dir, 'json/train.json'), 'r') as fp:
-            meta = json.load(fp)
-        return len(meta)
-    return 0
-
+        torch.save(meta_data_dict, os.path.join(meta_folder, image_name + ".pt"))
+    return train_index, val_index
 
 if __name__ == "__main__":
     waymo_root_p = "data/v1.0"
-    result_root_folder = "data/pytorch_block_nerf_dataset"
+    result_root_folder = "data/pytorch_waymo_dataset"
+    os.makedirs(result_root_folder, exist_ok=True)
+
+    coordinate_info = {
+        'origin_drb': [0.0, 0.0, 0.0],
+        'pose_scale_factor': 1.0
+    }
+    torch.save(coordinate_info, os.path.join(result_root_folder, "coordinates.pt"))
+    train_folder = os.path.join(result_root_folder, 'train')
+    os.makedirs(train_folder, exist_ok=True)
+    val_folder = os.path.join(result_root_folder, 'val')
+    os.makedirs(val_folder, exist_ok=True)
+
+    train_img_folder = os.path.join(train_folder, 'rgbs')
+    train_meta_folder = os.path.join(train_folder, 'metadata')
+    val_img_folder = os.path.join(val_folder, 'rgbs')
+    val_meta_folder = os.path.join(val_folder, 'metadata')
+
+    os.makedirs(train_img_folder, exist_ok=True)
+    os.makedirs(val_img_folder, exist_ok=True)
+    os.makedirs(train_meta_folder, exist_ok=True)
+    os.makedirs(val_meta_folder, exist_ok=True)
+
+    train_meta, val_meta = {}, {}
+    train_index = 0
+    val_index = 0
     ori_waymo_data = sorted(glob.glob(os.path.join(waymo_root_p, "*")))
-    exist_img_list = sorted(glob.glob(os.path.join(result_root_folder + "/images", "*.png")))
-
-    exist_imgs = []
-    for img_name in exist_img_list:
-        exist_imgs.append(os.path.basename(img_name))
-
-    index = get_the_current_index(result_root_folder)
-    print(f"Has loaded {index} images!")
-    train_meta = {}
-
     for idx, tfrecord in enumerate(ori_waymo_data):
         print(f"Handling the {idx+1}/{len(ori_waymo_data)} tfrecord")
-        index = handle_one_record(tfrecord, exist_imgs, index)
+        train_index, val_index = handle_one_record(tfrecord, train_index, val_index)
