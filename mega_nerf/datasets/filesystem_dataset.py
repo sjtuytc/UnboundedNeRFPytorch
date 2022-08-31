@@ -33,7 +33,7 @@ class FilesystemDataset(Dataset):
         self._ray_altitude_range = ray_altitude_range
 
         intrinsics = torch.cat(
-            [torch.cat([torch.FloatTensor([x.W, x.H]), x.intrinsics]).unsqueeze(0) for x in metadata_items])
+            [torch.cat([torch.FloatTensor([x.W, x.H]).to(device), x.intrinsics.to(device)]).unsqueeze(0) for x in metadata_items])
         if (intrinsics - intrinsics[0]).abs().max() == 0:
             main_print(
                 'All intrinsics identical: W: {} H: {}, intrinsics: {}'.format(metadata_items[0].W, metadata_items[0].H,
@@ -50,8 +50,8 @@ class FilesystemDataset(Dataset):
         else:
             main_print('Differing intrinsics')
             self._directions = None
-        parquet_paths = self._check_existing_paths(chunk_paths, center_pixels, scale_factor,
-                                                   len(metadata_items))
+        parquet_paths = self._check_existing_paths(chunk_paths, center_pixels, scale_factor, len(metadata_items))
+        # parquet_paths = None  # do not load from existing paths
         if parquet_paths is not None:
             main_print('Reusing {} chunks from previous run'.format(len(parquet_paths)))
             self._parquet_paths = parquet_paths
@@ -138,7 +138,8 @@ class FilesystemDataset(Dataset):
         total_free = 0
 
         for chunk_path in chunk_paths:
-            chunk_path.mkdir(parents=True)
+            if not os.path.exists(chunk_path):
+                chunk_path.mkdir(parents=True, exist_ok=True)
 
             _, _, free = shutil.disk_usage(chunk_path)
             total_free += free
@@ -181,6 +182,18 @@ class FilesystemDataset(Dataset):
 
         main_print('{} chunks allocated'.format(index))
 
+        for chunk_path in chunk_paths:
+            chunk_metadata = {
+                'images': len(metadata_items),
+                'scale_factor': scale_factor
+            }
+
+            if self._directions is None:
+                chunk_metadata['near'] = self._near
+                chunk_metadata['far'] = self._far
+                chunk_metadata['center_pixels'] = center_pixels
+                chunk_metadata['ray_altitude_range'] = self._ray_altitude_range
+            torch.save(chunk_metadata, chunk_path / 'metadata.pt')
         write_futures = []
         rgbs = []
         rays = []
@@ -246,18 +259,6 @@ class FilesystemDataset(Dataset):
 
                 for write_future in write_futures:
                     write_future.result()
-        for chunk_path in chunk_paths:
-            chunk_metadata = {
-                'images': len(metadata_items),
-                'scale_factor': scale_factor
-            }
-
-            if self._directions is None:
-                chunk_metadata['near'] = self._near
-                chunk_metadata['far'] = self._far
-                chunk_metadata['center_pixels'] = center_pixels
-                chunk_metadata['ray_altitude_range'] = self._ray_altitude_range
-            torch.save(chunk_metadata, chunk_path / 'metadata.pt')
 
         for parquet_writer in parquet_writers:
             parquet_writer.close()
@@ -271,28 +272,27 @@ class FilesystemDataset(Dataset):
         num_exist = 0
         for chunk_path in chunk_paths:
             if chunk_path.exists():
-                shutil.rmtree(chunk_path)  # clean the chunk path every exp time.
-                # assert (chunk_path / 'metadata.pt').exists(), \
-                #     "Could not find metadata file (did previous writing to this directory not complete successfully?)"
-                # dataset_metadata = torch.load(chunk_path / 'metadata.pt', map_location='cpu')
-                # assert dataset_metadata['images'] == images
-                # assert dataset_metadata['scale_factor'] == scale_factor
+                assert (chunk_path / 'metadata.pt').exists(), \
+                    "Could not find metadata file (did previous writing to this directory not complete successfully?)"
+                dataset_metadata = torch.load(chunk_path / 'metadata.pt', map_location='cpu')
+                assert dataset_metadata['images'] == images
+                assert dataset_metadata['scale_factor'] == scale_factor
 
-                # if self._directions is None:
-                #     assert dataset_metadata['near'] == self._near
-                #     assert dataset_metadata['far'] == self._far
-                #     assert dataset_metadata['center_pixels'] == center_pixels
+                if self._directions is None:
+                    assert dataset_metadata['near'] == self._near
+                    assert dataset_metadata['far'] == self._far
+                    assert dataset_metadata['center_pixels'] == center_pixels
 
-                #     if self._ray_altitude_range is not None:
-                #         assert (torch.allclose(torch.FloatTensor(dataset_metadata['ray_altitude_range']),
-                #                                torch.FloatTensor(self._ray_altitude_range)))
-                #     else:
-                #         assert dataset_metadata['ray_altitude_range'] is None
+                    # if self._ray_altitude_range is not None:
+                    #     assert (torch.allclose(torch.FloatTensor(dataset_metadata['ray_altitude_range']),
+                    #                            torch.FloatTensor(self._ray_altitude_range)))
+                    # else:
+                    #     assert dataset_metadata['ray_altitude_range'] is None
 
-                # for child in list(chunk_path.iterdir()):
-                #     if child.name != 'metadata.pt':
-                #         parquet_files.append(child)
-                # num_exist += 1
+                for child in list(chunk_path.iterdir()):
+                    if child.name != 'metadata.pt':
+                        parquet_files.append(child)
+                num_exist += 1
 
         if num_exist > 0:
             assert num_exist == len(chunk_paths)

@@ -1,5 +1,5 @@
 from typing import List
-
+import pdb
 import torch
 
 
@@ -15,7 +15,7 @@ def get_ray_directions(W: int, H: int, fx: float, fy: float, cx: float, cy: floa
         torch.stack([(i - cx) / fx, -(j - cy) / fy, -torch.ones_like(i)], -1)  # (H, W, 3)
     directions /= torch.linalg.norm(directions, dim=-1, keepdim=True)
 
-    return directions
+    return directions.to(device)
 
 
 def get_rays(directions: torch.Tensor, c2w: torch.Tensor, near: float, far: float,
@@ -37,7 +37,7 @@ def get_rays_batch(directions: torch.Tensor, c2w: torch.Tensor, near: float, far
     rays_d = directions @ c2w[:, :, :3].transpose(1, 2)  # (n, H*W, 3)
     rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
     # The origin of all rays is the camera origin in world coordinate
-    rays_o = c2w[:, :, 3].unsqueeze(1).expand(rays_d.shape)  # (n, H*W, 3)
+    rays_o = c2w[:, :, 3].unsqueeze(1).expand(rays_d.shape).to(rays_d.device)  # (n, H*W, 3)
 
     return _get_rays_inner(rays_o, rays_d, near, far, ray_altitude_range)
 

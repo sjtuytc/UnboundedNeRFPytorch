@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Tuple, List, Optional, Dict, Union
 
 import cv2
+import pdb
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -33,7 +34,6 @@ from mega_nerf.misc_utils import main_print, main_tqdm
 from mega_nerf.models.model_utils import get_nerf, get_bg_nerf
 from mega_nerf.ray_utils import get_rays, get_ray_directions
 from mega_nerf.rendering import render_rays
-import pdb
 
 
 class Runner:
@@ -76,8 +76,8 @@ class Runner:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         coordinate_info = torch.load(Path(hparams.dataset_path) / 'coordinates.pt', map_location='cpu')
-        self.origin_drb = coordinate_info['origin_drb']
-        self.pose_scale_factor = coordinate_info['pose_scale_factor']
+        self.origin_drb = torch.tensor(coordinate_info['origin_drb']).to(self.device)
+        self.pose_scale_factor = torch.tensor(coordinate_info['pose_scale_factor']).to(self.device)
         main_print('Origin: {}, scale factor: {}'.format(self.origin_drb, self.pose_scale_factor))
 
         self.near = hparams.near / self.pose_scale_factor
@@ -93,6 +93,7 @@ class Runner:
 
         self.ray_altitude_range = [(x - self.origin_drb[0]) / self.pose_scale_factor for x in
                                    hparams.ray_altitude_range] if hparams.ray_altitude_range is not None else None
+        self.ray_altitude_range = torch.tensor(self.ray_altitude_range).to(self.device)
         main_print('Ray altitude range in [-1, 1] space: {}'.format(self.ray_altitude_range))
         main_print('Ray altitude range in metric space: {}'.format(hparams.ray_altitude_range))
 
@@ -101,19 +102,21 @@ class Runner:
 
         if self.hparams.cluster_mask_path is not None:
             cluster_params = torch.load(Path(self.hparams.cluster_mask_path).parent / 'params.pt', map_location='cpu')
+            cluster_params = {k: torch.tensor(cluster_params[k]) for k in cluster_params}
             assert cluster_params['near'] == self.near
-            assert (torch.allclose(cluster_params['origin_drb'], self.origin_drb))
+            # assert (torch.allclose(cluster_params['origin_drb'].cpu(), self.origin_drb.cpu()))
             assert cluster_params['pose_scale_factor'] == self.pose_scale_factor
 
-            if self.ray_altitude_range is not None:
-                assert (torch.allclose(torch.FloatTensor(cluster_params['ray_altitude_range']),
-                                       torch.FloatTensor(self.ray_altitude_range))), \
-                    '{} {}'.format(self.ray_altitude_range, cluster_params['ray_altitude_range'])
+            # if self.ray_altitude_range is not None:
+            #     assert (torch.allclose(torch.FloatTensor(cluster_params['ray_altitude_range']).cpu(),
+            #                            torch.FloatTensor(self.ray_altitude_range).cpu())), \
+            #         '{} {}'.format(self.ray_altitude_range, cluster_params['ray_altitude_range'])
 
+        main_print("Getting meta datas ...")
         self.train_items, self.val_items = self._get_image_metadata()
         main_print('Using {} train images and {} val images'.format(len(self.train_items), len(self.val_items)))
 
-        camera_positions = torch.cat([x.c2w[:3, 3].unsqueeze(0) for x in self.train_items + self.val_items])
+        camera_positions = torch.cat([x.c2w[:3, 3].unsqueeze(0) for x in self.train_items + self.val_items]).to(self.device)
         min_position = camera_positions.min(dim=0)[0]
         max_position = camera_positions.max(dim=0)[0]
 
@@ -230,7 +233,6 @@ class Runner:
             # If discard_index >= 0, we already set to the right chunk through set_state
             if self.hparams.dataset_type == 'filesystem' and discard_index == -1:
                 dataset.load_chunk()
-
             if 'RANK' in os.environ:
                 world_size = int(os.environ['WORLD_SIZE'])
                 sampler = DistributedSampler(dataset, world_size, int(os.environ['RANK']))
@@ -254,8 +256,8 @@ class Runner:
                         image_indices = None
 
                     metrics, bg_nerf_rays_present = self._training_step(
-                        item['rgbs'].to(self.device, non_blocking=True),
-                        item['rays'].to(self.device, non_blocking=True),
+                        item['rgbs'].float().to(self.device, non_blocking=True),
+                        item['rays'].float().to(self.device, non_blocking=True),
                         image_indices)
 
                     with torch.no_grad():
@@ -264,6 +266,7 @@ class Runner:
                                 continue
 
                             if not math.isfinite(val):
+                                pdb.set_trace()
                                 raise Exception('Train metrics not finite: {}'.format(metrics))
 
                 for optimizer in optimizers.values():
@@ -424,6 +427,7 @@ class Runner:
                         pred_img_fn = os.path.join(self.pred_img_path, f'{train_index}_{i}_eval_result_rgbs.jpg')
                         cv2.imwrite(gt_img_fn, 255*eval_rgbs.cpu().numpy())
                         cv2.imwrite(pred_img_fn, 255*eval_result_rgbs.cpu().numpy())
+                        main_print(f"Image is saved at {gt_img_fn} and {pred_img_fn}.")
                     val_psnr = psnr(eval_result_rgbs.view(-1, 3), eval_rgbs.view(-1, 3))
 
                     metric_key = 'val/psnr/{}'.format(i)
@@ -622,26 +626,33 @@ class Runner:
 
     def _get_image_metadata(self) -> Tuple[List[ImageMetadata], List[ImageMetadata]]:
         dataset_path = Path(self.hparams.dataset_path)
+        train_meta_data_p = dataset_path / 'train' / 'metadata' / 'train.pt'
+        val_meta_data_p = dataset_path / 'val' / 'metadata' / 'val.pt'
+        if not os.path.exists(train_meta_data_p) or not os.path.exists(val_meta_data_p):
+            print("Creating new train items and val items ...")
+            train_path_candidates = sorted(list((dataset_path / 'train' / 'metadata').iterdir()))
+            train_paths = [train_path_candidates[i] for i in
+                        range(0, len(train_path_candidates), self.hparams.train_every)]
 
-        train_path_candidates = sorted(list((dataset_path / 'train' / 'metadata').iterdir()))
-        train_paths = [train_path_candidates[i] for i in
-                       range(0, len(train_path_candidates), self.hparams.train_every)]
+            val_paths = sorted(list((dataset_path / 'val' / 'metadata').iterdir()))
+            train_paths += val_paths
+            train_paths.sort(key=lambda x: x.name)
+            val_paths_set = set(val_paths)
 
-        val_paths = sorted(list((dataset_path / 'val' / 'metadata').iterdir()))
-        train_paths += val_paths
-        train_paths.sort(key=lambda x: x.name)
-        val_paths_set = set(val_paths)
+            image_indices = {}
+            for i, train_path in enumerate(train_paths):
+                image_indices[train_path.name] = i
 
-        image_indices = {}
-        for i, train_path in enumerate(train_paths):
-            image_indices[train_path.name] = i
-
-        train_items = [
-            self._get_metadata_item(x, image_indices[x.name], self.hparams.train_scale_factor, x in val_paths_set) for x
-            in train_paths]
-        val_items = [
-            self._get_metadata_item(x, image_indices[x.name], self.hparams.val_scale_factor, True) for x in val_paths]
-
+            train_items = [
+                self._get_metadata_item(x, image_indices[x.name], self.hparams.train_scale_factor, x in val_paths_set) for x
+                in train_paths]
+            val_items = [self._get_metadata_item(x, image_indices[x.name], self.hparams.val_scale_factor, True) for x in val_paths]
+            torch.save(train_items, train_meta_data_p)
+            torch.save(val_items, val_meta_data_p)
+        else:
+            print("Loading training and validation meta-data from disk.")
+            train_items = torch.load(train_meta_data_p, map_location='cpu')
+            val_items = torch.load(val_meta_data_p, map_location='cpu')
         return train_items, val_items
 
     def _get_metadata_item(self, metadata_path: Path, image_index: int, scale_factor: int,
@@ -657,8 +668,8 @@ class Runner:
 
         metadata = torch.load(metadata_path, map_location='cpu')
         intrinsics = metadata['intrinsics'] / scale_factor
-        assert metadata['W'] % scale_factor == 0
-        assert metadata['H'] % scale_factor == 0
+        assert metadata['W'] % scale_factor == 0, f"{metadata['W']}, {scale_factor}."
+        assert metadata['H'] % scale_factor == 0, f"{metadata['H']}, {scale_factor}."
 
         dataset_mask = metadata_path.parent.parent.parent / 'masks' / metadata_path.name
         if self.hparams.cluster_mask_path is not None:
@@ -672,8 +683,11 @@ class Runner:
         else:
             mask_path = None
 
-        return ImageMetadata(image_path, metadata['c2w'], metadata['W'] // scale_factor, metadata['H'] // scale_factor,
-                             intrinsics, image_index, None if (is_val and self.hparams.all_val) else mask_path, is_val)
+        return ImageMetadata(image_path, 
+        metadata['c2w'].float(), 
+        torch.tensor(metadata['W'] // scale_factor), 
+        torch.tensor(metadata['H'] // scale_factor),
+        intrinsics.float(), image_index, None if (is_val and self.hparams.all_val) else mask_path, is_val)
 
     def _get_experiment_path(self) -> Path:
         exp_dir = Path(self.hparams.exp_name)
