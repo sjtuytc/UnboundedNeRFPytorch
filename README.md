@@ -56,6 +56,7 @@ The other features of this project would be:
 Welcome to star and watch this project, thank you very much!
 
 ## 2. News
+- [2022.8.31] Training Mega-NeRF on the Waymo dataset.
 - [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.
