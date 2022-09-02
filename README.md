@@ -3,7 +3,7 @@ We track weekly NeRF papers and classify them. All previous published NeRF paper
 
 We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta data) of all NeRF papers, you can add your own comments or make your own paper analysis tools based on the structured meta data.
 
-# [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
+# Large-scale Neural Radiance Fields in Pytorch
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
