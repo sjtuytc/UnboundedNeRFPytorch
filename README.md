@@ -51,7 +51,7 @@ The other features of this project would be:
 
 - [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
-Welcome to star and watch this project, thank you very much!
+Hope our efforts could help your research or projects!
 
 ## 2. News
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset.
