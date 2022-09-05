@@ -28,8 +28,14 @@
 	```
    You may otherwise symbol link the downloaded dataset ("v1.0") under the "data" folder. The Waymo official files (e.g., v1.0/v1.0_waymo_block_nerf_mission_bay_train.tfrecord-00000-of-01063) would be put under the data folder. 
 
-2. Transfer the original data in TF to the mega-NeRF format via the following command:
+2. Transfer the original data in TF to the pytorch format via the following command:
 
    ```bash
    python data_preprocess/fetch_data_from_tf_record.py
    ```
+
+3. Split the waymo dataset into blocks and extract corresponding information.
+
+	```bash
+	python data_preprocess/split_block_and_extract_info.py
+	```

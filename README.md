@@ -43,7 +43,7 @@ The other features of this project would be:
 
 - [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
 
-- [x] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
+- [ ] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
 
 - [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
@@ -93,9 +93,9 @@ Hope our efforts could help your research or projects!
 
 ## 4. Large-scale NeRF on the public datasets
 
-Click the following sub-section titles to expand / collapse steps. 
+**We provide implementations for two algorithms: Block-NeRF and Mega-NeRF.** Most of the Mega-NeRF implementations is from [the official Mega-NeRF repo](https://github.com/cmusatyalab/mega-nerf) while we support [Waymo dataset training](https://waymo.com/intl/zh-cn/research/block-nerf/), visualizations and fix some Mega-NeRF bugs.
 
-**Note we provide useful debugging commands in many scripts.** Debug commands require a single GPU card only and may run slower than the standard commands. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
+**We provide useful debugging commands in many scripts.** Debug commands require a single GPU card only and may run slower than the standard commands. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
 
 ```bash
 # arguments
@@ -106,48 +106,30 @@ ARGUMENTS HERE  # we provide you sampled arguments with explanations and options
 STANDARD TRAINING COMMAND HERE
 ```
 
+Click the following sub-section titles to expand / collapse steps.
+
 <details>
 <summary> 4.1 Download processed data and pre-trained models.</summary>
 
 What you should know before downloading the data:
 
-   (1) You don't need these steps if you only want to get results on your custom data (in other words, you can directly go to [Section 5](#5-build-your-custom-large-scale-nerf)) but we recommand you to run on public datasets first.
+   (1) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
 
-   (2) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
-
-   (3) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. 
+   (2) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders.
 
 You can download and preprocess all of the data and pretrained models via the following commands:
 ```
 bash data_proprocess/download_waymo.sh  // download waymo datasets
-bash data_preprocess/download_mega.sh   // download mega datasets from the CMU server. The total size is around 31G.
 ```
 
-(Optional) you may also download the mega dataset (which is the same as the "download\_mega.sh" bash) from [our Google drive](https://drive.google.com/drive/folders/1zzvGWhrbx2_XuK_6mBYpkGngHoL9QGMR?usp=sharing). You can download selected data from this table:
+If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
 
-| Dataset name | Images & poses | Masks | Pretrained models |
-|---|---|---|---|
-| Waymo | [waymo\_image\_poses](https://drive.google.com/file/d/1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd/view?usp=sharing) | Not ready | Not ready |
-| Building | [building-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm.tgz) | [building-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-grid-8.tgz) | [building-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/building-pixsfm-8.pt) |
-| Rubble | [rubble-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm.tgz) | [rubble-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-grid-8.tgz) | [rubble-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/rubble-pixsfm-8.pt) |
-| Quad | [ArtsQuad_dataset](http://vision.soic.indiana.edu/disco_files/ArtsQuad_dataset.tar) - [quad-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm.tgz) | [quad-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-grid-8.tgz) | [quad-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/quad-pixsfm-8.pt) |
-| Residence | [UrbanScene3D](https://vcc.tech/UrbanScene3D/) - [residence-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm.tgz) | [residence-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-grid-8.tgz) | [residence-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/residence-pixsfm-8.pt) |
-| Sci-Art | [UrbanScene3D](https://vcc.tech/UrbanScene3D/) - [sci-art-pixsfm](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm.tgz) | [sci-art-pixsfm-grid-25](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-grid-25.tgz) | [sci-art-pixsfm-25-w-512.pt](https://storage.cmusatyalab.org/mega-nerf-data/sci-art-pixsfm-25-w-512.pt) |
-| Campus | [UrbanScene3D](https://vcc.tech/UrbanScene3D/) - [campus](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm.tgz) | [campus-pixsfm-grid-8](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-grid-8.tgz) | [campus-pixsfm-8.pt](https://storage.cmusatyalab.org/mega-nerf-data/campus-pixsfm-8.pt) |
-
-The data structures follow the Mega-NeRF standards. We provide detailed explanations with examples for each data structure in [this doc](docs/mega_format_explained.md). After downloading the data, unzip the files and make folders via the following commands:
-
-```bash
-bash data_preprocess/process_mega.sh
-```
-
-If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_block_nerf.md).
 </details>
 
 <details>
 <summary> 4.2 Run pretrained models.</summary>
 
-We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models. The pre-trained models should be downloaded from the previous section 4.1.
+We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models, which should be downloaded from the previous section 4.1.
 
 ```bash
 bash scripts/eval_trained_models.sh
