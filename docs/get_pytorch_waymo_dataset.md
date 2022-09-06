@@ -37,5 +37,7 @@
 3. Split the waymo dataset into blocks and extract corresponding information.
 
 	```bash
-	python data_preprocess/split_block_and_extract_info.py
+	python data_preprocess/split_block.py
 	```
+
+Now you have finished the waymo data preprocess procedure and you can start training.

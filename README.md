@@ -117,12 +117,29 @@ What you should know before downloading the data:
 
    (2) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders.
 
-You can download and preprocess all of the data and pretrained models via the following commands:
-```
-bash data_proprocess/download_waymo.sh  // download waymo datasets
-```
+Download and preprocess all of the data and pretrained models via the following commands:
+   ```
+   bash data_proprocess/download_waymo.sh  // download waymo datasets
+   ```
 
 If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
+
+The downloaded data would look like this:
+
+   ```
+   data
+      |——————pytorch_waymo_dataset                     // the root folder for pytorch waymo dataset
+      |        └——————cam_info.json                    // extracted cam2img information in dict.
+      |        └——————coordinates.pt                   // global camera information used in Mega-NeRF
+      |        └——————train                            // train data
+      |        |         └——————metadata               // meta data per image (camera information, etc)
+      |        |         └——————rgbs                   // rgb images
+      |        |         └——————split_block_train.json // split block informations
+      |        |         └——————train_all_meta.json    // all meta informations in train folder
+      |        └——————val                              // val data with the same structure as train
+   ```
+
+If you wish to run the Mega-NeRF algorithm, you will need to create masks prior to the training or evaluation. Please refer to [this doc](./docs/mega_nerf_mask_creation.md) for more details. You can download other Mega-NeRF benchmarks following [this doc](./docs/download_and_process_mega.md).
 
 </details>
 
@@ -132,7 +149,7 @@ If you are interested in processing the raw waymo data on your own, please refer
 We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models, which should be downloaded from the previous section 4.1.
 
 ```bash
-bash scripts/eval_trained_models.sh
+bash scripts/eval_trained_models.sh  # for the Mega-NeRF algorithm
 # The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
 ```
 The sample output log by running this script can be found at [docs/sample_logs/eval_trained_models.txt](docs/sample_logs/eval_trained_models.txt).
@@ -140,22 +157,7 @@ The sample output log by running this script can be found at [docs/sample_logs/e
 </details>
 
 <details>
-<summary> 4.3 Generate masks.</summary>
-
-Why should we generate masks? (1) Masks help us transfer camera poses + images to ray-based data. In this way, we can download the raw datasets quickly and train quickly as well. (2) Masks helps us manage the boundary of rays.
-
-Run the following script (choose one of the following two cmmands) to create masks:
-
-```bash
-bash scripts/create_cluster_mask.sh                      # for the mega dataset
-bash scripts/waymo_create_cluster_mask.sh                # for the waymo dataset
-# The output would be placed under the ${MASK_PATH}, which is set to data/mega/${DATASET_NAME}/building-pixsfm-grid-8 by default.
-```
-The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/create_cluster_mask.txt). The middle parts of the log have been deleted to save space.
-</details>
-
-<details>
-<summary> 4.4 Train sub-modules.</summary>
+<summary> 4.3 Train sub-modules.</summary>
 
 Run the following commands to train the sub-module (the block):
 ```bash
@@ -167,7 +169,7 @@ The sample output log by running this script can be found at [docs/sample_logs/c
 </details>
 
 <details>
-<summary> 4.5 Merge modules.</summary>
+<summary> 4.4 Merge modules.</summary>
 
 Run the following commands to merge the trained modules to a unified model:
 ```bash

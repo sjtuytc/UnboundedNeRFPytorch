@@ -230,6 +230,24 @@ def visualize_origin(train_origins, val_origins, block_info=None, radius=2, visu
     # o3d.visualization.draw_geometries(draw_list)
 
 
+def extract_cam_idx(train_meta):
+    cam_idx=[]
+    for meta in train_meta:
+        img_info=train_meta[meta]
+        if img_info['cam_idx'] not in cam_idx:
+            cam_idx.append(img_info['cam_idx'])
+    return sorted(cam_idx)
+
+
+def extract_img_each_idx(idx,train_meta,train_split_meta):
+    imgs=[]
+    for block in train_split_meta:
+        for element in train_split_meta[block]['elements']:
+            if train_meta[element[0]]['cam_idx']==idx:
+                if element[0] not in imgs:
+                    imgs.append(element[0])
+    return imgs
+
 if __name__ == "__main__":
     args = get_hparams()
     print(args)
@@ -276,3 +294,15 @@ if __name__ == "__main__":
         # block_json
         visualize_origin(train_origins, val_origins, block_info=block_train_json, radius=args['radius'],
                          visual_Block=args['visual_Block'])
+    
+    cam_idxes=extract_cam_idx(train_meta)
+    print(f"There are {len(cam_idxes)} cameras. ")
+    cam_save_path = os.path.join(root_dir, "cam_info.json")
+    cam_imgs={}
+    for idx in cam_idxes:
+        cam_imgs[idx]=extract_img_each_idx(idx, train_meta, split_train_results)
+        with open(cam_save_path, "w") as fp:
+            json.dump(cam_imgs, fp)
+            fp.close()
+    print(f"The camera information has been saved in the path of {cam_save_path}.")
+    print("All done.")
