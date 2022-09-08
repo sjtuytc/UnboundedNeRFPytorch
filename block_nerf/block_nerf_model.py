@@ -82,9 +82,8 @@ class Block_NeRF(nn.Module):
                  in_channel_xyz=60, in_channel_dir=24,
                  in_channel_exposure=8,  # exposure只有一维，而dir有三维
                  in_channel_appearance=32,
-                 # in_channel_transient=16,
-
-                 ):
+                 add_apperance=True,
+                 add_exposure=False):
         # 输入：[xyz60,dir24,exposure24,appearance24]
         super(Block_NeRF, self).__init__()
         self.D = D
@@ -94,6 +93,8 @@ class Block_NeRF(nn.Module):
         self.in_channel_dir = in_channel_dir
         self.in_channel_exposure = in_channel_exposure
         self.in_channel_appearance = in_channel_appearance
+        self.add_appearance = add_apperance
+        self.add_exposure = add_exposure
         # self.in_channel_transient = in_channel_transient
 
         for i in range(D):
@@ -107,10 +108,15 @@ class Block_NeRF(nn.Module):
             setattr(self, f'xyz_encoding_{i + 1}', layer)
         self.xyz_encoding_final = nn.Linear(W, W)
 
+        input_channel = W + in_channel_dir
+        if add_apperance:
+            input_channel += in_channel_appearance
+        if add_exposure:
+            input_channel += in_channel_exposure
         # 3层128
         self.dir_encoding = nn.Sequential(  # RGB由dir,Exposure,Appearance决定
             nn.Linear(
-                W + in_channel_dir + in_channel_appearance + in_channel_exposure,
+                input_channel,
                 W // 2
             ), nn.ReLU(True),
             nn.Linear(W // 2, W // 2), nn.ReLU(True),
@@ -138,8 +144,13 @@ class Block_NeRF(nn.Module):
             return static_sigma
 
         xyz_feature = self.xyz_encoding_final(xyz)
-        dir_encoding = self.dir_encoding(
-            torch.cat([xyz_feature, input_dir, input_exp, input_appear], dim=-1))
+        input_xyz_feature = torch.cat([xyz_feature, input_dir], dim=-1)
+        if self.add_exposure:
+            input_xyz_feature = torch.cat([input_xyz_feature, input_exp], dim=-1)
+        if self.add_appearance:
+            input_xyz_feature = torch.cat([input_xyz_feature, input_appear], dim=-1)
+        
+        dir_encoding = self.dir_encoding(input_xyz_feature)
 
         static_rgb = self.static_rgb(dir_encoding)
         static_rgb_sigma = torch.cat([static_rgb, static_sigma], dim=-1)
