@@ -47,9 +47,8 @@ The other features of this project would be:
 
 - [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page!
+- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The general NeRF QQ big group is 706949479 (300+ friends are already in this group). The contributors of this project are listed at the bottom of this page.
 
-- [x] **Chinese community.** We will host regular Chinese tutorials and provide hands-on videos on general NeRF and building your custom NeRFs in the wild and in the city. Welcome to add my Wechat if you have a Wechat.
 
 Hope our efforts could help your research or projects!
 
@@ -85,7 +84,6 @@ Hope our efforts could help your research or projects!
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
-   pip install -r requirements.txt
    conda install pytorch-scatter -c pyg  # or install via https://github.com/rusty1s/pytorch_scatter
    ```
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
@@ -93,7 +91,7 @@ Hope our efforts could help your research or projects!
 
 ## 4. Large-scale NeRF on the public datasets
 
-**We provide implementations for two algorithms: Block-NeRF and Mega-NeRF.** Most of the Mega-NeRF implementations is from [the official Mega-NeRF repo](https://github.com/cmusatyalab/mega-nerf) while we support [Waymo dataset training](https://waymo.com/intl/zh-cn/research/block-nerf/), visualizations and fix some Mega-NeRF bugs.
+**We provide implementations for two algorithms: Block-NeRF and Mega-NeRF.** Most of the Mega-NeRF implementations is from [the official Mega-NeRF repo](https://github.com/cmusatyalab/mega-nerf) while we support [Waymo dataset training](https://waymo.com/intl/zh-cn/research/block-nerf/), visualizations and fix some Mega-NeRF bugs. In the following, the Mega-NeRF commands are commented to prevent confusions.
 
 **We provide useful debugging commands in many scripts.** Debug commands require a single GPU card only and may run slower than the standard commands. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
 
@@ -117,10 +115,7 @@ What you should know before downloading the data:
 
    (2) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders.
 
-Download and preprocess all of the data and pretrained models via the following commands:
-   ```
-   bash data_proprocess/download_waymo.sh  // download waymo datasets
-   ```
+Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) and [pretrained models](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines.
 
 If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
 
@@ -149,33 +144,28 @@ If you wish to run the Mega-NeRF algorithm, you will need to create masks prior 
 We recommand you to eval the pretrained models first before you train the models. In this way, you can quickly see the results of our provided models and help you rule out many environmental issues. Run the following script to eval the pre-trained models, which should be downloaded from the previous section 4.1.
 
 ```bash
-bash scripts/eval_trained_models.sh  # for the Mega-NeRF algorithm
-# The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default.
+bash scripts/block_nerf_eval.sh
+# bash scripts/mega_nerf_eval.sh  # for the Mega-NeRF algorithm. The rendered images would be placed under ${EXP_FOLDER}, which is set to data/mega/${DATASET_NAME}/exp_logs by default. The sample output log by running this script can be found at [docs/sample_logs/mega_nerf_eval.txt](docs/sample_logs/mega_nerf_eval.txt).
 ```
-The sample output log by running this script can be found at [docs/sample_logs/eval_trained_models.txt](docs/sample_logs/eval_trained_models.txt).
 
 </details>
 
 <details>
 <summary> 4.3 Train sub-modules.</summary>
 
-Run the following commands to train the sub-module (the block):
+Run the following commands to train the sub-modules (the blocks):
 ```bash
-bash scripts/train_sub_modules.sh SUBMODULE_INDEX         # for the mega dataset
-bash scripts/waymo_train_sub_modules.sh SUBMODULE_INDEX   # for the waymo dataset
-# SUBMODULE_INDEX is the index of the submodule.
-```
-The sample output log by running this script can be found at [docs/sample_logs/create_cluster_mask.txt](docs/sample_logs/train_sub_modules.txt). You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
-</details>
+export BLOCK_INDEX=0
+bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Block-NeRF algorithm. The training tensorboard log is at the logs/. Using "tensorboard dev --logdir logs/" to see the tensorboard log. 
 
-<details>
-<summary> 4.4 Merge modules.</summary>
+# bash scripts/mega_nerf_train_sub_modules.sh BLOCK_INDEX         # For the Mega-NeRF algorithm. The sample training log is at[docs/sample_logs/mega_nerf_train_sub_modules.txt](docs/sample_logs/mega_nerf_train_sub_modules.txt) . You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
 
-Run the following commands to merge the trained modules to a unified model:
-```bash
-bash scripts/merge_sub_modules.sh
+# If you are running the Mega-NeRF algorithm, you need to merge the trained modules:
+# ```bash
+# bash scripts/merge_sub_modules.sh
+# ```
+# The sample log can be found at [docs/sample_logs/merge_sub_modules.txt](docs/sample_logs/merge_sub_modules.txt).
 ```
-After that, you can go to 4.1 to eval your trained modules. The sample log can be found at [docs/sample_logs/merge_sub_modules.txt](docs/sample_logs/merge_sub_modules.txt).
 </details>
 
 ## 5. Build your custom large-scale NeRF
@@ -219,18 +209,6 @@ After that, you can go to 4.1 to eval your trained modules. The sample log can b
 
 
 ## 6. Citations & acknowledgements
-
-You may cite this repo to better convince the reviewers about the reproducibility of your paper. If this repo helps you, please cite it as:
-```
-@software{Zhao_PytorchBlockNeRF_2022,
-author = {Zhao, Zelin and Jia, Jiaya},
-month = {8},
-title = {{PytorchBlockNeRF}},
-url = {https://github.com/dvlab-research/BlockNeRFPytorch},
-version = {0.0.1},
-year = {2022}
-}
-```
 
 The original paper Block-NeRF and Mega-NeRF can be cited as:
 

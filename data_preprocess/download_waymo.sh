@@ -1,2 +1,2 @@
-gdown --id 1U7wcE5r-kWtUBscljjTn6q18E8E8kJTd
-unzip pytorch_block_nerf_dataset.zip
+gdown --id 1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9
+gdown --id 1O7uzcPBQHNAcmAcmcS6TRbLqiIDE3D0y # ckpts, will be updated at next time
