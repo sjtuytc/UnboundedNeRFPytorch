@@ -203,33 +203,6 @@ def extract_origins(meta):
     return origins
 
 
-def visualize_origin(train_origins, val_origins, block_info=None, radius=2, visual_Block=True):
-    coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0., 0., 0.])
-    train_pcd = o3d.geometry.PointCloud()
-    train_pcd.points = o3d.utility.Vector3dVector(train_origins)
-    train_pcd.paint_uniform_color([0, 1, 0])
-    val_pcd = o3d.geometry.PointCloud()
-    val_pcd.points = o3d.utility.Vector3dVector(val_origins)
-    val_pcd.paint_uniform_color([1, 0, 0])
-
-    print(train_pcd, val_pcd)
-
-    draw_list = [train_pcd, val_pcd, coord_frame]
-
-    if visual_Block:
-        if block_info != None:
-            for block in block_info:
-                print(f"{block} has {len(block_info[block]['elements'])} images!")
-                block = block_info[block]
-                pos = np.array(block['centroid'][1])
-                sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius, resolution=10)
-                sphere = o3d.geometry.LineSet.create_from_triangle_mesh(sphere)  # 网格
-                sphere.translate(pos)  # 首先与第一维对齐
-                sphere.paint_uniform_color((random.random(), random.random(), random.random()))
-                draw_list.append(sphere)
-    # o3d.visualization.draw_geometries(draw_list)
-
-
 def extract_cam_idx(train_meta):
     cam_idx=[]
     for meta in train_meta:
@@ -292,8 +265,6 @@ if __name__ == "__main__":
         val_origins = extract_origins(val_meta)
         # 11269,3
         # block_json
-        visualize_origin(train_origins, val_origins, block_info=block_train_json, radius=args['radius'],
-                         visual_Block=args['visual_Block'])
     
     cam_idxes=extract_cam_idx(train_meta)
     print(f"There are {len(cam_idxes)} cameras. ")
