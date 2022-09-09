@@ -6,7 +6,7 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 # [CVPR22Oral] Block-NeRF: Scalable Large Scene Neural View Synthesis
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## 1. Introduction
@@ -280,11 +280,14 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
-  <tr>
-    <td align="center"><a href="https://sjtuytc.github.io/"><img src="https://avatars.githubusercontent.com/u/31123348?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Zelin Zhao</b></sub></a><br /><a href="https://github.com/dvlab-research/BlockNeRFPytorch/commits?author=sjtuytc" title="Code">💻</a> <a href="#maintenance-sjtuytc" title="Maintenance">🚧</a></td>
-    <td align="center"><a href="https://github.com/SEUleaderYang"><img src="https://avatars.githubusercontent.com/u/55042050?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EZ-Yang</b></sub></a><br /><a href="https://github.com/dvlab-research/BlockNeRFPytorch/commits?author=SEUleaderYang" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/Alex-Alison-Zhang"><img src="https://avatars.githubusercontent.com/u/71915735?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Alex-Zhang</b></sub></a><br /><a href="https://github.com/dvlab-research/BlockNeRFPytorch/issues?q=author%3AAlex-Alison-Zhang" title="Bug reports">🐛</a></td>
-  </tr>
+  <tbody>
+    <tr>
+      <td align="center"><a href="https://sjtuytc.github.io/"><img src="https://avatars.githubusercontent.com/u/31123348?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Zelin Zhao</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/commits?author=sjtuytc" title="Code">💻</a> <a href="#maintenance-sjtuytc" title="Maintenance">🚧</a></td>
+      <td align="center"><a href="https://github.com/SEUleaderYang"><img src="https://avatars.githubusercontent.com/u/55042050?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EZ-Yang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/commits?author=SEUleaderYang" title="Code">💻</a></td>
+      <td align="center"><a href="https://github.com/Alex-Alison-Zhang"><img src="https://avatars.githubusercontent.com/u/71915735?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Alex-Zhang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AAlex-Alison-Zhang" title="Bug reports">🐛</a></td>
+      <td align="center"><a href="https://fanlu97.github.io/"><img src="https://avatars.githubusercontent.com/u/45007531?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Fan Lu</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AFanLu97" title="Bug reports">🐛</a></td>
+    </tr>
+  </tbody>
 </table>
 
 <!-- markdownlint-restore -->

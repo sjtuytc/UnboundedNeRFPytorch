@@ -32,10 +32,19 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "FanLu97",
+      "name": "Fan Lu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/45007531?v=4",
+      "profile": "https://fanlu97.github.io/",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
-  "projectName": "BlockNeRFPytorch",
+  "projectName": "LargeScaleNeRFPytorch",
   "projectOwner": "dvlab-research",
   "repoType": "github",
   "repoHost": "https://github.com",
