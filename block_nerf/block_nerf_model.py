@@ -56,7 +56,7 @@ class InterPosEmbedding(nn.Module):  # 给位置编码
         return torch.cat(out, -1)
 
 
-class PosEmbedding(nn.Module):  # 给方向编码
+class PosEmbedding(nn.Module):
     def __init__(self, N_freqs):
         """
         Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
@@ -95,7 +95,6 @@ class Block_NeRF(nn.Module):
         self.in_channel_appearance = in_channel_appearance
         self.add_appearance = add_apperance
         self.add_exposure = add_exposure
-        # self.in_channel_transient = in_channel_transient
 
         for i in range(D):
             if i == 0:

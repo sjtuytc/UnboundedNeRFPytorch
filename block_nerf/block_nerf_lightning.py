@@ -82,8 +82,6 @@ class Block_NeRF_System(LightningModule):
                                         near=self.hparams['near'],
                                         far=self.hparams['far'])
 
-        # dataset = WaymoDataset(root_dir="../data/WaymoDataset", split='train',block='block_0')
-
     def configure_optimizers(self):
         self.optimizer = get_optimizer(self.hparams, self.models_to_train)
         scheduler = get_scheduler(self.hparams, self.optimizer)
@@ -120,7 +118,7 @@ class Block_NeRF_System(LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_nb):#每一个epoch校验一次
+    def validation_step(self, batch, batch_nb):  # validate at each epoch
         rays, rgbs, ts = batch['rays'].squeeze(), batch['rgbs'].squeeze(), batch['ts'].squeeze()
         W,H=batch['w_h']
         results = self(rays, ts)

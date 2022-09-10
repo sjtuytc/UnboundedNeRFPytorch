@@ -231,7 +231,7 @@ The original paper Block-NeRF and Mega-NeRF can be cited as:
 }
 ```
 
-We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO), [Mega-NeRF](https://github.com/cmusatyalab/mega-nerf), and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
+We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO), [Mega-NeRF](https://github.com/cmusatyalab/mega-nerf), [nerf-pl](https://github.com/kwea123/nerf_pl) and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):

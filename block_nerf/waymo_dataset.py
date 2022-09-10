@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 import json
 from kornia import create_meshgrid
 from tqdm import tqdm
+import pdb
 
 
 def get_ray_directions(H, W, K):
@@ -81,15 +82,16 @@ class WaymoDataset(Dataset):
         self.read_json()
 
     def read_json(self):
-        # train/val/test/compose
         if self.split == "test" or self.split=="compose":  # test stage use the data in train.json
-            with open(os.path.join(self.root_dir, f'train/train_all_meta.json'), 'r') as fp:
-                self.meta = json.load(fp)
+            # with open(os.path.join(self.root_dir, f'train/train_all_meta.json'), 'r') as fp:
+            #     self.meta = json.load(fp)
+            self.meta = torch.load(os.path.join(self.root_dir, f'train/train_all_meta.pt'))
             with open(os.path.join(self.root_dir, f'train/split_block_train.json'), 'r') as fp:
                 self.block_split_info = json.load(fp)
         else:
-            with open(os.path.join(self.root_dir, f'{self.split}/{self.split}_all_meta.json'), 'r') as fp:
-                self.meta = json.load(fp)
+            # with open(os.path.join(self.root_dir, f'{self.split}/{self.split}_all_meta.json'), 'r') as fp:
+            #     self.meta = json.load(fp)
+            self.meta = torch.load(os.path.join(self.root_dir, f'{self.split}/{self.split}_all_meta.pt'))
             with open(os.path.join(self.root_dir, f'{self.split}/split_block_{self.split}.json'), 'r') as fp:
                 self.block_split_info = json.load(fp)
 
@@ -108,16 +110,16 @@ class WaymoDataset(Dataset):
                 img_info = self.meta[img_idx[0]]
                 self.image_path.append(img_info['image_name'])
                 exposure = torch.tensor(img_info['equivalent_exposure'])
-                c2w = torch.FloatTensor(img_info['transform_matrix'])
+                c2w = torch.FloatTensor(img_info['c2w'].float())
                 self.c2w[img_idx[0]] = c2w
 
-                width = img_info['width'] // self.img_downscale
-                height = img_info['height'] // self.img_downscale
+                width = img_info['W'] // self.img_downscale
+                height = img_info['H'] // self.img_downscale
 
                 # img = Image.open(os.path.join(
                 #     self.root_dir, 'images', img_info['image_name'])).convert('RGB')
                 img = Image.open(os.path.join(
-                    self.root_dir, 'train', 'rgbs', img_info['image_name'])).convert('RGB')
+                    self.root_dir, 'train', 'rgbs', img_info['image_name'] + ".png")).convert('RGB')
                 if self.img_downscale != 1:
                     img = img.resize((width, height),
                                      Image.Resampling.LANCZOS)  # cv2.imshow("123.png",cv2.cvtColor(np.array(img),cv2.COLOR_BGR2RGB)),cv2.waitKey()
@@ -136,7 +138,7 @@ class WaymoDataset(Dataset):
                 directions = get_ray_directions(height, width, K)
                 rays_o, rays_d = get_rays(directions, c2w)
 
-                # 求半径
+                # calculate the radius
                 dx_1 = torch.sqrt(
                     torch.sum((rays_d[:-1, :, :] - rays_d[1:, :, :]) ** 2, -1))
                 dx = torch.cat([dx_1, dx_1[-2:-1, :]], 0)
@@ -216,14 +218,15 @@ class WaymoDataset(Dataset):
             print("Basic image is {0}".format(img_name))
             img_info = self.meta[img_name]
             exposure = torch.tensor(img_info['equivalent_exposure'])
-            c2w = torch.FloatTensor(img_info['transform_matrix'])
 
-            width = img_info['width'] // self.img_downscale
-            height = img_info['height'] // self.img_downscale
+            c2w = torch.FloatTensor(img_info['c2w'].float())
+
+            width = img_info['W'] // self.img_downscale
+            height = img_info['H'] // self.img_downscale
 
             if self.split == 'val':
                 img = Image.open(os.path.join(
-                    self.root_dir, 'val', 'rgbs', img_info['image_name'])).convert('RGB')
+                    self.root_dir, 'val', 'rgbs', img_info['image_name'] + ".png")).convert('RGB')
                 if self.img_downscale != 1:
                     img = img.resize((width, height),
                                      Image.Resampling.LANCZOS)  # cv2.imshow("123.png",cv2.cvtColor(np.array(img),cv2.COLOR_BGR2RGB)),cv2.waitKey()

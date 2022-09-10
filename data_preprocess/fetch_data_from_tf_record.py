@@ -110,7 +110,6 @@ def handle_one_record(tfrecord, train_index, val_index):
         equivalent_exposure = float(batch["equivalent_exposure"])
         height, width = int(batch["height"]), int(batch["width"])
         intrinsics = tf.sparse.to_dense(batch["intrinsics"]).numpy().tolist()
-
         ray_origins = tf.sparse.to_dense(batch["ray_origins"]).numpy().reshape(height, width, 3)
         ray_dirs = tf.sparse.to_dense(batch["ray_dirs"]).numpy().reshape(height, width, 3)
 
@@ -133,7 +132,7 @@ def handle_one_record(tfrecord, train_index, val_index):
         meta_data_dict = {
             'W': width,
             'H': height,
-            "intrinsics": torch.tensor(intrinsics + [width * 0.5, height * 0.5]),
+            "intrinsics": torch.tensor(intrinsics),
             "c2w": torch.tensor(c2w_matrix),
             'image_name': image_name,
             "cam_idx": cam_idx,
