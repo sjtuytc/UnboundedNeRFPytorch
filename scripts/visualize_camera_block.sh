@@ -1,0 +1,1 @@
+python data_preprocess/visualize_cameras.py --data_path data/samples/block_0 --multi_scale

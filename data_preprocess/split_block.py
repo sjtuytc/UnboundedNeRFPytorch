@@ -18,7 +18,7 @@ def get_hparams():
     parser.add_argument('--radius', type=float, default=0.3,
                         help='The radius of a block')
     parser.add_argument('--overlap', type=float,
-                        default=0.5, help='overlap each block')
+                        default=0.5, help='overlap each block'0)
     parser.add_argument('--visualization', type=bool, default=True,
                         help="Whether visualize the split results")
     parser.add_argument('--visual_Block', type=bool, default=False,
