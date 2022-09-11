@@ -1,11 +1,13 @@
 import glob
 import os
 import json
+from turtle import onkey
 import numpy as np
 import argparse
 from collections import defaultdict
 import open3d as o3d
 import random
+import copy
 import pdb
 import torch
 
@@ -221,6 +223,15 @@ def extract_img_each_idx(idx,train_meta,train_split_meta):
                     imgs.append(element[0])
     return imgs
 
+
+def transfer_pt_to_json(pt_meta):
+    new_dict = copy.deepcopy(pt_meta)
+    for one_key in new_dict:
+        new_dict[one_key]['intrinsics'] = np.array(new_dict[one_key]['intrinsics']).tolist()
+        new_dict[one_key]['c2w'] = np.array(new_dict[one_key]['c2w']).tolist()
+        new_dict[one_key]['origin_pos'] = np.array(new_dict[one_key]['origin_pos']).tolist()
+    return new_dict
+
 if __name__ == "__main__":
     args = get_hparams()
     print(args)
@@ -234,7 +245,17 @@ if __name__ == "__main__":
     
     train_meta = torch.load(os.path.join(root_dir, 'train', 'train_all_meta.pt'))
     val_meta = torch.load(os.path.join(root_dir, 'val', 'val_all_meta.pt'))
-    
+
+    # rewrite to json following the convention
+    with open(os.path.join(root_dir, 'train', 'train_all_meta.json'), "w") as fp:
+        new_train_meta = transfer_pt_to_json(train_meta)
+        json.dump(new_train_meta, fp)
+        fp.close()
+    with open(os.path.join(root_dir, 'val', 'val_all_meta.json'), "w") as fp:
+        new_val_meta = transfer_pt_to_json(val_meta)
+        json.dump(new_val_meta, fp)
+        fp.close()
+
     print(
         f"Before spliting, there are {len(train_meta)} images for train and {len(val_meta)} images for val!")
     split_train_results, split_val_results = split_dataset(train_meta, val_meta, radius=args['radius'],
