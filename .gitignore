@@ -133,3 +133,4 @@ logs/
 logs/*
 ckpts/
 ckpts/*
+data
