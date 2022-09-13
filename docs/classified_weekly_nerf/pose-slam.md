@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - pose-slam ![Awesome](https://cdn.rawg
 =====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep4 - Sep10, 2022
+  - [PixTrack: Precise 6DoF Object Pose Tracking using NeRF Templates and Feature-metric Alignment](https://arxiv.org/abs/2209.03910) | [code]
+    > We present PixTrack, a vision based object pose tracking framework using novel view synthesis and deep feature-metric alignment. Our evaluations demonstrate that our method produces highly accurate, robust, and jitter-free 6DoF pose estimates of objects in RGB images without the need of any data annotation or trajectory smoothing. Our method is also computationally efficient making it easy to have multi-object tracking with no alteration to our method and just using CPU multiprocessing.
+## Aug28 - Sep3, 2022
+## Aug21 - Aug27, 2022
+## Previous weeks
 ## Aug21 - Aug27, 2022
   - [SCONE: Surface Coverage Optimization in Unknown Environments by Volumetric Integration](https://arxiv.org/abs/2208.10449) | [code]
     > Next Best View computation (NBV) is a long-standing problem in robotics, and consists in identifying the next most informative sensor position(s) for reconstructing a 3D object or scene efficiently and accurately. Like most current methods, we consider NBV prediction from a depth sensor. Learning-based methods relying on a volumetric representation of the scene are suitable for path planning, but do not scale well with the size of the scene and have lower accuracy than methods using a surface-based representation. However, the latter constrain the camera to a small number of poses. To obtain the advantages of both representations, we show that we can maximize surface metrics by Monte Carlo integration over a volumetric representation. Our method scales to large scenes and handles free camera motion: It takes as input an arbitrarily large point cloud gathered by a depth sensor like Lidar systems as well as camera poses to predict NBV. We demonstrate our approach on a novel dataset made of large and complex 3D scenes.

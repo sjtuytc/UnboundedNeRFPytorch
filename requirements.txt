@@ -17,3 +17,8 @@ matplotlib
 configargparse
 mdutils
 openpyxl
+kornia
+torch_optimizer
+test-tube
+gdown
+pytorch_lightning

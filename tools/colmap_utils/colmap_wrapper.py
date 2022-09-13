@@ -31,7 +31,6 @@ def run_colmap(basedir, match_type):
             '--image_path', os.path.join(basedir, 'source'),
             '--ImageReader.single_camera', '1',
             '--SiftExtraction.use_gpu', 'false'
-            # '--SiftExtraction.use_gpu', '0',
     ]
     joined_args = ' '.join(feature_extractor_args)
     os.system(joined_args)
@@ -42,10 +41,10 @@ def run_colmap(basedir, match_type):
     exhaustive_matcher_args = [
         'colmap', match_type, 
             '--database_path', os.path.join(basedir, 'database.db'), 
-            '--SiftMatching.use_gpu', 'false'
+            '--SiftMatching.use_gpu', 'false' # comment this line to use gpus, but a desktop is required
     ]
     joined_args = ' '.join(exhaustive_matcher_args)
-    print(joined_args)
+    print("Executing: ", joined_args)
     os.system(joined_args)
     # match_output = ( subprocess.check_output(exhaustive_matcher_args, universal_newlines=True) )
     # logfile.write(match_output)

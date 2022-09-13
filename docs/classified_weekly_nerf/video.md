@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep4 - Sep10, 2022
+## Aug28 - Sep3, 2022
+## Aug21 - Aug27, 2022
+## Previous weeks
+  - [﻿Plenoxels: Radiance Fields without Neural Networks, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
+    > We introduce Plenoxels (plenoptic voxels), a system for photorealistic view synthesis. Plenoxels represent a scene as a sparse 3D grid with spherical harmonics. This representation can be optimized from calibrated images via gradient methods and regularization without any neural components. On standard, benchmark tasks, Plenoxels are optimized two orders of magnitude faster than Neural Radiance Fields with no loss in visual quality.
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [Temporal View Synthesis of Dynamic Scenes through 3D Object Motion Estimation with Multi-Plane Images, ISMAR2022](https://arxiv.org/abs/2208.09463) | [***``[code]``***](https://github.com/NagabhushanSN95/DeCOMPnet)

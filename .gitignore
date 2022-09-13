@@ -127,7 +127,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-.data/
-.data/*
+data/
+data/*
 logs/
 logs/*
+ckpts/
+ckpts/*

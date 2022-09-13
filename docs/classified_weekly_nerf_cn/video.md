@@ -3,6 +3,12 @@
 ==================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
+## Sep4 - Sep10, 2022
+## Aug28 - Sep3, 2022
+## Aug21 - Aug27, 2022
+## Previous weeks
+  - [﻿Plenoxels：没有神经网络的辐射场, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
+    > 我们介绍了 Plenoxels（全光体素），一种用于照片级真实视图合成的系统。 Plenoxels 将场景表示为具有球谐函数的稀疏 3D 网格。这种表示可以通过梯度方法和正则化从校准图像中优化，而无需任何神经组件。在标准的基准任务中，Plenoxels 的优化速度比神经辐射场快两个数量级，而视觉质量没有损失。
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [通过多平面图像的 3D 对象运动估计动态场景的时间视图合成, ISMAR2022](https://arxiv.org/abs/2208.09463) | [***``[code]``***](https://github.com/NagabhushanSN95/DeCOMPnet)

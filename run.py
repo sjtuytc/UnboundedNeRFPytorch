@@ -580,7 +580,7 @@ if __name__=='__main__':
     parser = config_parser()
     args = parser.parse_args()
     cfg = mmcv.Config.fromfile(args.config)
-
+    
     # init enviroment
     if torch.cuda.is_available():
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -624,7 +624,6 @@ if __name__=='__main__':
         np.savez_compressed(args.export_coarse_only, alpha=alpha, rgb=rgb)
         print('done')
         sys.exit()
-
     # train
     if not args.render_only:
         train(args, cfg, data_dict)

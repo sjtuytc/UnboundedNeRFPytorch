@@ -1,25 +1,17 @@
-from turtle import exitonclick
 import numpy as np
 import datetime, os
-from base64 import decodestring
 import cv2
 import os
-import json
 import pdb
 import glob
 import tensorflow as tf
 import torch
 import glob
 import os
-import json
 import numpy as np
 import torch
 from kornia import create_meshgrid
-from typing import Tuple
-from numpy.linalg import tensorsolve
 import pdb
-import numpy.linalg as la
-import scipy.linalg as spla
 from tqdm import tqdm
 
 
@@ -81,7 +73,7 @@ def get_rotate_one_image(cam_ray_dir, world_ray_dir):
     R[2:3, :] = r789.T
 
     R_loss = world_ray_dir - cam_ray_dir @ R.T
-    print(f"Pose loss:\t{np.absolute(R_loss).mean()}")
+    # print(f"Pose loss:\t{np.absolute(R_loss).mean()}")  # should < 0.01
     return R.tolist()
 
 
@@ -105,8 +97,7 @@ def handle_one_record(tfrecord, train_index, val_index):
         index = val_index
         val_index += 1
     
-    for idx, batch in enumerate(dataset_map):
-        print(f"\tLoading the {idx + 1}th image...")
+    for batch in dataset_map:
         image_name = str(int(batch["image_hash"]))
 
         imagestr = batch["image"]
@@ -119,7 +110,6 @@ def handle_one_record(tfrecord, train_index, val_index):
         equivalent_exposure = float(batch["equivalent_exposure"])
         height, width = int(batch["height"]), int(batch["width"])
         intrinsics = tf.sparse.to_dense(batch["intrinsics"]).numpy().tolist()
-
         ray_origins = tf.sparse.to_dense(batch["ray_origins"]).numpy().reshape(height, width, 3)
         ray_dirs = tf.sparse.to_dense(batch["ray_dirs"]).numpy().reshape(height, width, 3)
 
@@ -142,7 +132,7 @@ def handle_one_record(tfrecord, train_index, val_index):
         meta_data_dict = {
             'W': width,
             'H': height,
-            "intrinsics": torch.tensor(intrinsics + [width * 0.5, height * 0.5]),
+            "intrinsics": torch.tensor(intrinsics),
             "c2w": torch.tensor(c2w_matrix),
             'image_name': image_name,
             "cam_idx": cam_idx,
@@ -150,7 +140,12 @@ def handle_one_record(tfrecord, train_index, val_index):
             "origin_pos": torch.tensor(ray_origins[0][0].tolist()),
             "index": index
         }
-
+        if train_or_val:
+            train_meta[image_name] = meta_data_dict
+        else:
+            val_meta[image_name] = meta_data_dict
+        torch.save(train_meta, os.path.join(train_folder, "train_all_meta.pt"))
+        torch.save(val_meta, os.path.join(val_folder, "val_all_meta.pt"))
         torch.save(meta_data_dict, os.path.join(meta_folder, image_name + ".pt"))
     return train_index, val_index
 
@@ -183,6 +178,5 @@ if __name__ == "__main__":
     train_index = 0
     val_index = 0
     ori_waymo_data = sorted(glob.glob(os.path.join(waymo_root_p, "*")))
-    for idx, tfrecord in enumerate(ori_waymo_data):
-        print(f"Handling the {idx+1}/{len(ori_waymo_data)} tfrecord")
+    for idx, tfrecord in enumerate(tqdm(ori_waymo_data)):
         train_index, val_index = handle_one_record(tfrecord, train_index, val_index)

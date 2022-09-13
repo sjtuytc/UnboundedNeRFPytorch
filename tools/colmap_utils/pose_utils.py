@@ -150,7 +150,7 @@ def minify(basedir, factors=[], resolutions=[]):
 
 def gen_poses(basedir, match_type, factors=None):
     print("Force run COLMAP!")
-    run_colmap(basedir, match_type)
+    run_colmap(basedir, match_type)  # comment this line if you have run the colmap software offline
 
     # files_needed = ['{}.bin'.format(f) for f in ['cameras', 'images', 'points3D']]
     # if os.path.exists(os.path.join(basedir, 'sparse/0')):

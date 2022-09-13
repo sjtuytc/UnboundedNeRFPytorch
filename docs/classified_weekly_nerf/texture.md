@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - texture ![Awesome](https://cdn.rawgit
 ===================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep4 - Sep10, 2022
+  - [3D Textured Shape Recovery with Learned Geometric Priors](https://arxiv.org/abs/2209.03254) | [code]
+    > 3D textured shape recovery from partial scans is crucial for many real-world applications. Existing approaches have demonstrated the efficacy of implicit function representation, but they suffer from partial inputs with severe occlusions and varying object types, which greatly hinders their application value in the real world. This technical report presents our approach to address these limitations by incorporating learned geometric priors. To this end, we generate a SMPL model from learned pose prediction and fuse it into the partial input to add prior knowledge of human bodies. We also propose a novel completeness-aware bounding box adaptation for handling different levels of scales and partialness of partial scans.
+## Aug28 - Sep3, 2022
+## Aug21 - Aug27, 2022
+## Previous weeks
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
 ## Aug7 - Aug13, 2022
