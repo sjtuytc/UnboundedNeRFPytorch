@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - lighting ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep4 - Sep10, 2022
+## Aug28 - Sep3, 2022
+  - [Cross-Spectral Neural Radiance Fields, 3DV2022](https://arxiv.org/abs/2209.00648) | [code]
+    > We propose X-NeRF, a novel method to learn a Cross-Spectral scene representation given images captured from cameras with different light spectrum sensitivity, based on the Neural Radiance Fields formulation. X-NeRF optimizes camera poses across spectra during training and exploits Normalized Cross-Device Coordinates (NXDC) to render images of different modalities from arbitrary viewpoints, which are aligned and at the same resolution. Experiments on 16 forward-facing scenes, featuring color, multi-spectral and infrared images, confirm the effectiveness of X-NeRF at modeling Cross-Spectral scene representations.
+## Aug21 - Aug27, 2022
+## Previous weeks
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [Casual Indoor HDR Radiance Capture from Omnidirectional Images](https://arxiv.org/abs/2208.07903) | [code]
