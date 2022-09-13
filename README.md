@@ -15,7 +15,7 @@ This project aims for benchmarking several state-of-the-art large-scale neural f
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
 
-Our reproduced results of Block-NeRF:
+Our reproduced results of Block-NeRF (current PSNR: 24.3):
 
 ![test](https://user-images.githubusercontent.com/31123348/188263832-f2eaaaaf-a998-4428-adf9-57f176ca3a8d.gif)
 
@@ -53,7 +53,8 @@ The other features of this project would be:
 Hope our efforts could help your research or projects!
 
 ## 2. News
-- [2022.8.31] Training Mega-NeRF on the Waymo dataset.
+- [2022.9.19] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
+- [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
 - [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
 - [2022.8.17] Support classification in weekly NeRF.

@@ -131,7 +131,7 @@ class Block_NeRF_System(LightningModule):
             depth = visualize_depth(results[f'depth_fine'].view(H, W)) # (3, H, W)
             stack = torch.stack([img_gt, img, depth]) # (3, 3, H, W)
             #stack = torch.stack([img_gt, img])  # (3, 3, H, W)
-            #不用*255吗
+            # todo: recheck this, * 255?
             self.logger.experiment.add_images('val/GT_pred_depth',
                                                stack, self.global_step)
 

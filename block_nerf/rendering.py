@@ -1,19 +1,20 @@
 import torch
 from einops import rearrange, reduce, repeat
 import pdb
+from block_nerf.block_nerf_model import *
+from block_nerf.block_nerf_lightning import *
 
 
 def get_cone_mean_conv(t_samples, rays_o, rays_d, radii):
-    # 得到每一个圆台区域内的均值和方差
     # t_samples:1024x65  rays_o:1024,3   radii:1024,1
-    t0 = t_samples[..., :-1]  # 每个圆台区间的左侧
-    t1 = t_samples[..., 1:]  # 每个圆台区间的右侧
+    t0 = t_samples[..., :-1]  # left side
+    t1 = t_samples[..., 1:]  # right side
 
-    # 将圆台进行高斯近似
+    # gaussian approximation
     # eq-7
     t_μ = (t0 + t1) / 2
     t_σ = (t1 - t0) / 2
-    μ_t = t_μ + (2 * t_μ * t_σ ** 2) / (3 * t_μ ** 2 + t_σ ** 2)  # 真正的区间
+    μ_t = t_μ + (2 * t_μ * t_σ ** 2) / (3 * t_μ ** 2 + t_σ ** 2)  # the real interval
     # 1024 x 64
     σ_t = (t_σ ** 2) / 3 - \
           (4 / 15) * \
@@ -24,7 +25,7 @@ def get_cone_mean_conv(t_samples, rays_o, rays_d, radii):
                   (t_μ ** 2) / 4 + (5 / 12) * t_σ ** 2 - 4 /
                   15 * (t_σ ** 4) / (3 * t_μ ** 2 + t_σ ** 2)
           )
-    # 求得eq8
+    # calculate following the eq. 8
     # mean = torch.unsqueeze(rays_d, dim=-2) * torch.unsqueeze(μ_t, dim=-1)  # [B, 1, 3]*[B, N, 1] = [B, N, 3]
     rays_d = rearrange(rays_d, 'n1 c -> n1 1 c')
     rays_o = rearrange(rays_o, 'n1 c -> n1 1 c')
@@ -46,11 +47,8 @@ def get_cone_mean_conv(t_samples, rays_o, rays_d, radii):
 
 def sample_pdf(bins, weights, N_importance, alpha=1e-2):
     N_rays, N_samples_ = weights.shape
-
-    # 要对weight进行blurpool
     weights_pad = torch.cat(
         [weights[..., :1], weights, weights[..., -1:]], dim=-1)
-    # 第一个元素的max对应就是自己本身
     weights_max = torch.maximum(weights_pad[..., :-1], weights_pad[..., 1:])
     weights_blur = 0.5 * (weights_max[..., :-1] + weights_max[..., 1:])
 
@@ -68,7 +66,7 @@ def sample_pdf(bins, weights, N_importance, alpha=1e-2):
     u = u.expand(N_rays, N_importance + 1)
     u = u.contiguous()
     inds = torch.searchsorted(cdf, u, right=True)
-    below = torch.clamp_min(inds - 1, 0)  # inds_1中小于0的元素全部赋为0
+    below = torch.clamp_min(inds - 1, 0)
     above = torch.clamp_max(inds, N_samples_)
 
     inds_sampled = rearrange(torch.stack(
@@ -85,13 +83,11 @@ def sample_pdf(bins, weights, N_importance, alpha=1e-2):
 
     samples = bins_g[..., 0] + (u - cdf_g[..., 0]) / \
               denom * (bins_g[..., 1] - bins_g[..., 0])
-    # 采样点
     return samples
 
 
 def volume_rendering(rgbs=None, sigmas=None, z_vals=None, μ_t=None, type="train"):
-    # 返回每个区间的权重
-    deltas = z_vals[:, 1:] - z_vals[:, :-1]  # 把每一个圆台的中心看作是采样点?????
+    deltas = z_vals[:, 1:] - z_vals[:, :-1]
     # delta_inf = 1e10 * torch.ones_like(deltas[:, :1])  # (N_rays, 1) the last delta is infinity
     # deltas = torch.cat([deltas, delta_inf], -1)  # (N_rays, N_samples_)
     noise = torch.randn_like(sigmas)
@@ -102,19 +98,20 @@ def volume_rendering(rgbs=None, sigmas=None, z_vals=None, μ_t=None, type="train
         torch.cat([torch.ones_like(alphas[:, :1]), 1 -
                    alphas + 1e-10], -1)  # （1,1-a1,1-a2）
     Ti = torch.cumprod(alphas_shifted[:, :-1], -1)
+    # cumprod: cumulated product, [:-1] is because eq3's upper index is i-1
     weights = alphas * Ti  # (N_rays, N_samples_)
-    # cumprod:返回元素的累计乘积 取[:-1]是因为eq3的上标是i-1
+    
     # (N_rays), the accumulated opacity along the rays
     weights_sum = reduce(weights, 'n1 n2 -> n1', 'sum')
     # ∑Ti*(1-exp(-δσ))
     # equals "1 - (1-a1)(1-a2)...(1-an)" mathematically
     results = {}
-    results['transmittance'] = Ti  # 用于和Visibility网络做loss
+    results['transmittance'] = Ti  # calculate the loss of the visibility network
     results['weights'] = weights
-    results['opacity'] = weights_sum  # 乘以颜色或者z_vals就是像素颜色或者深度
+    results['opacity'] = weights_sum
     results['z_vals'] = z_vals
 
-    if type == "test_coarse":  # 只需要weights！
+    if type == "test_coarse":
         return results
 
     # weight:1024,64
@@ -124,8 +121,7 @@ def volume_rendering(rgbs=None, sigmas=None, z_vals=None, μ_t=None, type="train
                      * rgbs, 'n1 n2 c -> n1 c', 'sum')
     # depth_map = reduce(weights * z_vals, 'n1 n2 -> n1', 'sum')
     depth_map = reduce(weights * μ_t, 'n1 n2 -> n1', 'sum')
-    # 深度图 深度图得用μ_t
-    # rgb_map += 1 - weights_sum.unsqueeze(1) 白色背景才需要
+    # rgb_map += 1 - weights_sum.unsqueeze(1) # only needed in the white map
 
     results[f'rgb'] = rgb_map
     results[f'depth'] = depth_map
@@ -142,26 +138,23 @@ def render_rays(models,
                 chunk=1024,
                 type="train",
                 use_disp=False):
-    #   rays:[1024,10] [rays_o,rays_d,radii,exposure,near,far]
+    # rays:[1024,10] [rays_o,rays_d,radii,exposure,near,far]
     N_rays = rays.shape[0]
     rays_o, rays_d, radii, exposure, near, far = torch.split(
         rays, [3, 3, 1, 1, 1, 1], dim=-1)
-    # 先进行Coarse网络的处理
+    # first handle the coarse network
     z_steps = torch.linspace(
-        0, 1, N_samples + 1, device=rays.device)  # 采样129个点，形成128个区域
-    # 因为要采样64个区域，所以要采样65个点
+        0, 1, N_samples + 1, device=rays.device)  # sample N_samples+1 points to form N_samples regions
 
     if not use_disp:  # use linear sampling in depth space
         z_vals = near * (1 - z_steps) + far * z_steps
-        # 2~6之间被分成了64个点：near+(far-near)*z_steps
     else:  # use linear sampling in disparity space
         # z_vals = 1 / (1 / near * (1 - z_steps) + 1 / far * z_steps)
         z_vals = torch.exp(torch.log(near) * (1 - z_steps) + torch.log(far) * z_steps)
 
     # z_vals = near + (far - near) * z_steps
-    z_vals_coarse = z_vals.expand(N_rays, N_samples + 1)  # 这句话有什么用
+    z_vals_coarse = z_vals.expand(N_rays, N_samples + 1)
 
-    #随机采样
     z_vals_mid = 0.5 * (z_vals_coarse[:, :-1] + z_vals_coarse[:, 1:])  # (N_rays, N_samples-1) interval mid points
     # get intervals between samples
     upper = torch.cat([z_vals_mid, z_vals[:, -1:]], -1)
@@ -170,36 +163,33 @@ def render_rays(models,
     perturb_rand = 1 * torch.rand_like(z_vals)
     z_vals_coarse = lower + (upper - lower) * perturb_rand
 
-    # 求粗采样阶段每个圆台区域的均值和方差
     μ_t_coarse, μ_coarse, diagE_coarse = get_cone_mean_conv(
         z_vals_coarse, rays_o, rays_d, radii)
     if type == "train":
-        # 进行位置编码
         IPE = embedding['IPE']
         PE = embedding['PE']
         appearance_encoding = embedding['appearance']
         #########
-        sample_coarse_encode = IPE(μ_coarse, diagE_coarse)  # 对位置进行编码
+        sample_coarse_encode = IPE(μ_coarse, diagE_coarse)
         sample_coarse_encode = rearrange(
             sample_coarse_encode, 'n1 n2 c -> (n1 n2) c')
         #########
-        dir_coarse_encode = PE(rays_d)  # 对方向进行编码
+        dir_coarse_encode = PE(rays_d)
         dir_coarse_encode = repeat(
             dir_coarse_encode, 'n1 c -> (n1 n2) c', n2=N_samples)
         #########
-        exp_encode = PE(exposure)  # 对曝光率进行编码
+        exp_encode = PE(exposure)
         exp_coarse_encode = repeat(
             exp_encode, 'n1 c -> (n1 n2) c', n2=N_samples)
-        # 外观嵌入向量
         appearance_encode = appearance_encoding(ts)  # [1024,32]
         appearance_coarse_encode = repeat(
             appearance_encode, 'n1 c -> (n1 n2) c', n2=N_samples)
 
         xyzdir_coarse_encode_f_σ = torch.cat(
             [sample_coarse_encode, dir_coarse_encode,
-             exp_coarse_encode, appearance_coarse_encode], dim=-1)  # fσ的输入
+             exp_coarse_encode, appearance_coarse_encode], dim=-1)  # fσ
         xyzdir_coarse_encode_f_v = torch.cat(
-            [sample_coarse_encode, dir_coarse_encode], dim=-1)  # fv的输入
+            [sample_coarse_encode, dir_coarse_encode], dim=-1)  # fv
 
         out_coarse_rgb_sigma = []
         out_coarse_visibility = []
@@ -211,7 +201,6 @@ def render_rays(models,
         out_coarse_rgb_sigma = rearrange(
             out_coarse_rgb_sigma, '(n1 n2) c -> n1 n2 c', n1=N_rays, n2=N_samples, c=4)
 
-        # if type == "train":  # 只有train才考虑coarse阶段的visibility
         for i in range(0, xyzdir_coarse_encode_f_v.shape[0], chunk):
             result = models['visibility_model'](
                 xyzdir_coarse_encode_f_v[i:i + chunk])
@@ -220,28 +209,24 @@ def render_rays(models,
         out_coarse_visibility = rearrange(out_coarse_visibility, '(n1 n2) c -> n1 n2 c', n1=N_rays, n2=N_samples,
                                           c=1)
 
-        rgbs_coarse = out_coarse_rgb_sigma[..., :3]  # 每一点的像素RGB
+        rgbs_coarse = out_coarse_rgb_sigma[..., :3]
         sigmas_coarse = out_coarse_rgb_sigma[..., 3]
-        # 先对coarse网络进行渲染
-        # 根据采样点进行渲染
         results_coarse = volume_rendering(
             rgbs_coarse, sigmas_coarse, z_vals_coarse, μ_t_coarse)
 
         ##################################
-        # 处理fine网络
-        # 首先逆采样
+        # handling the fine network
+        # inverse sampling
         z_vals_mid = 0.5 * (z_vals_coarse[:, :-1] + z_vals_coarse[:, 1:])
         z_vals_fine = sample_pdf(z_vals_mid, results_coarse['weights'][:, 1:-1].detach(),
-                                 N_importance)  # 要采样129个点
-        # 总共采样65+65个点 -> 130个点，形成129个圆台区域
+                                 N_importance)
         z_vals_fine = torch.sort(
             torch.cat([z_vals_coarse, z_vals_fine], -1), -1)[0]
         μ_t_fine, μ_fine, diagE_fine = get_cone_mean_conv(z_vals_fine, rays_o, rays_d, radii)
 
-        sample_fine_encode = IPE(μ_fine, diagE_fine)  # 对位置进行编码
+        sample_fine_encode = IPE(μ_fine, diagE_fine)
         sample_fine_encode = rearrange(
             sample_fine_encode, 'n1 n2 c -> (n1 n2) c')
-        # 拓展到65+65-1=129个圆台区域上
         dir_fine_encode = PE(rays_d)
         dir_fine_encode = repeat(
             dir_fine_encode, 'n1 c -> (n1 n2) c', n2=N_samples + N_importance + 1)
@@ -275,8 +260,6 @@ def render_rays(models,
 
         rgbs_fine = out_fine_rgb_sigma[..., :3]
         sigmas_fine = out_fine_rgb_sigma[..., 3]
-        # 先对coarse网络进行渲染
-        # 根据采样点进行渲染
         results_fine = volume_rendering(rgbs_fine, sigmas_fine, z_vals_fine, μ_t_fine)
 
         result = {}
@@ -291,15 +274,13 @@ def render_rays(models,
         # rearrange(results_fine['transmittance'],"n1 n2 -> n1 n2 1").shape
         return result
 
-    else:  # 如果是test和validation的时候
-        # 进行位置编码
+    else:  # for test and val
         IPE = embedding['IPE']
         PE = embedding['PE']
         appearance_encoding = embedding['appearance']
-        exp_encode = PE(exposure)  # 对曝光率进行编码
+        exp_encode = PE(exposure)
         appearance_encode = appearance_encoding(ts)  # [1024,32]
-        #########
-        sample_coarse_encode = IPE(μ_coarse, diagE_coarse)  # 对位置进行编码
+        sample_coarse_encode = IPE(μ_coarse, diagE_coarse)
         sample_coarse_encode = rearrange(
             sample_coarse_encode, 'n1 n2 c -> (n1 n2) c')
 
@@ -315,26 +296,19 @@ def render_rays(models,
             out_coarse_sigma, '(n1 n2) c -> n1 n2 c', n1=N_rays, n2=N_samples, c=1)
 
         sigmas_coarse = out_coarse_sigma.squeeze()
-        # 先对coarse网络进行渲染
-        # 根据采样点进行渲染
         results_coarse = volume_rendering(
-            sigmas=sigmas_coarse, z_vals=z_vals_coarse, type="test_coarse")  # 只需要result的weight进行采样
+            sigmas=sigmas_coarse, z_vals=z_vals_coarse, type="test_coarse")
 
         ##################################
-        # 处理fine网络
-        # 首先逆采样
-        #########
         z_vals_mid = 0.5 * (z_vals_coarse[:, :-1] + z_vals_coarse[:, 1:])
         z_vals_fine = sample_pdf(z_vals_mid, results_coarse['weights'][:, 1:-1].detach(),
-                                 N_importance)  # 要采样129个点
-        # 总共采样65+65个点 -> 130个点，形成129个圆台区域
+                                 N_importance)
         z_vals_fine = torch.sort(torch.cat([z_vals_coarse, z_vals_fine], -1), -1)[0]
         μ_t_fine, μ_fine, diagE_fine = get_cone_mean_conv(z_vals_fine, rays_o, rays_d, radii)
 
-        sample_fine_encode = IPE(μ_fine, diagE_fine)  # 对位置进行编码
+        sample_fine_encode = IPE(μ_fine, diagE_fine)
         sample_fine_encode = rearrange(
             sample_fine_encode, 'n1 n2 c -> (n1 n2) c')
-        # 拓展到65+65-1=129个圆台区域上
         dir_fine_encode = PE(rays_d)
         dir_fine_encode = repeat(
             dir_fine_encode, 'n1 c -> (n1 n2) c', n2=N_samples + N_importance + 1)
@@ -368,8 +342,6 @@ def render_rays(models,
 
         rgbs_fine = out_fine_rgb_sigma[..., :3]
         sigmas_fine = out_fine_rgb_sigma[..., 3]
-        # 先对coarse网络进行渲染
-        # 根据采样点进行渲染
         results_fine = volume_rendering(
             rgbs_fine, sigmas_fine, z_vals_fine, μ_t_fine)
 
@@ -377,8 +349,6 @@ def render_rays(models,
         result['rgb_fine'] = results_fine['rgb']
         result['depth_fine'] = results_fine['depth']
         result['transmittance_fine_vis'] = out_fine_visibility.squeeze()
-
-        # rearrange(results_fine['transmittance'],"n1 n2 -> n1 n2 1").shape
         return result
 
 
@@ -405,7 +375,7 @@ def test_train():
                          embedding=embedding,
                          rays=rays_test,
                          ts=ts_test)
-    print()
+    print(result)
 
 
 def test_test():
@@ -433,5 +403,4 @@ def test_test():
 
 
 if __name__ == "__main__":
-    from Block_NeRF import *
     test_train()

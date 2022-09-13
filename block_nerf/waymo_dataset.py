@@ -19,7 +19,7 @@ def get_ray_directions(H, W, K):
     directions = \
         torch.stack([(i - cx) / fx, -(j - cy) / fy, -
         torch.ones_like(i)], -1)  # (H, W, 3)
-    # 相机归一化平面与像素坐标系之间的转换
+    # normalized camera space to pixel space
     directions = directions / torch.norm(directions, dim=-1, keepdim=True)
     return directions
 
@@ -28,7 +28,7 @@ def get_rays(directions, c2w):
     # Rotate ray directions from camera coordinate to the world coordinate
     rays_d = directions @ c2w[:, :3].T  # (H, W, 3)
 
-    # 在directions便已归一化
+    # normalized before directions
     # rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
     # The origin of all rays is the camera origin in world coordinate
     rays_o = c2w[:, 3].expand(rays_d.shape)  # (H, W, 3)
@@ -37,20 +37,20 @@ def get_rays(directions, c2w):
 
 
 def find_idx_name(elements, img_name):
-    #   用于在element里面根据img_name找到其idx
+    #  image name to index
     for element in elements:
         if img_name in element:
             return element[1]
     return None
 
 def find_nearest_idx(img_source,block_elements,train_meta):
-    # 根据某个相机拍摄的图像找到当前block距离其最近的图像对应的idx
+    # fetch te closest image according to figure.
     cam_idx=img_source['cam_idx']
     distance = 1000
     img_idx=None
     img_nearest=None
     for element in block_elements:
-        if train_meta[element[0]]['cam_idx']==cam_idx:#如果是同一相机
+        if train_meta[element[0]]['cam_idx']==cam_idx:  # if this is the same camera
             distance_temp = np.linalg.norm(np.array(img_source['origin_pos']) - np.array(train_meta[element[0]]['origin_pos']))
             if distance_temp < distance:
                 distance = distance_temp
@@ -73,12 +73,11 @@ class WaymoDataset(Dataset):
         self.near = near
         self.far = far
         self.test_img_name = test_img_name
-
-        self.cam_begin=cam_begin#用于放置compose时的起点
+        
+        # cam_begin is the start location of the compose phase
+        self.cam_begin=cam_begin 
         self.cam_end=cam_end
-
         self.transform = transforms.ToTensor()
-
         self.read_json()
 
     def read_json(self):
@@ -121,8 +120,7 @@ class WaymoDataset(Dataset):
                 img = Image.open(os.path.join(
                     self.root_dir, 'train', 'rgbs', img_info['image_name'] + ".png")).convert('RGB')
                 if self.img_downscale != 1:
-                    img = img.resize((width, height),
-                                     Image.Resampling.LANCZOS)  # cv2.imshow("123.png",cv2.cvtColor(np.array(img),cv2.COLOR_BGR2RGB)),cv2.waitKey()
+                    img = img.resize((width, height), Image.Resampling.LANCZOS)
                 img = self.transform(img)  # (3,h,w)
                 img = img.view(3, -1).permute(1, 0)
                 self.all_rgbs.append(img)
@@ -151,7 +149,7 @@ class WaymoDataset(Dataset):
                     np.load(os.path.join(self.root_dir, "images", f"{img_idx[0]}_ray_origins.npy"))
                 )
                 '''
-                # 此处的rays_d已经经过归一化
+                # rays_d has been normalized
                 rays_d = rays_d.view(-1, 3)
                 rays_o = rays_o.view(-1, 3)
                 radii = radii.view(-1, 1)
@@ -180,7 +178,7 @@ class WaymoDataset(Dataset):
             self.N_frames = 10
             self.dy = np.linspace(0,0.2, self.N_frames)
 
-        elif self.split == "compose":#test只需要输入一个图片，compose需要输入两个位置，观察两位置之间的变化
+        elif self.split == "compose": # input two views with distances
             print(f"Now is inferencing the images between {self.cam_begin} and {self.cam_end} ...")
             self.img_info = self.meta[self.cam_begin]
             self.img_info_end = self.meta[self.cam_end]
@@ -203,9 +201,9 @@ class WaymoDataset(Dataset):
             if len(self.block_split_info[self.block]) > 5:
                 return 5
             else:
-                return len(self.block_split_info[self.block])  # only validate 8images
+                return len(self.block_split_info[self.block])  # only validate 8 images
 
-        return self.N_frames# test return the num of frames
+        return self.N_frames # test return the num of frames
 
     def __getitem__(self, idx):
         if self.split == 'train':
@@ -245,7 +243,7 @@ class WaymoDataset(Dataset):
             directions = get_ray_directions(height, width, K)
             rays_o, rays_d = get_rays(directions, c2w)
 
-            # 求半径
+            # calculate radius
             dx_1 = torch.sqrt(
                 torch.sum((rays_d[:-1, :, :] - rays_d[1:, :, :]) ** 2, -1))
             dx = torch.cat([dx_1, dx_1[-2:-1, :]], 0)
@@ -258,7 +256,6 @@ class WaymoDataset(Dataset):
                 np.load(os.path.join(self.root_dir, "images", f"{img_idx[0]}_ray_origins.npy"))
             )
             '''
-            # 此处的rays_d已经经过归一化
             rays_d = rays_d.view(-1, 3)
             rays_o = rays_o.view(-1, 3)
             radii = radii.view(-1, 1)
@@ -276,7 +273,7 @@ class WaymoDataset(Dataset):
                       "w_h": [width, height]}
             sample["rgbs"]=img
 
-        elif self.split=="test":#test
+        elif self.split=="test": #test
             img_info = self.meta[self.test_img_name]
             exposure = torch.tensor(img_info['equivalent_exposure'])
             c2w = torch.FloatTensor(img_info['transform_matrix'])
@@ -297,25 +294,22 @@ class WaymoDataset(Dataset):
             directions = get_ray_directions(height, width, K)
             rays_o, rays_d = get_rays(directions, c2w)
 
-            # 求半径
+            # calculate radius
             dx_1 = torch.sqrt(
                 torch.sum((rays_d[:-1, :, :] - rays_d[1:, :, :]) ** 2, -1))
             dx = torch.cat([dx_1, dx_1[-2:-1, :]], 0)
             radii = dx[..., None] * 2 / torch.sqrt(torch.tensor(12))
 
-            # 此处的rays_d已经经过归一化
+            # rays_d have been normalized
             rays_d = rays_d.view(-1, 3)
             rays_o = rays_o.view(-1, 3)
             radii = radii.view(-1, 1)
 
-            #img_idx=0 # 暂时缓冲一下
 
             img_idx=find_idx_name(self.block_split_info[self.block]['elements'],self.test_img_name)
 
             if img_idx==None:
                 print("It seems that the {0} doesn't belong to {1}".format(self.test_img_name,self.block))
-                # 该图像不属于当前Block
-                # 如果不属于，则找当前block离他最近的同一相机的idx
                 img_idx=find_nearest_idx(img_info,self.block_split_info[self.block]['elements'],self.meta)
 
 
@@ -332,8 +326,7 @@ class WaymoDataset(Dataset):
                       "w_h": [width, height]}
 
 
-        else:#compose
-            #composing的时候，两个相机之间的轨迹
+        else: #compose
             exposure = torch.tensor(self.img_info['equivalent_exposure'])
             c2w = torch.FloatTensor(self.img_info['transform_matrix'])
 
@@ -360,35 +353,18 @@ class WaymoDataset(Dataset):
             directions = get_ray_directions(height, width, K)
             rays_o, rays_d = get_rays(directions, c2w)
 
-            # 求半径
+            # calculare radius
             dx_1 = torch.sqrt(
                 torch.sum((rays_d[:-1, :, :] - rays_d[1:, :, :]) ** 2, -1))
             dx = torch.cat([dx_1, dx_1[-2:-1, :]], 0)
             radii = dx[..., None] * 2 / torch.sqrt(torch.tensor(12))
 
-            # 此处的rays_d已经经过归一化
             rays_d = rays_d.view(-1, 3)
             rays_o = rays_o.view(-1, 3)
             radii = radii.view(-1, 1)
 
-            #   注意，要改！！！，因为默认的block是block_0
-            img_idx = 0  # 暂时缓冲一下
-            '''
-            block_index=0
-            img_idx=None
-            while img_idx==None:
-                img_idx = find_idx_name(self.block_split_info[f"block_{block_index}"]['elements'], self.cam_begin)
-                block_index+=1
-            print(f"{self.cam_begin} is found at the block_{block_index}...")
-            
-            img_idx = find_idx_name(self.block_split_info[self.block]['elements'], self.cam_begin)
-            if img_idx==None:
-                print("It seems that the {0} doesn't belong to {1}".format(self.test_img_name,self.block))
-                # 该图像不属于当前Block
-                # 如果不属于，则找当前block离他最近的同一相机的idx
-                img_idx=find_nearest_idx(self.img_info,self.block_split_info[self.block]['elements'],self.meta)
-            '''
-
+            #   todo: change this because the default block is block 0
+            img_idx = 0
             rays_t = img_idx * torch.ones(len(rays_o), 1)
             rays = torch.cat([
                 rays_o, rays_d,
@@ -407,7 +383,7 @@ class WaymoDataset(Dataset):
 
 
 def test_train():
-    dataset = WaymoDataset(root_dir="../data/WaymoDataset",
+    dataset = WaymoDataset(root_dir="data/pytorch_waymo_dataset",
                            split='train', block='block_0', img_downscale=8)
     from torch.utils.data import DataLoader
 
@@ -425,7 +401,7 @@ def test_train():
 
 
 def test_val():
-    dataset = WaymoDataset(root_dir="../data/WaymoDataset",
+    dataset = WaymoDataset(root_dir="data/pytorch_waymo_dataset",
                            split='val', block='block_14', img_downscale=8)
     from torch.utils.data import DataLoader
 
@@ -438,7 +414,7 @@ def test_val():
 
 
 def test_test():
-    dataset = WaymoDataset(root_dir="../data/Ubuntu",
+    dataset = WaymoDataset(root_dir="data/pytorch_waymo_dataset",
                            split='test',
                            block='block_0', img_downscale=8,
                            test_img_name="729712596")
@@ -452,4 +428,4 @@ def test_test():
 
 
 if __name__ == "__main__":
-    test_test()
+    test_train()

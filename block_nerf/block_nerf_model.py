@@ -22,15 +22,15 @@ class BlockNeRFLoss(nn.Module):
         return loss
 
 
-class InterPosEmbedding(nn.Module):  # 给位置编码
+class InterPosEmbedding(nn.Module):
     def __init__(self, N_freqs=10):
         super(InterPosEmbedding, self).__init__()
         self.N_freqs = N_freqs
         self.funcs = [torch.sin, torch.cos]
 
-        # [2^0,2^1,...,2^(n-1)]:给sin用
+        # [2^0,2^1,...,2^(n-1)]: for sin
         self.freq_band_1 = 2 ** torch.linspace(0, N_freqs - 1, N_freqs)
-        # [4^0,4^1,...,4^(n-1)]:给diag(∑)用
+        # [4^0,4^1,...,4^(n-1)]: for diag(∑)
         self.freq_band_2 = self.freq_band_1 ** 2
 
     def forward(self, μ, diagE):
@@ -80,11 +80,11 @@ class PosEmbedding(nn.Module):
 class Block_NeRF(nn.Module):
     def __init__(self, D=8, W=256, skips=[4],
                  in_channel_xyz=60, in_channel_dir=24,
-                 in_channel_exposure=8,  # exposure只有一维，而dir有三维
+                 in_channel_exposure=8,  # exposure is in 1d and dirs are in 3d
                  in_channel_appearance=32,
                  add_apperance=True,
                  add_exposure=False):
-        # 输入：[xyz60,dir24,exposure24,appearance24]
+        # input：[xyz60,dir24,exposure24,appearance24]
         super(Block_NeRF, self).__init__()
         self.D = D
         self.W = W
