@@ -192,7 +192,7 @@ bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Bloc
 	python tools/imgs2poses.py data/Madoka
 	```
    You can replace data/Madoka by your data folder.
-   If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in Ln67 of colmap_wrapper.py.
+   If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in the colmap_wrapper.py.
 
 3. Training NeRF scenes.
 

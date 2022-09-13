@@ -1,0 +1,1 @@
+python run.py --config configs/waymo/block_0.py

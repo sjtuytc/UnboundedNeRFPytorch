@@ -19,7 +19,7 @@ data = dict(
     white_bkgd=False,             # use white background (note that some dataset don't provide alpha and with blended bg color)
     rand_bkgd=False,              # use random background during training
     half_res=False,               # [TODO]
-    bd_factor=.75,
+    bd_factor=.75,                # background 
     movie_render_kwargs=dict(),
 
     # Below are forward-facing llff specific settings.
