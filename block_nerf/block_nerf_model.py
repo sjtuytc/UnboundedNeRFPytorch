@@ -73,9 +73,8 @@ class PosEmbedding(nn.Module):
         for freq in self.freq_bands:  # [2^0,2^1,...,2^(n-1)]
             for func in self.funcs:
                 out += [func(freq * x)]
-        # !!!!相当于63维，多了三个基础坐标——>[x,y,z,sin(2^0Πpi),cos.......]
         # xyz——>63,dir——>27
-        return torch.cat(out, -1)  # 变成一个63的元素
+        return torch.cat(out, -1)
 
 class Block_NeRF(nn.Module):
     def __init__(self, D=8, W=256, skips=[4],
@@ -83,7 +82,7 @@ class Block_NeRF(nn.Module):
                  in_channel_exposure=8,  # exposure is in 1d and dirs are in 3d
                  in_channel_appearance=32,
                  add_apperance=True,
-                 add_exposure=False):
+                 add_exposure=True):
         # input：[xyz60,dir24,exposure24,appearance24]
         super(Block_NeRF, self).__init__()
         self.D = D

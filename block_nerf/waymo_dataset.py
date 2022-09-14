@@ -276,7 +276,7 @@ class WaymoDataset(Dataset):
         elif self.split=="test": #test
             img_info = self.meta[self.test_img_name]
             exposure = torch.tensor(img_info['equivalent_exposure'])
-            c2w = torch.FloatTensor(img_info['transform_matrix'])
+            c2w = torch.FloatTensor(img_info['c2w'])
             c2w[1, 3] += self.dy[idx]
 
             width = img_info['width'] // self.img_downscale
