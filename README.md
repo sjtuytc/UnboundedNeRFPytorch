@@ -6,7 +6,7 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 # Large-scale Neural Radiance Fields in Pytorch
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## 1. Introduction
@@ -116,7 +116,7 @@ What you should know before downloading the data:
 
    (2) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. Furthermore, the processed data support training by Mega-NeRF and Block-NeRF both.
 
-Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) and [pretrained models](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines.
+Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) and [pretrained models](https://drive.google.com/drive/folders/1O7uzcPBQHNAcmAcmcS6TRbLqiIDE3D0y?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines.
 
 If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
 
@@ -247,6 +247,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center"><a href="https://github.com/SEUleaderYang"><img src="https://avatars.githubusercontent.com/u/55042050?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EZ-Yang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/commits?author=SEUleaderYang" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/Alex-Alison-Zhang"><img src="https://avatars.githubusercontent.com/u/71915735?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Alex-Zhang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AAlex-Alison-Zhang" title="Bug reports">🐛</a></td>
       <td align="center"><a href="https://fanlu97.github.io/"><img src="https://avatars.githubusercontent.com/u/45007531?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Fan Lu</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AFanLu97" title="Bug reports">🐛</a></td>
+      <td align="center"><a href="https://maybeshewill-cv.github.io"><img src="https://avatars.githubusercontent.com/u/15725187?v=4?s=100" width="100px;" alt=""/><br /><sub><b>MaybeShewill-CV</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AMaybeShewill-CV" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
