@@ -6,7 +6,7 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 # Large-scale Neural Radiance Fields in Pytorch
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ## 1. Introduction
@@ -247,6 +247,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center"><a href="https://github.com/SEUleaderYang"><img src="https://avatars.githubusercontent.com/u/55042050?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EZ-Yang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/commits?author=SEUleaderYang" title="Code">💻</a></td>
       <td align="center"><a href="https://github.com/Alex-Alison-Zhang"><img src="https://avatars.githubusercontent.com/u/71915735?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Alex-Zhang</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AAlex-Alison-Zhang" title="Bug reports">🐛</a></td>
       <td align="center"><a href="https://fanlu97.github.io/"><img src="https://avatars.githubusercontent.com/u/45007531?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Fan Lu</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AFanLu97" title="Bug reports">🐛</a></td>
+      <td align="center"><a href="https://maybeshewill-cv.github.io"><img src="https://avatars.githubusercontent.com/u/15725187?v=4?s=100" width="100px;" alt=""/><br /><sub><b>MaybeShewill-CV</b></sub></a><br /><a href="https://github.com/dvlab-research/LargeScaleNeRFPytorch/issues?q=author%3AMaybeShewill-CV" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
