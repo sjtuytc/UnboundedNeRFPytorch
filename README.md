@@ -53,7 +53,7 @@ The other features of this project would be:
 Hope our efforts could help your research or projects!
 
 ## 2. News
-- [2022.9.19] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
+- [2022.9.12] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
 - [2022.8.24] Support the full Mega-NeRF pipeline.
 - [2022.8.18] Support all previous papers in weekly classified NeRF.
