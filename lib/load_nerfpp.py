@@ -3,6 +3,7 @@ Modify from
 https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 '''
 import os
+import pdb
 import glob
 import scipy
 import imageio
@@ -104,6 +105,7 @@ def rerotate_poses(poses, render_poses):
 
 def load_nerfpp_data(basedir, rerotate=True):
     tr_K, tr_c2w, tr_im_path = load_data_split(os.path.join(basedir, 'train'))[:3]
+    assert len(tr_im_path) > 0, f"Images are not found in {basedir}"
     te_K, te_c2w, te_im_path = load_data_split(os.path.join(basedir, 'test'))[:3]
     assert len(tr_K) == len(tr_c2w) and len(tr_K) == len(tr_im_path)
     assert len(te_K) == len(te_c2w) and len(te_K) == len(te_im_path)
