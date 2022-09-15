@@ -64,6 +64,7 @@ def render_main_doc(meta_data_path="docs/weekly_nerf_meta_data.xlsx", cn=False):
         cls_head2 = "[lighting](./classified_weekly_nerf/lighting.md) | [reconstruction](./classified_weekly_nerf/reconstruction.md) | [texture](./classified_weekly_nerf/texture.md) | [semantic](./classified_weekly_nerf/semantic.md) | [pose-slam](./classified_weekly_nerf/pose-slam.md) | [others](./classified_weekly_nerf/others.md) \n"
     else:
         cls_md = {one_cls: MdUtils(file_name=os.path.join('docs/classified_weekly_nerf_cn', one_cls),title=title_by_cls(one_cls, cn)) for one_cls in classes}
+        all_md.write("\n NeRF研究QQ大群（300+成员）：706949479 \n")
         cls_head = "## 按类别筛选: \n [全部](./weekly_nerf_cn.md) | [动态](./classified_weekly_nerf_cn/dynamic.md) | [编辑](./classified_weekly_nerf_cn/editing.md) | [快速](./classified_weekly_nerf_cn/fast.md) | [泛化](./classified_weekly_nerf_cn/generalization.md) | [人体](./classified_weekly_nerf_cn/human.md) | [视频](./classified_weekly_nerf_cn/video.md) | "
         cls_head2 = "[光照](./classified_weekly_nerf_cn/lighting.md) | [重建](./classified_weekly_nerf_cn/reconstruction.md) | [纹理](./classified_weekly_nerf_cn/texture.md) | [语义](./classified_weekly_nerf_cn/semantic.md) | [姿态-SLAM](./classified_weekly_nerf_cn/pose-slam.md) | [其他](./classified_weekly_nerf_cn/others.md) \n"
 

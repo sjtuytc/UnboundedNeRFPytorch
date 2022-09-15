@@ -1,6 +1,8 @@
 
 每周分类神经辐射场 ![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)
 ==========================================================================================================================
+
+ NeRF研究QQ大群（300+成员）：706949479 
 ## 按类别筛选: 
  [全部](./weekly_nerf_cn.md) | [动态](./classified_weekly_nerf_cn/dynamic.md) | [编辑](./classified_weekly_nerf_cn/editing.md) | [快速](./classified_weekly_nerf_cn/fast.md) | [泛化](./classified_weekly_nerf_cn/generalization.md) | [人体](./classified_weekly_nerf_cn/human.md) | [视频](./classified_weekly_nerf_cn/video.md) | [光照](./classified_weekly_nerf_cn/lighting.md) | [重建](./classified_weekly_nerf_cn/reconstruction.md) | [纹理](./classified_weekly_nerf_cn/texture.md) | [语义](./classified_weekly_nerf_cn/semantic.md) | [姿态-SLAM](./classified_weekly_nerf_cn/pose-slam.md) | [其他](./classified_weekly_nerf_cn/others.md) 
 ## Sep4 - Sep10, 2022
