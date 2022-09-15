@@ -238,7 +238,9 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
 def compute_bbox_by_coarse_geo(model_class, model_path, thres):
     print('compute_bbox_by_coarse_geo: start')
     eps_time = time.time()
-    model = utils.load_model(model_class, model_path)
+    # model = utils.load_model(model_class, model_path)
+    model, _, _ = load_existed_model(args, cfg, cfg.fine_train, model_path)
+    model.to(device)
     interp = torch.stack(torch.meshgrid(
         torch.linspace(0, 1, model.world_size[0]),
         torch.linspace(0, 1, model.world_size[1]),
@@ -334,7 +336,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     else:
         print(f'scene_rep_reconstruction ({stage}): reload from {reload_ckpt_path}')
         model, optimizer, start = load_existed_model(args, cfg, cfg_train, reload_ckpt_path)
-
     # init rendering setup
     render_kwargs = {
         'near': data_dict['near'],
@@ -620,7 +621,9 @@ if __name__=='__main__':
         print('Export coarse visualization...')
         with torch.no_grad():
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'coarse_last.tar')
-            model = utils.load_model(dvgo.DirectVoxGO, ckpt_path).to(device)
+            # model = utils.load_model(dvgo.DirectVoxGO, ckpt_path).to(device)
+            model, _, _ = load_existed_model(args, cfg, cfg.fine_train, ckpt_path)
+            model.to(device)
             alpha = model.activate_density(model.density.get_dense_grid()).squeeze().cpu().numpy()
             rgb = torch.sigmoid(model.k0.get_dense_grid()).squeeze().permute(1,2,3,0).cpu().numpy()
         np.savez_compressed(args.export_coarse_only, alpha=alpha, rgb=rgb)
