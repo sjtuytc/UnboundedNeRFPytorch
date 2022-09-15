@@ -25,6 +25,8 @@ def config_parser():
                         help='config file path')
     parser.add_argument("--seed", type=int, default=777,
                         help='Random seed')
+    parser.add_argument("--sample_num", type=int, default=-1,
+                        help='Sample number of data points in the dataset, used for debugging.')
     parser.add_argument("--no_reload", action='store_true',
                         help='do not reload weights from saved ckpt')
     parser.add_argument("--no_reload_optimizer", action='store_true',
@@ -624,6 +626,10 @@ if __name__=='__main__':
         np.savez_compressed(args.export_coarse_only, alpha=alpha, rgb=rgb)
         print('done')
         sys.exit()
+    
+    if args.sample_num > 0:
+        data_dict['i_train'] = data_dict['i_train'][:args.sample_num]
+    
     # train
     if not args.render_only:
         train(args, cfg, data_dict)

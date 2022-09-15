@@ -1,6 +1,6 @@
 _base_ = './tankstemple_base.py'
 
-expname = 'sep14_waymo'
+expname = 'sep14_waymo_five_images'
 
 data = dict(
     datadir='data/sep13_block0/dense',

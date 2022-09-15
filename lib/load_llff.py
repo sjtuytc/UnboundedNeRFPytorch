@@ -2,6 +2,7 @@ import numpy as np
 import os, imageio
 import torch
 import scipy
+import pdb
 
 ########## Slightly modified version of LLFF data loading code
 ##########  see https://github.com/Fyusion/LLFF for original
@@ -310,7 +311,6 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
         depths = depths[0]
     else:
         depths = 0
-
     # Correct rotation matrix ordering and move variable dim to axis 0
     poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
     poses = np.moveaxis(poses, -1, 0).astype(np.float32)
@@ -321,7 +321,7 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
     # Rescale if bd_factor is provided
     if bds.min() < 0 and bd_factor is not None:
         print('Found negative z values from SfM sparse points!?')
-        print('Please try bd_factor=None')
+        print('Please try bd_factor=None. This program is terminating now!')
         import sys; sys.exit()
     sc = 1. if bd_factor is None else 1./(bds.min() * bd_factor)
     poses[:,:3,3] *= sc

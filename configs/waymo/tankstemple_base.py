@@ -8,7 +8,9 @@ data = dict(
     white_bkgd=True,
     rand_bkgd=True,
     unbounded_inward=True,
+    # unbounded_inward=False,  # for visualizing poses
     load2gpu_on_the_fly=True,
+    bd_factor=None,
 )
 
 # data = dict(
@@ -21,6 +23,7 @@ data = dict(
 # )
 
 coarse_train = dict(N_iters=0)
+# coarse_train = dict(N_iters=3000)  # for visualizing poses
 
 fine_train = dict(
     N_iters=30000,
@@ -36,12 +39,14 @@ fine_train = dict(
 
 alpha_init = 1e-4
 stepsize = 0.5
+_mpi_depth = 256
 
 fine_model_and_render = dict(
     num_voxels=320**3,
     num_voxels_base=320**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
+    # fast_color_thres=stepsize/_mpi_depth/5,  # for visualizing poses
     fast_color_thres={
         '_delete_': True,
         0   : alpha_init*stepsize/10,
