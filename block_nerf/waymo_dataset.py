@@ -328,7 +328,7 @@ class WaymoDataset(Dataset):
 
         else: #compose
             exposure = torch.tensor(self.img_info['equivalent_exposure'])
-            c2w = torch.FloatTensor(self.img_info['transform_matrix'])
+            c2w = self.img_info['c2w'].float()
 
             dx = np.linspace(0, self.dx_dy_dz[0], self.N_frames)
             dy = np.linspace(0, self.dx_dy_dz[1], self.N_frames)
@@ -338,8 +338,8 @@ class WaymoDataset(Dataset):
             c2w[1, 3] += dy[idx]
             c2w[2, 3] += dz[idx]
 
-            width = self.img_info['width'] // self.img_downscale
-            height = self.img_info['height'] // self.img_downscale
+            width = self.img_info['W'] // self.img_downscale
+            height = self.img_info['H'] // self.img_downscale
 
             self.K = {}
             K = np.zeros((3, 3), dtype=np.float32)
