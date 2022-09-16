@@ -6,7 +6,7 @@ alpha_init = 1e-4
 stepsize = 0.5
 _mpi_depth = 256
 
-visualize_poses = True
+visualize_poses = False
 
 if visualize_poses:  # very effective tools for debugging
     unbounded_inward = True

@@ -14,6 +14,7 @@ from lib import utils, dvgo, dcvgo, dmpigo
 from lib.load_data import load_data
 import pdb
 from torch_efficient_distloss import flatten_eff_distloss
+from pathlib import Path
 
 
 def config_parser():
@@ -611,6 +612,8 @@ if __name__=='__main__':
             cam_o = rays_o[0,0].cpu().numpy()
             cam_d = rays_d[[0,0,-1,-1],[0,-1,0,-1]].cpu().numpy()
             cam_lst.append(np.array([cam_o, *(cam_o+cam_d*max(near, far*0.05))]))
+        dir_name = os.path.dirname(args.export_bbox_and_cams_only)
+        Path(dir_name).mkdir(parents=True, exist_ok=True)
         np.savez_compressed(args.export_bbox_and_cams_only,
             xyz_min=xyz_min.cpu().numpy(), xyz_max=xyz_max.cpu().numpy(),
             cam_lst=np.array(cam_lst))
