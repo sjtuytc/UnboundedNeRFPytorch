@@ -1,1 +1,0 @@
-python run_yono.py --config configs/waymo/block_0_tt.py --sample_num 20 --render_train --render_only --render_video_factor 1
