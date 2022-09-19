@@ -12,15 +12,16 @@ from torch_scatter import segment_coo
 from . import grid
 from .dvgo import Raw2Alpha, Alphas2Weights
 from .dmpigo import create_full_step_id
+import ub360_utils_cuda
 
-from torch.utils.cpp_extension import load
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-ub360_utils_cuda = load(
-        name='ub360_utils_cuda',
-        sources=[
-            os.path.join(parent_dir, path)
-            for path in ['cuda/ub360_utils.cpp', 'cuda/ub360_utils_kernel.cu']],
-        verbose=True)
+# from torch.utils.cpp_extension import load
+# parent_dir = os.path.dirname(os.path.abspath(__file__))
+# ub360_utils_cuda = load(
+#         name='ub360_utils_cuda',
+#         sources=[
+#             os.path.join(parent_dir, path)
+#             for path in ['cuda/ub360_utils.cpp', 'cuda/ub360_utils_kernel.cu']],
+#         verbose=True)
 
 
 '''Model'''

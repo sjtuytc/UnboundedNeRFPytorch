@@ -1,13 +1,17 @@
 import os
 import torch
-from torch.utils.cpp_extension import load
+import adam_upd_cuda  # requires pre-build adam
+## online installation as follows
+# from torch.utils.cpp_extension import load
 
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-sources=['cuda/adam_upd.cpp', 'cuda/adam_upd_kernel.cu']
-adam_upd_cuda = load(
-        name='adam_upd_cuda',
-        sources=[os.path.join(parent_dir, path) for path in sources],
-        verbose=True)
+# parent_dir = os.path.dirname(os.path.abspath(__file__))
+# sources = ['cuda/adam_upd.cpp', 'cuda/adam_upd_kernel.cu']
+# print("Loading masked adam.")
+# adam_upd_cuda = load(
+#         name='adam_upd_cuda',
+#         sources=[os.path.join(parent_dir, path) for path in sources],
+#         verbose=False)
+# print("CUDA support for masked adam loaded.")
 
 
 ''' Extend Adam optimizer
@@ -70,3 +74,7 @@ class MaskedAdam(torch.optim.Optimizer):
                                 param, param.grad, state['exp_avg'], state['exp_avg_sq'],
                                 state['step'], beta1, beta2, lr, eps)
 
+if __name__=='__main__':
+    a = torch.nn.Linear(3, 4)
+    optim = MaskedAdam(a.parameters())
+    print("Testing masked adam optimizer finished!")

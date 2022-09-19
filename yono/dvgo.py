@@ -8,16 +8,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch_scatter import segment_coo
-
 from . import grid
-from torch.utils.cpp_extension import load
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-render_utils_cuda = load(
-        name='render_utils_cuda',
-        sources=[
-            os.path.join(parent_dir, path)
-            for path in ['cuda/render_utils.cpp', 'cuda/render_utils_kernel.cu']],
-        verbose=True)
+import render_utils_cuda
+
+# from torch.utils.cpp_extension import load
+# parent_dir = os.path.dirname(os.path.abspath(__file__))
+# render_utils_cuda = load(
+#         name='render_utils_cuda',
+#         sources=[
+#             os.path.join(parent_dir, path)
+#             for path in ['cuda/render_utils.cpp', 'cuda/render_utils_kernel.cu']],
+#         verbose=True)
 
 
 '''Model'''

@@ -10,7 +10,7 @@ from .load_co3d import load_co3d_data
 from .load_nerfpp import load_nerfpp_data
 
 
-def load_data(args):
+def load_common_data(args):
 
     K, depths = None, None
     near_clip = None

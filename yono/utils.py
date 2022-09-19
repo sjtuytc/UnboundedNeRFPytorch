@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .masked_adam import MaskedAdam
+from yono.masked_adam import MaskedAdam
 
 
 ''' Misc

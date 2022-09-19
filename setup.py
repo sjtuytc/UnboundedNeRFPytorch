@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="dvlab_nerf", # Replace with your own username
-    version="0.0.1",
+    version="0.0.2",
     author="Zelin Zhao",
     author_email="sjtuytc@gmail.com",
     description="Code for large-scale neural radiance fields.",

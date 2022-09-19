@@ -86,6 +86,10 @@ Hope our efforts could help your research or projects!
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
    conda install pytorch-scatter -c pyg  # or install via https://github.com/rusty1s/pytorch_scatter
+   python setup.py install
+   cd yono/cuda/
+   python setup.py install
+   cd ../../
    ```
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
@@ -171,6 +175,8 @@ bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Bloc
 
 ## 5. Build your custom large-scale NeRF
 
+## TODO: remove this part.
+
 <details>
 <summary>Expand / collapse steps for building custom NeRF world.</summary>
 
@@ -197,14 +203,14 @@ bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Bloc
 3. Training NeRF scenes.
 
 	```bash
-	python run.py --config configs/custom/Madoka.py
+	python run_yono.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
 
 4. Validating the training results to generate a fly-through video.
 
 	```bash
-	python run.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
+	python run_yono.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
 	```
 </details>
 
