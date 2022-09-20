@@ -8,6 +8,8 @@ from yono.run_export_bbox import *
 from yono.run_export_coarse import run_export_coarse
 from yono.run_train import run_train
 from yono.run_render import run_render
+from yono.gen_trace import gen_trace
+
 
 def config_parser():
     '''Define command line arguments

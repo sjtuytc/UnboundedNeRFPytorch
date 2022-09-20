@@ -33,7 +33,7 @@ else:
     weight_distortion = 0.01
 
 data = dict(
-    dataset_type='llff',
+    dataset_type='waymo',
     inverse_y=True,
     white_bkgd=True,
     rand_bkgd=True,

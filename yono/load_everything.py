@@ -1,12 +1,17 @@
 import torch
 from yono.common_data_loaders.load_common_data import load_common_data
+from yono.load_waymo import load_waymo_data
 from yono import utils, dvgo, dcvgo, dmpigo
 
 
 def load_everything(args, cfg):
     '''Load images / poses / camera settings / data split.
     '''
-    data_dict = load_common_data(cfg.data)
+    if cfg.data.dataset_type == "waymo":
+        data_dict = load_waymo_data(args, cfg.data)
+        return data_dict
+    else:
+        data_dict = load_common_data(cfg.data)
 
     # remove useless field
     kept_keys = {

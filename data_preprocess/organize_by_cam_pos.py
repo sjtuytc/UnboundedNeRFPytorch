@@ -11,6 +11,9 @@ from tqdm import tqdm
 from pathlib import Path
 
 
+COPYFILE = False  # change it to true to rename and copy image files
+
+
 def get_pix2cam(focals, width, height):
     fx = np.array(focals)
     fy = np.array(focals)
@@ -73,6 +76,7 @@ def form_unified_dict(old_to_new, metas, save_prefix='images_train', split_prefi
     fars = []
     return_metas = []
     positions = []
+    intrisincs = []
     for idx, one_img in enumerate(tqdm(metas)):
         ori_path = os.path.join('data', 'pytorch_waymo_dataset', split_prefix, 'rgbs/' + one_img + ".png")
         new_name = old_to_new[one_img]
@@ -82,23 +86,32 @@ def form_unified_dict(old_to_new, metas, save_prefix='images_train', split_prefi
             cur_meta = val_all_meta[one_img]
         final_path = os.path.join(save_prefix, new_name + ".png")
         full_save_path = os.path.join(save_path, final_path)
-        shutil.copyfile(ori_path, full_save_path)
+        if COPYFILE:
+            shutil.copyfile(ori_path, full_save_path)
         file_paths.append(final_path)
         return_metas.append(cur_meta)
         positions.append(cur_meta['origin_pos'])
-        cur_meta['c2w'].append([0.0, 0.0, 0.0, 1.0])
+        if len(cur_meta['c2w']) < 4:
+            cur_meta['c2w'].append([0.0, 0.0, 0.0, 1.0])
         c2ws.append(cur_meta['c2w'])
         widths.append(cur_meta['W'])
         heights.append(cur_meta['H'])
         focals.append(cur_meta['intrinsics'][0])
         nears.append(0.01)
         fars.append(15.)
+        K = np.array([
+            [cur_meta['intrinsics'][0], 0, 0.5*cur_meta['W']],
+            [0, cur_meta['intrinsics'][0], 0.5*cur_meta['H']],
+            [0, 0, 1]
+        ]).tolist()
+        intrisincs.append(K)
+
     lossmult = np.ones(np.array(heights).shape).tolist()
     pix2cam = get_pix2cam(focals=np.array(focals), width=np.array(widths), height=np.array(heights))
     positions = np.array(positions)
     return_metas = {'file_path': file_paths, 'cam2world': np.array(c2ws).tolist(), 'width': np.array(widths).tolist(),
     'height': np.array(heights).tolist(), 'focal': np.array(focals).tolist(), 'pix2cam': pix2cam, 'lossmult': lossmult, 
-    'near':nears, 'far': fars}
+    'near':nears, 'far': fars, 'K': intrisincs}
     return return_metas
 
 
