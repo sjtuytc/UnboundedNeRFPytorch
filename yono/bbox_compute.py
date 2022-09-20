@@ -3,6 +3,7 @@ import numpy as np
 from yono import utils, dvgo
 import time
 from yono.load_everything import load_existing_model
+from tqdm import tqdm
 import pdb
 
 
@@ -10,7 +11,7 @@ def _compute_bbox_by_cam_frustrm_unbounded(cfg, HW, Ks, poses, i_train, near_cli
     # Find a tightest cube that cover all camera centers
     xyz_min = torch.Tensor([np.inf, np.inf, np.inf])
     xyz_max = -xyz_min
-    for (H, W), K, c2w in zip(HW[i_train], Ks[i_train], poses[i_train]):
+    for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
         rays_o, rays_d, viewdirs = dvgo.get_rays_of_a_view(
                 H=H, W=W, K=K, c2w=c2w,
                 ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,

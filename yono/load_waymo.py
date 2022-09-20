@@ -145,8 +145,9 @@ def load_waymo(args, basedir, rerotate=True):
     #     poses, render_poses = rerotate_poses(poses, render_poses)
 
     # render_poses = torch.Tensor(render_poses)
-    H, W = metadata['train']['height'][0], metadata['train']['width'][0]
-    HW = np.array([[H, W] for i in imgs])
+    train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] for i in range(len(metadata['train']['height']))]).tolist()
+    test_HW = np.array([[metadata['test']['height'][i], metadata['test']['width'][i]] for i in range(len(metadata['test']['height']))]).tolist()
+    HW = np.array(train_HW + test_HW)
     if args.sample_num > 0:
         i_split[0] = i_split[0][:args.sample_num]
     return imgs, poses, None, HW, all_K, i_split
