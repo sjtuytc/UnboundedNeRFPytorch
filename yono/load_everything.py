@@ -23,6 +23,8 @@ def load_everything(args, cfg):
     else:
         data_dict['images'] = torch.FloatTensor(data_dict['images'], device='cpu')
     data_dict['poses'] = torch.Tensor(data_dict['poses'])
+    if args.sample_num > 0:
+        data_dict['i_train'] = data_dict['i_train'][:args.sample_num]
     return data_dict
 
 

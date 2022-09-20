@@ -12,10 +12,9 @@ from yono.run_render import run_render
 def config_parser():
     '''Define command line arguments
     '''
-
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--program', required=True, type=str, 
-                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 'render', 'train']
+                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 'render', 'train', 'gen_trace']
                         )
     parser.add_argument('--config', required=True,
                         help='config file path')
@@ -81,8 +80,6 @@ if __name__=='__main__':
 
     # load images / poses / camera settings / data split
     data_dict = load_everything(args=args, cfg=cfg)
-    if args.sample_num > 0:
-        data_dict['i_train'] = data_dict['i_train'][:args.sample_num]
     
     program = args.program
 
@@ -97,6 +94,8 @@ if __name__=='__main__':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'render':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
+    elif program == 'gen_trace':
+        gen_trace()
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     print(f"Finished running program {program}.")
