@@ -82,7 +82,6 @@ if __name__=='__main__':
 
     # load images / poses / camera settings / data split
     data_dict = load_everything(args=args, cfg=cfg)
-    
     program = args.program
 
     # launch the corresponding program

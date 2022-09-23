@@ -82,6 +82,10 @@ def rerotate_poses(poses, render_poses):
 def load_waymo(args, basedir, rerotate=True):
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
         metadata = json.load(fp)
+    if args.sample_num > 0:
+        sample_idxs = list(range(args.sample_num))
+    else:
+        pass
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['test']['cam_idx']
     cam_idxs = tr_cam_idx + val_cam_idx
     positions = metadata['train']['position'] + metadata['test']['position']
@@ -151,8 +155,6 @@ def load_waymo(args, basedir, rerotate=True):
     train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] for i in range(len(metadata['train']['height']))]).tolist()
     test_HW = np.array([[metadata['test']['height'][i], metadata['test']['width'][i]] for i in range(len(metadata['test']['height']))]).tolist()
     HW = np.array(train_HW + test_HW)
-    if args.sample_num > 0:
-        i_split[0] = i_split[0][:args.sample_num]
     return imgs, poses, render_poses, HW, all_K, cam_idxs, i_split, positions
 
 

@@ -1,4 +1,4 @@
-export CONFIG=yono/configs/tankstemple_unbounded/Playground.py #yono/configs/waymo/block_0_tt.py
+# export CONFIG=yono/configs/tankstemple_unbounded/Playground.py #yono/configs/waymo/block_0_tt.py
 export CONFIG=yono/configs/waymo/waymo_full.py
 # visualize cameras
 CUDA_VISIBLE_DEVICES=8 python run_yono.py --program export_bbox --config ${CONFIG} --export_bbox_and_cams_only data/waymo_vis/cam.npz

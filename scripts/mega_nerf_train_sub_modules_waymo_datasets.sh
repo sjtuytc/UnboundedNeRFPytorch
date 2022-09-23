@@ -7,4 +7,4 @@ export DATASET_PATH=./data/${DATASET_NAME}  # raw image folder with poses
 export NUM_GPUS=1 # number of GPUs
 export SUBMODULE_INDEX=$1 # submodule index
 # for debugging
-python train_mega_nerf.py --config_file configs/mega-nerf/${DATASET_NAME}.yaml --exp_name ${EXP_FOLDER}/${SUBMODULE_INDEX} --dataset_path $DATASET_PATH --chunk_paths data/${DATASET_NAME}/chunks/${SUBMODULE_INDEX} --cluster_mask_path ${MASK_PATH}/${SUBMODULE_INDEX} --train_scale_factor 1 --val_scale_factor 1
+python train_mega_nerf.py --config_file mega_nerf/configs/${DATASET_NAME}.yaml --exp_name ${EXP_FOLDER}/${SUBMODULE_INDEX} --dataset_path $DATASET_PATH --chunk_paths data/${DATASET_NAME}/chunks/${SUBMODULE_INDEX} --cluster_mask_path ${MASK_PATH}/${SUBMODULE_INDEX} --train_scale_factor 1 --val_scale_factor 1
