@@ -5,7 +5,6 @@ https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 import os
 import pdb
 import glob
-from posixpath import splitdrive
 import scipy
 import imageio
 import numpy as np
@@ -79,13 +78,31 @@ def rerotate_poses(poses, render_poses):
     return poses, render_poses
 
 
-def load_waymo(args, basedir, rerotate=True):
+def sample_list_by_idx(one_list, idxs):
+    return [one_list[idx] for idx in idxs]
+    
+    
+def sample_metadata_by_idxs(metadata, sample_idxs):
+    if sample_idxs is None:
+        return metadata
+    for split in metadata:
+        if split != "train":
+            sample_idxs = [1, 2, 3, 4, 5]
+        for one_k in metadata[split]:
+            metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
+    return metadata
+
+def load_waymo(args, data_cfg, rerotate=True):
+    basedir = data_cfg.datadir
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
         metadata = json.load(fp)
     if args.sample_num > 0:
         sample_idxs = list(range(args.sample_num))
+    elif 'sample_idxs' in data_cfg:
+        sample_idxs = data_cfg['sample_idxs']
     else:
-        pass
+        sample_idxs = None
+    metadata = sample_metadata_by_idxs(metadata, sample_idxs)
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['test']['cam_idx']
     cam_idxs = tr_cam_idx + val_cam_idx
     positions = metadata['train']['position'] + metadata['test']['position']
@@ -95,7 +112,7 @@ def load_waymo(args, basedir, rerotate=True):
     tr_c2w, te_c2w = metadata['train']['cam2world'], metadata['test']['cam2world']
     tr_K, te_K = metadata['train']['K'], metadata['test']['K']
     
-    all_K = tr_K + te_K
+    all_K = np.array(tr_K + te_K)
     # Determine split id list
     i_split = [[], []]
     i = 0
@@ -122,12 +139,14 @@ def load_waymo(args, basedir, rerotate=True):
         poses.append(np.array(c2w).reshape(4,4))
 
     # Load images
-    imgs = tr_im_path + te_im_path
-    # imgs = []
-    # for path in tqdm(tr_im_path):
-    #     imgs.append(imageio.imread(path) / 255.)
-    # for path in tqdm(te_im_path):
-    #     imgs.append(imageio.imread(path) / 255.) 
+    if args.program == "gen_trace":
+        imgs = tr_im_path + te_im_path  # do not load all the images
+    else:
+        imgs = []
+        for path in tqdm(tr_im_path):
+            imgs.append(torch.tensor(imageio.imread(os.path.join(basedir, path)) / 255.))
+        for path in tqdm(te_im_path):
+            imgs.append(torch.tensor(imageio.imread(os.path.join(basedir, path)) / 255.)) 
         
     # Bundle all data
     # imgs = np.stack(imgs, 0)
@@ -170,7 +189,7 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
 def load_waymo_data(args, data_cfg):
     K, depths = None, None
     near_clip = None
-    images, poses, render_poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg.datadir)
+    images, poses, render_poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
@@ -182,7 +201,7 @@ def load_waymo_data(args, data_cfg):
     # H, W = int(H), int(W)
     # hwf = [H, W, focal]
     # HW = np.array([im.shape[:2] for im in images])
-    # irregular_shape = (images.dtype is np.dtype('object'))
+    irregular_shape = True
 
     # if K is None:
     #     K = np.array([
@@ -204,7 +223,7 @@ def load_waymo_data(args, data_cfg):
         i_train=i_train, i_val=i_val, i_test=i_test,
         poses=poses, render_poses=render_poses,
         images=images, depths=depths, cam_idxs=cam_idxs, 
-        positions=positions
+        positions=positions, irregular_shape=irregular_shape
     )
     data_dict['poses'] = torch.Tensor(data_dict['poses'])
     return data_dict

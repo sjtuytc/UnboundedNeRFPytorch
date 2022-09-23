@@ -1,6 +1,6 @@
 _base_ = './waymo_base.py'
 
-expname = 'sep20_waymo_full'
+expname = 'sep23_waymo_rotate'
 
 data = dict(
     datadir='data/sep19_ordered_dataset',
@@ -10,7 +10,8 @@ data = dict(
         'scale_f': 0.8,
         'zrate': 2.0,
         'zdelta': 0.5,
-    }
+    },
+    sample_idxs=[1127, 11009, 9805, 9426, 5859, 6315]
 )
 
 fine_train = dict(

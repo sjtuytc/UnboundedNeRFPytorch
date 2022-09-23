@@ -1,4 +1,4 @@
-import os, math
+import os, math, cv2
 import numpy as np
 import scipy.signal
 from typing import List, Optional
@@ -15,6 +15,11 @@ from yono.masked_adam import MaskedAdam
 '''
 mse2psnr = lambda x : -10. * torch.log10(x)
 to8b = lambda x : (255*np.clip(x,0,1)).astype(np.uint8)
+
+def resize_and_to_8b(input_images, res):
+    rgb_images = np.array([cv2.resize(input_image, res) for input_image in input_images])
+    b_images = to8b(rgb_images)
+    return b_images
 
 def create_optimizer_or_freeze_model(model, cfg_train, global_step):
     decay_steps = cfg_train.lrate_decay * 1000

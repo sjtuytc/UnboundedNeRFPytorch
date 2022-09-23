@@ -74,7 +74,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
     else:
         print(f'scene_rep_reconstruction ({stage}): reload from {reload_ckpt_path}')
-        model, optimizer, start = load_existing_model(args, cfg, cfg_train, reload_ckpt_path)
+        model, optimizer, start = load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     # init rendering setup
     render_kwargs = {
         'near': data_dict['near'],

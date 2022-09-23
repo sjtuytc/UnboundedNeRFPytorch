@@ -86,7 +86,7 @@ def run_export_bbox_cams(args, cfg, data_dict, sample_idxs, save_path):
 
 
 
-def gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
+def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
     print("Generating camera paths ...")
     # retrieve set of image lists for rendering videos
     images = data_dict['images']
@@ -120,7 +120,7 @@ def gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
         cam_idx = whole_cam_idxs[one_idx]
         if cam_idx not in cam2idxs:
             cam2idxs[cam_idx] = [one_idx] + straight_idxs
-            print(f'cam_id:{cam_idx}, image path: {images[one_idx]}.')
+            print(f'cam_id:{cam_idx}, image path: {images[one_idx]}, original idx: {one_idx}.')
             save_idxs.append(one_idx)
             # run_export_bbox_cams(args, cfg, data_dict=data_dict, sample_idxs=cam2idxs[cam_idx], save_path=os.path.join(save_p, f'cam_{cam_idx}.npz'))
     move_idxs_to_folder(data_dict, save_idxs, save_path=save_p)

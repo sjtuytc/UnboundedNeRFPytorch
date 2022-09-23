@@ -4,6 +4,8 @@ import torch
 from tqdm import tqdm, trange
 import numpy as np
 from yono import utils, dvgo, dcvgo, dmpigo
+import pdb
+from yono.utils import resize_and_to_8b
 
 
 @torch.no_grad()
@@ -136,6 +138,7 @@ def run_render(args, cfg, data_dict, device):
         testsavedir = os.path.join(cfg.basedir, cfg.expname, f'render_train_{ckpt_name}')
         os.makedirs(testsavedir, exist_ok=True)
         print('All results are dumped into', testsavedir)
+        
         rgbs, depths, bgmaps = render_viewpoints(cfg=cfg,
                 render_poses=data_dict['poses'][data_dict['i_train']],
                 HW=data_dict['HW'][data_dict['i_train']],
@@ -144,8 +147,9 @@ def run_render(args, cfg, data_dict, device):
                 savedir=testsavedir, dump_images=args.dump_images,
                 eval_ssim=args.eval_ssim, eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
                 **render_viewpoints_kwargs)
-        imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(rgbs), fps=30, quality=8)
-        imageio.mimwrite(os.path.join(testsavedir, 'video.depth.mp4'), utils.to8b(1 - depths / np.max(depths)), fps=30, quality=8)
+        imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), resize_and_to_8b(rgbs, res=(800, 608)), fps=30, quality=8)
+        # TODO: make the depth visualization work with resize
+        # imageio.mimwrite(os.path.join(testsavedir, 'video.depth.mp4'), resize_and_to_8b(1 - depths / np.max(depths), res=(800, 608)), fps=30, quality=8)
 
     # render testset and eval
     if args.render_test:
