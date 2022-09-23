@@ -8,7 +8,7 @@ from yono.run_export_bbox import *
 from yono.run_export_coarse import run_export_coarse
 from yono.run_train import run_train
 from yono.run_render import run_render
-from yono.gen_trace import gen_trace
+from yono.gen_cam_paths import gen_cam_paths
 
 
 def config_parser():
@@ -97,7 +97,7 @@ if __name__=='__main__':
     elif program == 'render':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'gen_trace':
-        gen_trace()
+        gen_cam_paths(args=args, cfg=cfg, data_dict=data_dict)
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     print(f"Finished running program {program}.")

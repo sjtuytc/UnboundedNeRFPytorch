@@ -82,13 +82,15 @@ def rerotate_poses(poses, render_poses):
 def load_waymo(args, basedir, rerotate=True):
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
         metadata = json.load(fp)
-    tr_im_path = waymo_load_img_list(os.path.join(basedir, 'images_train'))
-    assert len(tr_im_path) > 0, f"Images are not found in {basedir}"
-    te_im_path = waymo_load_img_list(os.path.join(basedir, 'images_test'))
-    # assert len(tr_K) == len(tr_c2w) and len(tr_K) == len(tr_im_path)
-    # assert len(te_K) == len(te_c2w) and len(te_K) == len(te_im_path)
+    tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['test']['cam_idx']
+    cam_idxs = tr_cam_idx + val_cam_idx
+    positions = metadata['train']['position'] + metadata['test']['position']
+    tr_im_path = metadata['train']['file_path']
+    te_im_path = metadata['test']['file_path']
+    # te_im_path = waymo_load_img_list(os.path.join(basedir, 'images_test'))
     tr_c2w, te_c2w = metadata['train']['cam2world'], metadata['test']['cam2world']
     tr_K, te_K = metadata['train']['K'], metadata['test']['K']
+    
     all_K = tr_K + te_K
     # Determine split id list
     i_split = [[], []]
@@ -143,15 +145,15 @@ def load_waymo(args, basedir, rerotate=True):
     # TODO: test this function
     # if rerotate:
     #     poses, render_poses = rerotate_poses(poses, render_poses)
-
     # render_poses = torch.Tensor(render_poses)
+    render_poses = None
+    
     train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] for i in range(len(metadata['train']['height']))]).tolist()
     test_HW = np.array([[metadata['test']['height'][i], metadata['test']['width'][i]] for i in range(len(metadata['test']['height']))]).tolist()
     HW = np.array(train_HW + test_HW)
     if args.sample_num > 0:
         i_split[0] = i_split[0][:args.sample_num]
-    return imgs, poses, None, HW, all_K, i_split
-    # return imgs, poses, render_poses, [H, W, focal], K, i_split
+    return imgs, poses, render_poses, HW, all_K, cam_idxs, i_split, positions
 
 
 def inward_nearfar_heuristic(cam_o, ratio=0.05):
@@ -166,7 +168,7 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
 def load_waymo_data(args, data_cfg):
     K, depths = None, None
     near_clip = None
-    images, poses, render_poses, HW, K, i_split = load_waymo(args, data_cfg.datadir)
+    images, poses, render_poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg.datadir)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
@@ -199,7 +201,8 @@ def load_waymo_data(args, data_cfg):
         near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,
         poses=poses, render_poses=render_poses,
-        images=images, depths=depths,
+        images=images, depths=depths, cam_idxs=cam_idxs, 
+        positions=positions
     )
     data_dict['poses'] = torch.Tensor(data_dict['poses'])
     return data_dict
