@@ -5,6 +5,7 @@ https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 import os
 import pdb
 import glob
+from turtle import onkey
 import scipy
 import imageio
 import numpy as np
@@ -82,20 +83,45 @@ def sample_list_by_idx(one_list, idxs):
     return [one_list[idx] for idx in idxs]
     
     
+def sample_metadata_by_cam(metadata, cam_idx):
+    for split in metadata:
+        sample_idxs = []
+        for idx, cam_id in enumerate(metadata[split]['cam_idx']):
+            if cam_id == cam_idx:
+                sample_idxs.append(idx)
+        for one_k in metadata[split]:
+            metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
+    return metadata
+    
+
 def sample_metadata_by_idxs(metadata, sample_idxs):
     if sample_idxs is None:
         return metadata
     for split in metadata:
         if split != "train":
+            # TODO: remove this for the validation dataset
             sample_idxs = [1, 2, 3, 4, 5]
         for one_k in metadata[split]:
             metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
     return metadata
 
-def load_waymo(args, data_cfg, rerotate=True):
+
+def sort_metadata_by_pos(metadata):
+    for split in metadata:
+        list_idxs = list(range(len(metadata[split]['position'])))
+        sorted_idxs = sorted(zip(list_idxs, metadata[split]['position']), key=lambda row: (row[1][1], row[1][0]))
+        sorted_idxs = [i for i, j in sorted_idxs]
+        for one_k in metadata[split]:
+            metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sorted_idxs)
+    return metadata
+
+
+def load_waymo(args, data_cfg, rerotate=True, sort_by_pos=True):
     basedir = data_cfg.datadir
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
         metadata = json.load(fp)
+    if 'sample_cam' in data_cfg:
+        metadata = sample_metadata_by_cam(metadata, data_cfg['sample_cam'])
     if args.sample_num > 0:
         sample_idxs = list(range(args.sample_num))
     elif 'sample_idxs' in data_cfg:
@@ -103,6 +129,7 @@ def load_waymo(args, data_cfg, rerotate=True):
     else:
         sample_idxs = None
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
+    metadata = sort_metadata_by_pos(metadata)
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['test']['cam_idx']
     cam_idxs = tr_cam_idx + val_cam_idx
     positions = metadata['train']['position'] + metadata['test']['position']

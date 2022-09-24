@@ -10,7 +10,7 @@ from yono.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
 
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
     model_kwargs = copy.deepcopy(cfg_model)
     num_voxels = model_kwargs.pop('num_voxels')
@@ -43,7 +43,6 @@ def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_
 
 def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, data_dict, stage, coarse_ckpt_path=None):
     # init
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if abs(cfg_model.world_bound_scale - 1) > 1e-9:
         xyz_shift = (xyz_max - xyz_min) * (cfg_model.world_bound_scale - 1) / 2
         xyz_min -= xyz_shift
@@ -299,7 +298,7 @@ def run_train(args, cfg, data_dict):
     else:
         xyz_min_fine, xyz_max_fine = compute_bbox_by_coarse_geo(
                 model_class=dvgo.DirectVoxGO, model_path=coarse_ckpt_path,
-                thres=cfg.fine_model_and_render.bbox_thres)
+                thres=cfg.fine_model_and_render.bbox_thres, device=device, args=args, cfg=cfg)
     scene_rep_reconstruction(
             args=args, cfg=cfg,
             cfg_model=cfg.fine_model_and_render, cfg_train=cfg.fine_train,

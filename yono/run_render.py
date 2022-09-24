@@ -30,8 +30,8 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     ssims = []
     lpips_alex = []
     lpips_vgg = []
-
-    for i, c2w in enumerate(tqdm(render_poses)):
+    tqdm_bar = tqdm(render_poses)
+    for i, c2w in enumerate(tqdm_bar):
 
         H, W = HW[i]
         K = Ks[i]
@@ -58,9 +58,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rgbs.append(rgb)
         depths.append(depth)
         bgmaps.append(bgmap)
-        if i==0:
-            print('Testing', rgb.shape)
-
+        tqdm_bar.set_description(f"Rendering video with frame shape: {rgb.shape}.")
         if gt_imgs is not None and render_factor==0:
             p = -10. * np.log10(np.mean(np.square(rgb - gt_imgs[i])))
             psnrs.append(p)

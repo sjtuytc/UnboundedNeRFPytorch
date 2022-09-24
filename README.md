@@ -195,7 +195,7 @@ bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Bloc
 2. Run COLMAP to reconstruct scenes. This would probably cost a long time.
 
 	```bash
-	python tools/imgs2poses.py data/Madoka
+	python yono/tools/imgs2poses.py data/Madoka
 	```
    You can replace data/Madoka by your data folder.
    If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in the colmap_wrapper.py.

@@ -45,6 +45,7 @@ data = dict(
 coarse_train = dict(
     N_iters=coarse_iter,
     pervoxel_lr = pervoxel_lr,
+    ray_sampler='flatten',    
 )
 
 fine_train = dict(
