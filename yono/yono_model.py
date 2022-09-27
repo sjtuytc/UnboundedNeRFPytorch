@@ -14,18 +14,9 @@ from .dvgo import Raw2Alpha, Alphas2Weights
 from .dmpigo import create_full_step_id
 import ub360_utils_cuda
 
-# from torch.utils.cpp_extension import load
-# parent_dir = os.path.dirname(os.path.abspath(__file__))
-# ub360_utils_cuda = load(
-#         name='ub360_utils_cuda',
-#         sources=[
-#             os.path.join(parent_dir, path)
-#             for path in ['cuda/ub360_utils.cpp', 'cuda/ub360_utils_kernel.cu']],
-#         verbose=True)
-
 
 '''Model'''
-class DirectContractedVoxGO(nn.Module):
+class YONOModel(nn.Module):
     def __init__(self, xyz_min, xyz_max,
                  num_voxels=0, num_voxels_base=0,
                  alpha_init=None,
@@ -38,7 +29,7 @@ class DirectContractedVoxGO(nn.Module):
                  rgbnet_depth=3, rgbnet_width=128,
                  viewbase_pe=4,
                  **kwargs):
-        super(DirectContractedVoxGO, self).__init__()
+        super(YONOModel, self).__init__()
         # xyz_min/max are the boundary that separates fg and bg scene
         xyz_min = torch.Tensor(xyz_min)
         xyz_max = torch.Tensor(xyz_max)
@@ -75,7 +66,7 @@ class DirectContractedVoxGO(nn.Module):
             density_type, channels=1, world_size=self.world_size,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max,
             config=self.density_config)
-
+        
         # init color representation
         self.rgbnet_kwargs = {
             'rgbnet_dim': rgbnet_dim,

@@ -6,6 +6,7 @@ import copy
 from tqdm import tqdm, trange
 from yono.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
 from yono import utils, dvgo, dcvgo, dmpigo
+from yono.yono_model import YONOModel
 from yono.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
@@ -20,7 +21,13 @@ def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_
     if len(cfg_train.pg_scale):
         num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
 
-    if cfg.data.ndc:
+    if cfg.data.dataset_type == "waymo":
+        print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
+        model = YONOModel(
+            xyz_min=xyz_min, xyz_max=xyz_max,
+            num_voxels=num_voxels,
+            **model_kwargs)
+    elif cfg.data.ndc:
         print(f'scene_rep_reconstruction ({stage}): \033[96muse multiplane images\033[0m')
         model = dmpigo.DirectMPIGO(
             xyz_min=xyz_min, xyz_max=xyz_max,

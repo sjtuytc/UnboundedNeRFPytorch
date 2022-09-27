@@ -24,7 +24,6 @@ def run_export_bbox_cams(args, cfg, data_dict, save_path=None):
         cam_d = rays_d[[0,0,-1,-1],[0,-1,0,-1]].cpu().numpy()
         frustrum_height = max(near, far*0.05)
         cam_lst.append(np.array([cam_o, *(cam_o+cam_d*frustrum_height)]))
-        # pdb.set_trace()
     dir_name = os.path.dirname(save_path)
     Path(dir_name).mkdir(parents=True, exist_ok=True)
     np.savez_compressed(save_path,

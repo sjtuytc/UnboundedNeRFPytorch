@@ -6,10 +6,10 @@ data = dict(
     datadir='data/sep19_ordered_dataset',
     factor=2,
     # near_clip = 0.0356,
-    near_clip = 0.001,
+    near_clip = 0.01,
     near = 0,
     # far = 1,
-    far = 0.001,
+    far = 0.01,
     # movie_render_kwargs={
     #     'scale_r': 1.0,
     #     'scale_f': 0.8,
