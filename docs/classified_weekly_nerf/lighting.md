@@ -3,6 +3,11 @@ Weekly Classified Neural Radiance Fields - lighting ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep18 - Sep24, 2022
+## Sep11 - Sep17, 2022
+  - [StructNeRF: Neural Radiance Fields for Indoor Scenes with Structural Hints](https://arxiv.org/abs/2209.05277) | [code]
+    > Neural Radiance Fields (NeRF) achieve photo-realistic view synthesis with densely captured input images. However, the geometry of NeRF is extremely under-constrained given sparse views, resulting in significant degradation of novel view synthesis quality. Inspired by self-supervised depth estimation methods, we propose StructNeRF, a solution to novel view synthesis for indoor scenes with sparse inputs. StructNeRF leverages the structural hints naturally embedded in multi-view inputs to handle the unconstrained geometry issue in NeRF. Specifically, it tackles the texture and non-texture regions respectively: a patch-based multi-view consistent photometric loss is proposed to constrain the geometry of textured regions; for non-textured ones, we explicitly restrict them to be 3D consistent planes. Through the dense self-supervised depth constraints, our method improves both the geometry and the view synthesis performance of NeRF without any additional training on external data. Extensive experiments on several real-world datasets demonstrate that StructNeRF surpasses state-of-the-art methods for indoor scenes with sparse inputs both quantitatively and qualitatively.
+## Previous weeks
 ## Sep4 - Sep10, 2022
 ## Aug28 - Sep3, 2022
   - [Cross-Spectral Neural Radiance Fields, 3DV2022](https://arxiv.org/abs/2209.00648) | [code]

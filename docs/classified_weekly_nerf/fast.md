@@ -3,6 +3,11 @@ Weekly Classified Neural Radiance Fields - fast ![Awesome](https://cdn.rawgit.co
 ================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Sep18 - Sep24, 2022
+  - [wildNeRF: Complete view synthesis of in-the-wild dynamic scenes captured using sparse monocular data](https://arxiv.org/abs/2209.10399) | [code]
+    > We present a novel neural radiance model that is trainable in a self-supervised manner for novel-view synthesis of dynamic unstructured scenes. Our end-to-end trainable algorithm learns highly complex, real-world static scenes within seconds and dynamic scenes with both rigid and non-rigid motion within minutes. By differentiating between static and motion-centric pixels, we create high-quality representations from a sparse set of images. We perform extensive qualitative and quantitative evaluation on existing benchmarks and set the state-of-the-art on performance measures on the challenging NVIDIA Dynamic Scenes Dataset. Additionally, we evaluate our model performance on challenging real-world datasets such as Cholec80 and SurgicalActions160.
+## Sep11 - Sep17, 2022
+## Previous weeks
 ## Sep4 - Sep10, 2022
 ## Aug28 - Sep3, 2022
   - [FoV-NeRF: Foveated Neural Radiance Fields for Virtual Reality, TVCG2022](https://ieeexplore.ieee.org/abstract/document/9872532) | [code]
