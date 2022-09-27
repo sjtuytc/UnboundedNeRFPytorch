@@ -11,9 +11,8 @@ from . import colmap_read_model as read_model
 
 
 def load_colmap_data(realdir):
-    
-    # camerasfile = os.path.join(realdir, 'sparse/0/cameras.bin')
     camerasfile = os.path.join(realdir, 'dense/sparse/cameras.bin')
+    # camerasfile = os.path.join(realdir, 'sparse/0/cameras.bin')
     camdata = read_model.read_cameras_binary(camerasfile)
     
     # cam = camdata[camdata.keys()[0]]
@@ -25,8 +24,8 @@ def load_colmap_data(realdir):
     # w, h, f = factor * w, factor * h, factor * f
     hwf = np.array([h,w,f]).reshape([3,1])
     
-    # imagesfile = os.path.join(realdir, 'sparse/0/images.bin')
     imagesfile = os.path.join(realdir, 'dense/sparse/images.bin')
+    # imagesfile = os.path.join(realdir, 'sparse/0/images.bin')
     imdata = read_model.read_images_binary(imagesfile)
     
     w2c_mats = []
@@ -54,7 +53,6 @@ def load_colmap_data(realdir):
     
     # must switch to [-u, r, -t] from [r, -u, t], NOT [r, u, -t]
     poses = np.concatenate([poses[:, 1:2, :], poses[:, 0:1, :], -poses[:, 2:3, :], poses[:, 3:4, :], poses[:, 4:5, :]], 1)
-    
     return poses, pts3d, perm, names
 
 
@@ -146,8 +144,6 @@ def minify(basedir, factors=[], resolutions=[]):
             check_output('rm {}/*.{}'.format(imgdir, ext), shell=True)
             print('Removed duplicates')
         print('Done')
-
-
 
 
 def gen_poses(basedir, match_type, factors=None):

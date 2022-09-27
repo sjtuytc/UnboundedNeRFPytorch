@@ -5,7 +5,7 @@ visualize_poses = False
 alpha_init = 1e-4
 stepsize = 0.5
 _mpi_depth = 256
-if visualize_poses:  # very effective tools for debugging
+if visualize_poses:  # for debugging
     unbounded_inward = True
     coarse_iter = 3000
     fast_color_thres=stepsize/_mpi_depth/5

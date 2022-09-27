@@ -1,7 +1,7 @@
 import time
 import torch
 import torch.nn.functional as F
-import os
+import os,pdb
 import copy
 from tqdm import tqdm, trange
 from yono.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
@@ -9,6 +9,9 @@ from yono import utils, dvgo, dcvgo, dmpigo
 from yono.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
+from yono.run_export_bbox import run_export_bbox_cams
+from yono.run_export_coarse import run_export_coarse
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
@@ -39,6 +42,38 @@ def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_
     model = model.to(device)
     optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0)
     return model, optimizer
+
+
+# init batch rays sampler
+def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs):
+    if data_dict['irregular_shape']:
+        rgb_tr_ori = [images[i].to('cpu' if cfg.data.load2gpu_on_the_fly else device) for i in i_train]
+    else:
+        rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
+
+    if cfg_train.ray_sampler == 'in_maskcache':
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
+                rgb_tr_ori=rgb_tr_ori,
+                train_poses=poses[i_train],
+                HW=HW[i_train], Ks=Ks[i_train],
+                ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y,
+                model=model, render_kwargs=render_kwargs)
+    elif cfg_train.ray_sampler == 'flatten':
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_flatten(
+            rgb_tr_ori=rgb_tr_ori,
+            train_poses=poses[i_train],
+            HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+            flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+    else:
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays(
+            rgb_tr=rgb_tr_ori,
+            train_poses=poses[i_train],
+            HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+            flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+    index_generator = dvgo.batch_indices_generator(len(rgb_tr), cfg_train.N_rand)
+    batch_index_sampler = lambda: next(index_generator)
+    return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler
 
 
 def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, data_dict, stage, coarse_ckpt_path=None):
@@ -85,39 +120,8 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         'flip_x': cfg.data.flip_x,
         'flip_y': cfg.data.flip_y,
     }
-
-    # init batch rays sampler
-    def gather_training_rays():
-        if data_dict['irregular_shape']:
-            rgb_tr_ori = [images[i].to('cpu' if cfg.data.load2gpu_on_the_fly else device) for i in i_train]
-        else:
-            rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
-
-        if cfg_train.ray_sampler == 'in_maskcache':
-            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
-                    rgb_tr_ori=rgb_tr_ori,
-                    train_poses=poses[i_train],
-                    HW=HW[i_train], Ks=Ks[i_train],
-                    ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
-                    flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y,
-                    model=model, render_kwargs=render_kwargs)
-        elif cfg_train.ray_sampler == 'flatten':
-            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_flatten(
-                rgb_tr_ori=rgb_tr_ori,
-                train_poses=poses[i_train],
-                HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
-                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
-        else:
-            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays(
-                rgb_tr=rgb_tr_ori,
-                train_poses=poses[i_train],
-                HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
-                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
-        index_generator = dvgo.batch_indices_generator(len(rgb_tr), cfg_train.N_rand)
-        batch_index_sampler = lambda: next(index_generator)
-        return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler
-
-    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler = gather_training_rays()
+    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler = \
+    gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
 
     # view-count-based learning rate
     if cfg_train.pervoxel_lr:
@@ -188,7 +192,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             rays_o, rays_d, viewdirs,
             global_step=global_step, is_train=True,
             **render_kwargs)
-
         # gradient descent step
         optimizer.zero_grad(set_to_none=True)
         loss = cfg_train.weight_main * F.mse_loss(render_result['rgb_marched'], target)
@@ -263,7 +266,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', last_ckpt_path)
 
 
-def run_train(args, cfg, data_dict):
+def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
     # init
     print('train: start')
     eps_time = time.time()
@@ -290,6 +293,12 @@ def run_train(args, cfg, data_dict):
     else:
         print('train: skip coarse geometry searching')
         coarse_ckpt_path = None
+
+    # export cameras and geometries for debugging
+    if export_cam:
+        run_export_bbox_cams(args=args, cfg=cfg, data_dict=data_dict, save_path=os.path.join(cfg.basedir, cfg.expname, 'cam.npz'))
+    if export_geometry and cfg.coarse_train.N_iters > 0:
+        run_export_coarse(args=args, cfg=cfg, device=device, save_path=os.path.join(cfg.basedir, cfg.expname, 'cam_coarse.npz'))
 
     # fine detail reconstruction
     eps_fine = time.time()

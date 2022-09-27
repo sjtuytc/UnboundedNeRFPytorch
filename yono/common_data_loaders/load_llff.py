@@ -155,12 +155,10 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
     if not load_imgs:
         return poses, bds
 
-
     imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
     imgs = np.stack(imgs, -1)
 
     print('Loaded image data', imgs.shape, poses[:,-1,0])
-
     if not load_depths:
         return poses, bds, imgs
 
@@ -327,7 +325,7 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
     poses[:,:3,3] *= sc
     bds *= sc
     depths *= sc
-
+    pdb.set_trace()
     if recenter:
         poses = recenter_poses(poses)
 

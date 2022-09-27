@@ -1,5 +1,5 @@
 import numpy as np
-
+import pdb
 from .load_llff import load_llff_data
 from .load_blender import load_blender_data
 from .load_nsvf import load_nsvf_data
@@ -48,7 +48,6 @@ def load_common_data(args):
             print('near_clip', near_clip)
             print('original far', _far)
         print('NEAR FAR', near, far)
-
     elif args.dataset_type == 'blender':
         images, poses, render_poses, hwf, i_split = load_blender_data(args.datadir, args.half_res, args.testskip)
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
@@ -78,7 +77,7 @@ def load_common_data(args):
         i_train, i_val, i_test = i_split
 
         near, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0)
-
+        
         if images.shape[-1] == 4:
             if args.white_bkgd:
                 images = images[...,:3]*images[...,-1:] + (1.-images[...,-1:])

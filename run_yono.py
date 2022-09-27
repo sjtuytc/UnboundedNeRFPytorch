@@ -9,6 +9,7 @@ from yono.run_export_coarse import run_export_coarse
 from yono.run_train import run_train
 from yono.run_render import run_render
 from yono.run_gen_cam_paths import run_gen_cam_paths
+from yono.run_sfm import run_sfm
 
 
 def config_parser():
@@ -16,7 +17,10 @@ def config_parser():
     '''
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--program', required=True, type=str, 
-                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 'render', 'train', 'gen_trace']
+                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 'render', 'train', 'gen_trace', 'sfm']
+                        )
+    parser.add_argument('--exp_id', required=True, type=str, 
+                        help='append exp_id to exp names', default=""
                         )
     parser.add_argument('--config', required=True,
                         help='config file path')
@@ -71,7 +75,7 @@ if __name__=='__main__':
     parser = config_parser()
     args = parser.parse_args()
     cfg = mmcv.Config.fromfile(args.config)
-    
+    cfg.expname = cfg.expname + args.exp_id
     # init enviroment
     if torch.cuda.is_available():
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -90,7 +94,7 @@ if __name__=='__main__':
     elif program == "export_coarse":
         run_export_coarse(args=args, cfg=cfg, device=device)
     elif program == "train":
-        run_train(args, cfg, data_dict)
+        run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
         print("Training finished. Run rendering.")
         # render after training
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
@@ -98,6 +102,8 @@ if __name__=='__main__':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'gen_trace':
         run_gen_cam_paths(args=args, cfg=cfg, data_dict=data_dict)
+    elif program == "sfm":
+        run_sfm(args=args, cfg=cfg, data_dict=data_dict)
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     print(f"Finished running program {program}.")

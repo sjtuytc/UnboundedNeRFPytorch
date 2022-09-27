@@ -18,8 +18,7 @@ def select_k_nearest_points(idx, positions, k):
     sorted_idxs = sorted(zip(range(len(distances)), distances), key=lambda row: row[1])
     sorted_idxs = [i for i, j in sorted_idxs[:1+k]]  # the first one is itself
     return sorted_idxs
-    
-    
+
 
 def move_idxs_to_folder(data_dict, sampled_idxs, save_path, data_root="data/sep19_ordered_dataset"):
     images = data_dict['images']
@@ -85,7 +84,6 @@ def run_export_bbox_cams(args, cfg, data_dict, sample_idxs, save_path):
     print(f"The cam path has been saved at {save_path}.")
 
 
-
 def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
     print("Generating camera paths ...")
     # retrieve set of image lists for rendering videos
@@ -115,6 +113,7 @@ def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
     sorted_idxs = sorted(zip(close_idxs, rotations), key=lambda row: (row[1][1], row[1][0]))
     sorted_idxs = [i for i, j in sorted_idxs]
     cam2idxs = {}
+    # save sorted indexes in to the disk.
     save_idxs = []
     for one_idx in sorted_idxs:
         cam_idx = whole_cam_idxs[one_idx]
@@ -122,9 +121,9 @@ def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
             cam2idxs[cam_idx] = [one_idx] + straight_idxs
             print(f'cam_id:{cam_idx}, image path: {images[one_idx]}, original idx: {one_idx}.')
             save_idxs.append(one_idx)
-            # run_export_bbox_cams(args, cfg, data_dict=data_dict, sample_idxs=cam2idxs[cam_idx], save_path=os.path.join(save_p, f'cam_{cam_idx}.npz'))
-    move_idxs_to_folder(data_dict, save_idxs, save_path=save_p)
+            run_export_bbox_cams(args, cfg, data_dict=data_dict, sample_idxs=cam2idxs[cam_idx], save_path=os.path.join(save_p, f'cam_{cam_idx}.npz'))
     pdb.set_trace()
+    # move_idxs_to_folder(data_dict, save_idxs, save_path=save_p)
 
     # close_poses = [whole_poses[idx] for idx in close_idxs]
     # rotations = [R.from_matrix(pose[:3, :3]) for pose in close_poses]
