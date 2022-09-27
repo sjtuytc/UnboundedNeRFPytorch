@@ -11,7 +11,7 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 ## 1. Introduction
 
-This project aims for benchmarking several state-of-the-art large-scale neural fields algorithms, not restricted to the original Block-NeRF algorithms. The title of this repo is BlockNeRFPytorch because it is memorizable and short.
+This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms, not restricted to the original Block-NeRF algorithm.
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
 
