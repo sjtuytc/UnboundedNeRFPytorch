@@ -330,7 +330,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
 
     # fine detail reconstruction
     eps_fine = time.time()
-    if cfg.coarse_train.N_iters == 0:
+    if cfg.coarse_train.N_iters == 0 or cfg.data.dataset_type == "waymo":
         xyz_min_fine, xyz_max_fine = xyz_min_coarse.clone(), xyz_max_coarse.clone()
     else:
         xyz_min_fine, xyz_max_fine = compute_bbox_by_coarse_geo(

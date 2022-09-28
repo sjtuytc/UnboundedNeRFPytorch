@@ -22,7 +22,7 @@ def run_export_bbox_cams(args, cfg, data_dict, save_path=None):
                 flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y,)
         cam_o = rays_o[0,0].cpu().numpy()
         cam_d = rays_d[[0,0,-1,-1],[0,-1,0,-1]].cpu().numpy()
-        frustrum_height = max(near, far*0.05)
+        frustrum_height = max(near, far*0.05) * cfg.vis.height_rate
         cam_lst.append(np.array([cam_o, *(cam_o+cam_d*frustrum_height)]))
     dir_name = os.path.dirname(save_path)
     Path(dir_name).mkdir(parents=True, exist_ok=True)

@@ -1,13 +1,14 @@
 _base_ = '../default.py'
 basedir = './logs/waymo'
-visualize_poses = False
+visualize_poses = True
 alpha_init = 1e-4
+# alpha_init = 1e-2
 stepsize = 0.5
 _mpi_depth = 256
 maskout_near_cam_vox = False
 pervoxel_lr = False
 unbounded_inward = True
-if visualize_poses:  # for debugging
+if visualize_poses:  # for debugging only
     coarse_iter = 600
     fast_color_thres=stepsize/_mpi_depth/5
     weight_distortion = 0.0
@@ -39,7 +40,7 @@ data = dict(
 coarse_train = dict(
     N_iters=coarse_iter,
     pervoxel_lr = pervoxel_lr,
-#     ray_sampler='flatten',
+    ray_sampler='flatten',
 )
 
 fine_train = dict(
@@ -56,6 +57,7 @@ fine_train = dict(
 
 coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
+    bbox_thres=1e-10  # display all the bboxes
 )
 
 fine_model_and_render = dict(

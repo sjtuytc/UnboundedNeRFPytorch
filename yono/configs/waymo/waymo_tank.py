@@ -1,7 +1,9 @@
 _base_ = './waymo_base.py'
 cam_id = 73
 expname = f'sep28_waymo_{cam_id}_tt'
-
+vis = dict(
+    height_rate = 0.6 # camera direction frustrum height
+)
 data = dict(
     datadir='data/sep19_ordered_dataset',
     factor=2,
