@@ -335,13 +335,6 @@ class YONOModel(nn.Module):
         rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
         N_inner = int(2 / (2+2*self.bg_len) * self.world_len / stepsize) + 1
         N_outer = N_inner
-        # original sample functions
-        # b_inner = torch.linspace(0, 2, N_inner+1)
-        # b_outer = 2 / torch.linspace(1, 1/128, N_outer+1)
-        # t = torch.cat([
-        #     (b_inner[1:] + b_inner[:-1]) * 0.5,
-        #     (b_outer[1:] + b_outer[:-1]) * 0.5,
-        # ])
         # sample far-away points.
         b_inner = torch.linspace(0, 2, N_inner+1)
         b_outer = 2 / torch.linspace(1, 1/128, N_outer+1)

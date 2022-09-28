@@ -1,8 +1,8 @@
 _base_ = '../default.py'
 basedir = './logs/waymo'
-visualize_poses = True
-alpha_init = 1e-4
-# alpha_init = 1e-2
+visualize_poses = False
+# alpha_init = 1e-4
+alpha_init = 1e-2
 stepsize = 0.5
 _mpi_depth = 256
 maskout_near_cam_vox = False
@@ -30,7 +30,7 @@ else:
 data = dict(
     dataset_type='waymo',
     inverse_y=True,
-    white_bkgd=True,
+    white_bkgd=False,     # almost no effect
     rand_bkgd=True,
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
