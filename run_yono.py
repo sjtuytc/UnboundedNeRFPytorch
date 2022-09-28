@@ -76,6 +76,7 @@ if __name__=='__main__':
     args = parser.parse_args()
     cfg = mmcv.Config.fromfile(args.config)
     cfg.expname = cfg.expname + args.exp_id
+    cfg.sample_num = args.sample_num
     # init enviroment
     if torch.cuda.is_available():
         torch.set_default_tensor_type('torch.cuda.FloatTensor')

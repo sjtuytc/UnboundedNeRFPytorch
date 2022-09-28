@@ -12,6 +12,7 @@ from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
 from yono.run_export_bbox import run_export_bbox_cams
 from yono.run_export_coarse import run_export_coarse
+from yono.yono_model import yono_get_training_rays
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -23,6 +24,9 @@ def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_
 
     if cfg.data.dataset_type == "waymo":
         print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
+        if cfg.sample_num <= 0:
+            raise NotImplementedError("YONO model must receive a sample_num arguments.")
+        model_kwargs['sample_num'] = cfg.sample_num
         model = YONOModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels,
@@ -58,7 +62,13 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
     else:
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
-    if cfg_train.ray_sampler == 'in_maskcache':
+    indexs_train = None
+    if cfg.data.dataset_type == "waymo":
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = yono_get_training_rays(
+        rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
+        ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+        flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+    elif cfg_train.ray_sampler == 'in_maskcache':
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
                 rgb_tr_ori=rgb_tr_ori,
                 train_poses=poses[i_train],
@@ -80,7 +90,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
             flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
     index_generator = dvgo.batch_indices_generator(len(rgb_tr), cfg_train.N_rand)
     batch_index_sampler = lambda: next(index_generator)
-    return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler
+    return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz, batch_index_sampler
 
 
 def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, data_dict, stage, coarse_ckpt_path=None):
@@ -127,9 +137,9 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         'flip_x': cfg.data.flip_x,
         'flip_y': cfg.data.flip_y,
     }
-    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz, batch_index_sampler = \
+    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
     gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
-
+    
     # view-count-based learning rate
     if cfg_train.pervoxel_lr:
         def per_voxel_init():
@@ -164,6 +174,8 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 model.scale_volume_grid(cur_voxels)
             elif isinstance(model, dmpigo.DirectMPIGO):
                 model.scale_volume_grid(cur_voxels, model.mpi_depth)
+            elif isinstance(model, YONOModel):
+                model.scale_volume_grid(cur_voxels)
             else:
                 raise NotImplementedError
             optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0)
@@ -177,6 +189,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             rays_o = rays_o_tr[sel_i]
             rays_d = rays_d_tr[sel_i]
             viewdirs = viewdirs_tr[sel_i]
+            if indexs_tr is not None:
+                indexs = indexs_tr[sel_i]
+            else:
+                indexs = None
         elif cfg_train.ray_sampler == 'random':
             sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
             sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
@@ -185,6 +201,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             rays_o = rays_o_tr[sel_b, sel_r, sel_c]
             rays_d = rays_d_tr[sel_b, sel_r, sel_c]
             viewdirs = viewdirs_tr[sel_b, sel_r, sel_c]
+            if indexs_tr is not None:
+                indexs = indexs_tr[sel_b, sel_r, sel_c]
+            else:
+                indexs = None
         else:
             raise NotImplementedError
 
@@ -193,11 +213,12 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             rays_o = rays_o.to(device)
             rays_d = rays_d.to(device)
             viewdirs = viewdirs.to(device)
+            if indexs is not None:
+                indexs = indexs.to(device)
 
-        # volume rendering
-        render_result = model(
-            rays_o, rays_d, viewdirs,
-            global_step=global_step, is_train=True,
+        render_kwargs['indexs'] = indexs  # to avoid change the model interface
+        # volumetric rendering
+        render_result = model(rays_o, rays_d, viewdirs, global_step=global_step, is_train=True,
             **render_kwargs)
         # gradient descent step
         optimizer.zero_grad(set_to_none=True)

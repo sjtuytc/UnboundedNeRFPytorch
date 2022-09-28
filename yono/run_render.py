@@ -4,6 +4,7 @@ import torch
 from tqdm import tqdm, trange
 import numpy as np
 from yono import utils, dvgo, dcvgo, dmpigo
+from yono.yono_model import YONOModel
 import pdb
 from yono.utils import resize_and_to_8b
 
@@ -43,10 +44,19 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rays_o = rays_o.flatten(0,-2)
         rays_d = rays_d.flatten(0,-2)
         viewdirs = viewdirs.flatten(0,-2)
-        render_result_chunks = [
-            {k: v for k, v in model(ro, rd, vd, **render_kwargs).items() if k in keys}
-            for ro, rd, vd in zip(rays_o.split(8192, 0), rays_d.split(8192, 0), viewdirs.split(8192, 0))
-        ]
+        if cfg.data.dataset_type == "waymo":
+            indexs = torch.zeros_like(rays_o)
+            indexs.copy_(torch.tensor(i).long().to(rays_o.device))
+            render_result_chunks = [
+                {k: v for k, v in model(ro, rd, vd, **{**render_kwargs, "indexs": ind}).items() if k in keys}
+                for ro, rd, vd, ind in zip(rays_o.split(8192, 0), rays_d.split(8192, 0), 
+                                           viewdirs.split(8192, 0), indexs.split(8192, 0))
+            ]
+        else:
+            render_result_chunks = [
+                {k: v for k, v in model(ro, rd, vd, **render_kwargs).items() if k in keys}
+                for ro, rd, vd in zip(rays_o.split(8192, 0), rays_d.split(8192, 0), viewdirs.split(8192, 0))
+            ]
         render_result = {
             k: torch.cat([ret[k] for ret in render_result_chunks]).reshape(H,W,-1)
             for k in render_result_chunks[0].keys()
@@ -108,7 +118,9 @@ def run_render(args, cfg, data_dict, device):
         else:
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
         ckpt_name = ckpt_path.split('/')[-1][:-4]
-        if cfg.data.ndc:
+        if cfg.data.dataset_type == "waymo":
+            model_class = YONOModel
+        elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO
         elif cfg.data.unbounded_inward:
             model_class = dcvgo.DirectContractedVoxGO

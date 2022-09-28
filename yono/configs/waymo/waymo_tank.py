@@ -1,6 +1,6 @@
 _base_ = './waymo_base.py'
 cam_id = 73
-expname = f'sep27_waymo_{cam_id}_tt'
+expname = f'sep28_waymo_{cam_id}_tt'
 
 data = dict(
     datadir='data/sep19_ordered_dataset',
@@ -21,5 +21,5 @@ data = dict(
 )
 
 fine_train = dict(
-    N_iters=4000, # 30k is for quick validation
+    N_iters=40000, # 30k is for quick validation
 )

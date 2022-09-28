@@ -1,6 +1,6 @@
 _base_ = '../default.py'
 basedir = './logs/waymo'
-visualize_poses = True
+visualize_poses = False
 alpha_init = 1e-4
 stepsize = 0.5
 _mpi_depth = 256
@@ -66,4 +66,6 @@ fine_model_and_render = dict(
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
     contracted_norm='l2',
+    # rgbnet_dim=0,
+    rgbnet_direct=True
 )

@@ -113,6 +113,7 @@ def compute_bbox_by_coarse_geo(model_class, model_path, thres, device, args, cfg
     density = model.density(dense_xyz)
     alpha = model.activate_density(density)
     mask = (alpha > thres)
+    assert mask.min() > 0, "No activated voxels found."
     active_xyz = dense_xyz[mask]
     xyz_min = active_xyz.amin(0)
     xyz_max = active_xyz.amax(0)

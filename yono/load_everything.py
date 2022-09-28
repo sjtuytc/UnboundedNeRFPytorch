@@ -2,6 +2,7 @@ import torch
 from yono.common_data_loaders.load_common_data import load_common_data
 from yono.load_waymo import load_waymo_data
 from yono import utils, dvgo, dcvgo, dmpigo
+from yono.yono_model import YONOModel
 
 
 def load_everything(args, cfg):
@@ -34,7 +35,9 @@ def load_everything(args, cfg):
 
 
 def load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device):
-    if cfg.data.ndc:
+    if cfg.data.dataset_type == "waymo":
+        model_class = YONOModel
+    elif cfg.data.ndc:
         model_class = dmpigo.DirectMPIGO
     elif cfg.data.unbounded_inward:
         model_class = dcvgo.DirectContractedVoxGO
