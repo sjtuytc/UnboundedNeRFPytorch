@@ -99,9 +99,11 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         xyz_shift = (xyz_max - xyz_min) * (cfg_model.world_bound_scale - 1) / 2
         xyz_min -= xyz_shift
         xyz_max += xyz_shift
-    HW, Ks, near, far, i_train, i_val, i_test, poses, render_poses, images = [
+    
+    # render_poses are removed because they are unused
+    HW, Ks, near, far, i_train, i_val, i_test, poses, images = [
         data_dict[k] for k in [
-            'HW', 'Ks', 'near', 'far', 'i_train', 'i_val', 'i_test', 'poses', 'render_poses', 'images'
+            'HW', 'Ks', 'near', 'far', 'i_train', 'i_val', 'i_test', 'poses', 'images'
         ]
     ]
 
@@ -273,7 +275,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                        f'Loss: {loss.item():.9f} / PSNR: {np.mean(psnr_lst):5.2f} / '
                        f'Eps: {eps_time_str}')
             psnr_lst = []
-
+        
         if global_step%args.i_weights==0:
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
             torch.save({
@@ -284,7 +286,9 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             }, path)
             print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', path)
 
-    if global_step != -1:
+
+    # final save
+    if global_step != -1:                              
         torch.save({
             'global_step': global_step,
             'model_kwargs': model.get_kwargs(),

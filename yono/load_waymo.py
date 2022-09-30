@@ -2,17 +2,20 @@
 Modify from
 https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 '''
+from locale import currency
 import os
 import pdb
 import glob
+import tracemalloc
 from turtle import onkey
+from unittest import getTestCaseNames
 import scipy
 import imageio
 import numpy as np
 import torch
 from tqdm import tqdm
 import json
-
+from scipy.spatial.transform import Rotation as R
 from yono.common_data_loaders.load_llff import normalize
 
 ########################################################################################################################
@@ -82,7 +85,8 @@ def rerotate_poses(poses, render_poses):
 
 
 def sample_list_by_idx(one_list, idxs):
-    return [one_list[idx] for idx in idxs]
+    # allow idxs to be out of range
+    return [one_list[idx] for idx in idxs if idx < len(one_list)]
     
     
 def sample_metadata_by_cam(metadata, cam_idx):
@@ -100,9 +104,6 @@ def sample_metadata_by_idxs(metadata, sample_idxs):
     if sample_idxs is None:
         return metadata
     for split in metadata:
-        if split != "train":
-            # TODO: remove this for the validation dataset
-            sample_idxs = [1, 2, 3, 4, 5]
         for one_k in metadata[split]:
             metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
     return metadata
@@ -162,7 +163,46 @@ def recenter_poses(poses):
     return poses
 
 
+def find_most_freq_ele(one_list):
+    most_freq_ele = max(set(one_list), key = one_list.count)
+    freq_count = one_list.count(most_freq_ele)
+    return most_freq_ele, freq_count
+
+
+def get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, test_num=100, rotate_angle=9):
+    # We assume the metadata has been sorted here.
+    start_c2w, end_c2w = np.array(tr_c2w[0]), np.array(tr_c2w[-1])
+    start_rot, end_rot = start_c2w[:3, :3], end_c2w[:3, :3]
+    
+    # get base information, this is where we started
+    base_pos = train_pos[0]
+    base_quat = R.from_matrix(start_rot).as_quat()
+    
+    # generate rotating matries
+    rotate_interval = rotate_angle / test_num
+    cur_R = R.from_quat(base_quat).as_matrix()
+    all_rot = [cur_R]
+    for i in range(test_num - 1):
+        rotate_r = R.from_euler('y', -rotate_interval, degrees=True)
+        cur_R = np.matmul(cur_R, rotate_r.as_matrix())
+        all_rot.append(cur_R)
+    all_c2ws = [start_c2w.copy() for i in range(test_num)]  # initialize
+    for i, c2w in enumerate(all_c2ws):
+        all_c2ws[i][:3, :3] = all_rot[i]
+        all_c2ws[i][:3, 3] = base_pos
+        
+    assert train_HW[0] == train_HW[-1], "image shapes are not the same for the first and the last frame."
+    test_HW = [train_HW[0] for i in range(test_num)]
+    assert tr_K[0] == tr_K[-1], "Ks are not the same for the first and the last frame."
+    test_K = [tr_K[0] for i in range(test_num)]
+    assert tr_cam_idx[0] == tr_cam_idx[-1], "cameras are not the same for the first and the last frame"
+    test_cam_idxs = [tr_cam_idx[0] for i in range(test_num)]
+    test_pos = [base_pos for i in range(test_num)]
+    return all_c2ws, test_HW, test_K, test_cam_idxs, test_pos
+
+    
 def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose=True):
+    load_img = False if args.program == "gen_trace" else True
     basedir = data_cfg.datadir
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
         metadata = json.load(fp)
@@ -176,83 +216,67 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
         sample_idxs = None
     metadata = sort_metadata_by_pos(metadata)
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
-    tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['test']['cam_idx']
-    cam_idxs = tr_cam_idx + val_cam_idx
-    positions = metadata['train']['position'] + metadata['test']['position']
-    tr_im_path = metadata['train']['file_path']
-    te_im_path = metadata['test']['file_path']
-    # te_im_path = waymo_load_img_list(os.path.join(basedir, 'images_test'))
-    tr_c2w, te_c2w = metadata['train']['cam2world'], metadata['test']['cam2world']
-    tr_K, te_K = metadata['train']['K'], metadata['test']['K']
-    
-    all_K = np.array(tr_K + te_K)
-    # Determine split id list
-    i_split = [[], []]
-    i = 0
-    for _ in tr_c2w:
-        i_split[0].append(i)
-        i += 1
-    for _ in te_c2w:
-        i_split[1].append(i)
-        i += 1
 
-    # # Load camera intrinsics. Assume all images share a intrinsic.
-    # K_flatten = np.loadtxt(tr_K[0])
-    # for path in tr_K:
-    #     assert np.allclose(np.loadtxt(path), K_flatten)
-    # for path in te_K:
-    #     assert np.allclose(np.loadtxt(path), K_flatten)
-    # K = K_flatten.reshape(4,4)[:3,:3]
+    # The validation datasets are from the official val split, 
+    # but the testing splits are hard-coded sequences (completely novel views)
+    tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['val']['cam_idx']
+    cam_idxs = tr_cam_idx + val_cam_idx
+    train_pos, val_pos = metadata['train']['position'], metadata['val']['position']
+    positions = train_pos + val_pos
+    tr_im_path, val_im_path = metadata['train']['file_path'], metadata['val']['file_path']
+    tr_c2w, val_c2w = metadata['train']['cam2world'], metadata['val']['cam2world']
+    tr_K, val_K = metadata['train']['K'], metadata['val']['K']
+    
+    # Determine split id list
+    i_split = [[], [], []]
+    loop_id = 0
+    for _ in tr_c2w:
+        i_split[0].append(loop_id)
+        loop_id += 1
+    for _ in val_c2w:
+        i_split[1].append(loop_id)
+        loop_id += 1
 
     # Load camera poses
     poses = []
     for c2w in tr_c2w:
         poses.append(np.array(c2w).reshape(4,4))
-    for c2w in te_c2w:
+    for c2w in val_c2w:
         poses.append(np.array(c2w).reshape(4,4))
 
     # Load images
-    if args.program == "gen_trace":
-        imgs = tr_im_path + te_im_path  # do not load all the images
+    if not load_img:
+        imgs = tr_im_path + val_im_path  # do not load all the images
     else:
         imgs = []
         for path in tqdm(tr_im_path):
             imgs.append(imageio.imread(os.path.join(basedir, path)) / 255.)
-        for path in tqdm(te_im_path):
+        for path in tqdm(val_im_path):
             imgs.append(imageio.imread(os.path.join(basedir, path)) / 255.) 
-        imgs = np.stack(imgs)
-    # Bundle all data
-    # imgs = np.stack(imgs, 0)
-    
-    # Pose filters
-    poses = np.stack(poses, 0)
-    if normalize_pose:
-        poses[:, :3, 3] = (poses[:, :3, 3] - poses[:, :3, 3].min()) /  (poses[:, :3, 3].max() - poses[:, :3, 3].min())
-    # if recenter_pose:
-        # poses = recenter_poses(poses)
-    # Add the val split as the test split
-    i_split.append(i_split[1])
-    # H, W = imgs.shape[1:3]
-    # focal = K[[0,1], [0,1]].mean()
+        
+    train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] 
+                         for i in range(len(metadata['train']['height']))]).tolist()
+    val_HW = np.array([[metadata['val']['height'][i], metadata['val']['width'][i]] 
+                       for i in range(len(metadata['val']['height']))]).tolist()
 
-    # # Generate movie trajectory
-    # render_poses_path = sorted(glob.glob(os.path.join(basedir, 'camera_path', 'pose', '*txt')))
-    # render_poses = []
-    # for path in render_poses_path:
-    #     render_poses.append(np.loadtxt(path).reshape(4,4))
-    # render_poses = np.array(render_poses)
-    # render_K = np.loadtxt(glob.glob(os.path.join(basedir, 'camera_path', 'intrinsics', '*txt'))[0]).reshape(4,4)[:3,:3]
-    # render_poses[:,:,0] *= K[0,0] / render_K[0,0]
-    # render_poses[:,:,1] *= K[1,1] / render_K[1,1]
-    # TODO: test this function
-    # if rerotate:
-    #     poses, render_poses = rerotate_poses(poses, render_poses)
-    # render_poses = torch.Tensor(render_poses)
-    render_poses = None
-    train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] for i in range(len(metadata['train']['height']))]).tolist()
-    test_HW = np.array([[metadata['test']['height'][i], metadata['test']['width'][i]] for i in range(len(metadata['test']['height']))]).tolist()
-    HW = np.array(train_HW + test_HW)
-    return imgs, poses, render_poses, HW, all_K, cam_idxs, i_split, positions
+    # Create the test split
+    te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
+        get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos)
+    for _ in te_c2w:
+        i_split[2].append(loop_id)
+        loop_id += 1
+    for c2w in te_c2w:
+        poses.append(np.array(c2w).reshape(4,4))
+    
+    # Bundle all the data
+    all_K = np.array(tr_K + val_K + test_K)
+    HW = np.array(train_HW + val_HW + test_HW)
+    poses = np.stack(poses, 0)
+    if load_img:
+        imgs = np.stack(imgs)
+    cam_idxs += test_cam_idxs
+    positions += test_pos
+    return imgs, poses, HW, all_K, cam_idxs, i_split, positions
 
 
 def inward_nearfar_heuristic(cam_o, ratio=0.05):
@@ -267,7 +291,7 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
 def load_waymo_data(args, data_cfg):
     K, depths = None, None
     near_clip = None
-    images, poses, render_poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg)
+    images, poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
@@ -299,14 +323,10 @@ def load_waymo_data(args, data_cfg):
     # else:
     #     Ks = K
 
-    # render_poses = render_poses[..., :4]
-    # hwf = None
     data_dict = dict(
-        HW=HW, Ks=Ks,
-        near=near, far=far, near_clip=near_clip,
+        HW=HW, Ks=Ks, near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,
-        poses=poses, render_poses=render_poses,
-        images=images, depths=depths, cam_idxs=cam_idxs, 
+        poses=poses, images=images, depths=depths, cam_idxs=cam_idxs, 
         positions=positions, irregular_shape=irregular_shape
     )
     data_dict['poses'] = torch.tensor(data_dict['poses']).float()

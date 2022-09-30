@@ -121,7 +121,7 @@ class YONOModel(nn.Module):
                  density_config={}, k0_config={},
                  rgbnet_dim=0,
                  rgbnet_depth=3, rgbnet_width=128,
-                 viewbase_pe=4,
+                 viewbase_pe=4, apperance_emb_dim=-1,
                  **kwargs):
         super(YONOModel, self).__init__()
         # xyz_min/max are the boundary that separates fg and bg scene
@@ -171,10 +171,14 @@ class YONOModel(nn.Module):
         self.k0_type = k0_type
         self.k0_config = k0_config
         
-        self.appear_dim = 4
+        self.appear_dim = apperance_emb_dim
+        if apperance_emb_dim > 0:  # use apperance embeddings
+            self.appear_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
+                                        embedding_dim=self.appear_dim)
+        else:
+            self.appear_embeddings = None
+            self.appear_dim = 0
         self.sample_num = kwargs['sample_num']
-        self.appear_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
-                                              embedding_dim=self.appear_dim)
 
         # rgbnet configurations
         if rgbnet_dim <= 0:
@@ -217,7 +221,6 @@ class YONOModel(nn.Module):
             path=None, mask=mask,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max)
 
-        
     def _set_grid_resolution(self, num_voxels):
         # Determine grid resolution
         self.num_voxels = num_voxels
@@ -430,7 +433,10 @@ class YONOModel(nn.Module):
             weights = weights[mask]
 
         # get appearance features
-        appear_feat = self.appear_embeddings(indexs.long()[:, 0])
+        if self.appear_embeddings is not None:
+            appear_feat = self.appear_embeddings(indexs.long()[:, 0])
+        else:
+            appear_feat = None
         # query for color
         k0 = self.k0(ray_pts)
         if self.rgbnet is None:
@@ -441,8 +447,9 @@ class YONOModel(nn.Module):
             viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
             viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
             viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
-            assert len(appear_feat) == len(k0), "Tensor sizes are not matched!"
-            rgb_feat = torch.cat([k0, viewdirs_emb, appear_feat], -1)
+            assert appear_feat is None or len(appear_feat) == len(k0), "Tensor sizes are not matched!"
+            rgb_feat = torch.cat([k0, viewdirs_emb, appear_feat], -1) if appear_feat is not None \
+                else torch.cat([k0, viewdirs_emb], -1)
             rgb_logit = self.rgbnet(rgb_feat)
             rgb = torch.sigmoid(rgb_logit)
 
@@ -485,7 +492,6 @@ class YONOModel(nn.Module):
                         out=torch.zeros([N]),
                         reduce='sum')
             ret_dict.update({'depth': depth})
-
         return ret_dict
 
 

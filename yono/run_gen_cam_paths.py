@@ -122,7 +122,6 @@ def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
             print(f'cam_id:{cam_idx}, image path: {images[one_idx]}, original idx: {one_idx}.')
             save_idxs.append(one_idx)
             run_export_bbox_cams(args, cfg, data_dict=data_dict, sample_idxs=cam2idxs[cam_idx], save_path=os.path.join(save_p, f'cam_{cam_idx}.npz'))
-    pdb.set_trace()
     # move_idxs_to_folder(data_dict, save_idxs, save_path=save_p)
 
     # close_poses = [whole_poses[idx] for idx in close_idxs]
@@ -140,4 +139,3 @@ def run_gen_cam_paths(args, cfg, data_dict, core_cam=None, straight_length=100):
     combined_idxs = final_rot_idxs + straight_idxs
     render_idxs(data_dict, combined_idxs, save_path=os.path.join(save_p, 'rot.mp4'))
     run_export_bbox_cams(args, cfg, data_dict=data_dict, sample_idxs=combined_idxs, save_path=os.path.join(save_p, 'rot_cam.npz'))
-    pdb.set_trace()

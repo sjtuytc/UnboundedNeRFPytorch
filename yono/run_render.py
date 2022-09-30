@@ -17,7 +17,6 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     '''Render images for the given viewpoints; run evaluation if gt given.
     '''
     assert len(render_poses) == len(HW) and len(HW) == len(Ks)
-
     if render_factor!=0:
         HW = np.copy(HW)
         Ks = np.copy(Ks)
@@ -166,12 +165,15 @@ def run_render(args, cfg, data_dict, device):
         testsavedir = os.path.join(cfg.basedir, cfg.expname, f'render_test_{ckpt_name}')
         os.makedirs(testsavedir, exist_ok=True)
         print('All results are dumped into', testsavedir)
+        if data_dict['i_test'][0] >= len(data_dict['images']):  # gt images are not provided
+            gt_imgs = None
+        else:
+            gt_imgs = [data_dict['images'][i].cpu().numpy() for i in data_dict['i_test']]
         rgbs, depths, bgmaps = render_viewpoints(
-                cfg=cfg,
-                render_poses=data_dict['poses'][data_dict['i_test']],
+                cfg=cfg, render_poses=data_dict['poses'][data_dict['i_test']],
                 HW=data_dict['HW'][data_dict['i_test']],
                 Ks=data_dict['Ks'][data_dict['i_test']],
-                gt_imgs=[data_dict['images'][i].cpu().numpy() for i in data_dict['i_test']],
+                gt_imgs=gt_imgs,
                 savedir=testsavedir, dump_images=args.dump_images,
                 eval_ssim=args.eval_ssim, eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
                 **render_viewpoints_kwargs)

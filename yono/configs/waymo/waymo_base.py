@@ -24,17 +24,15 @@ else:
             5500: min(alpha_init, 1e-4),
             6500: 1e-4,
         }
-
     weight_distortion = 0.01
 
 data = dict(
     dataset_type='waymo',
     inverse_y=True,
-    white_bkgd=False,     # almost no effect
-    rand_bkgd=True,
+    white_bkgd=True,     # almost no effect when rand_bkgd=True
+    rand_bkgd=False,      # random background
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
-    # bd_factor=None,
 )
 
 coarse_train = dict(
@@ -68,6 +66,6 @@ fine_model_and_render = dict(
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
     contracted_norm='l2',
-    # rgbnet_dim=0,
+    rgbnet_dim=12,
     rgbnet_direct=True
 )

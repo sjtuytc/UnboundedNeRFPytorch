@@ -107,4 +107,10 @@ if __name__=='__main__':
         run_sfm(args=args, cfg=cfg, data_dict=data_dict)
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
-    print(f"Finished running program {program}.")
+    
+    render_notes = ""
+    if args.render_train:
+        render_notes += "Rendered train. "
+    elif args.render_test:
+        render_notes += "Rendered test."
+    print(f"Finished running program {program}. " + render_notes)
