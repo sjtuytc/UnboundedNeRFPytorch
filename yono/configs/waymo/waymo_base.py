@@ -55,7 +55,7 @@ fine_train = dict(
 
 coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
-    bbox_thres=1e-10  # display all the bboxes
+    bbox_thres=1e-10,  # display all the bboxes
 )
 
 fine_model_and_render = dict(
@@ -67,5 +67,13 @@ fine_model_and_render = dict(
     world_bound_scale=1,
     contracted_norm='l2',
     rgbnet_dim=12,
-    rgbnet_direct=True
+    rgbnet_direct=True,
+    density_type='DenseGrid',
+    k0_type='DenseGrid',
+    bg_len=0.2,  # very important
+    # # TensorRF settings
+    # density_type='TensoRFGrid', 
+    # k0_type='TensoRFGrid', 
+    # density_config=dict(n_comp=8),
+    # k0_config=dict(n_comp=24),
 )

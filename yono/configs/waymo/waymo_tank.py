@@ -24,4 +24,6 @@ data = dict(
 
 fine_train = dict(
     N_iters=40000, # 30k is for quick validation
+    # pg_scale=[1000,2000,3000,4000,5000,6000,7000], # default
+    pg_scale=[1000,2000,3000,4000,5000,], # default
 )

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from torch_scatter import segment_coo
 
-from . import grid
+from . import yono_grid
 from .dvgo import Raw2Alpha, Alphas2Weights
 from .dmpigo import create_full_step_id
 import ub360_utils_cuda
@@ -111,18 +111,10 @@ def yono_get_training_rays(rgb_tr_ori, train_poses, HW, Ks, ndc, inverse_y, flip
 
 '''Model'''
 class YONOModel(nn.Module):
-    def __init__(self, xyz_min, xyz_max,
-                 num_voxels=0, num_voxels_base=0,
-                 alpha_init=None,
-                 mask_cache_world_size=None,
-                 fast_color_thres=0, bg_len=0.2,
-                 contracted_norm='inf',
-                 density_type='DenseGrid', k0_type='DenseGrid',
-                 density_config={}, k0_config={},
-                 rgbnet_dim=0,
-                 rgbnet_depth=3, rgbnet_width=128,
-                 viewbase_pe=4, apperance_emb_dim=-1,
-                 **kwargs):
+    def __init__(self, xyz_min, xyz_max, num_voxels=0, num_voxels_base=0, alpha_init=None,
+                 mask_cache_world_size=None, fast_color_thres=0, bg_len=0.2, contracted_norm='inf',
+                 density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
+                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, apperance_emb_dim=-1, **kwargs):
         super(YONOModel, self).__init__()
         # xyz_min/max are the boundary that separates fg and bg scene
         xyz_min = torch.Tensor(xyz_min)
@@ -156,7 +148,7 @@ class YONOModel(nn.Module):
         # init density voxel grid
         self.density_type = density_type
         self.density_config = density_config
-        self.density = grid.create_grid(
+        self.density = yono_grid.create_grid(
             density_type, channels=1, world_size=self.world_size,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max,
             config=self.density_config)
@@ -181,10 +173,32 @@ class YONOModel(nn.Module):
         self.sample_num = kwargs['sample_num']
 
         # rgbnet configurations
-        if rgbnet_dim <= 0:
+        self.yono_vector_grid = False
+        if self.yono_vector_grid:
+            self.k0_dim = 9  # rgb * 3
+            self.k0 = yono_grid.create_grid(
+                k0_type, channels=self.k0_dim, world_size=self.world_size,
+                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                config=self.k0_config)
+            self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
+            dim0 = (3+3*viewbase_pe*2)
+            dim0 += 3  # real k0 dim is 3
+            dim0 += self.appear_dim
+            self.rgbnet = nn.Sequential(
+                nn.Linear(dim0, rgbnet_width), nn.ReLU(inplace=True),
+                *[
+                    nn.Sequential(nn.Linear(rgbnet_width, rgbnet_width), nn.ReLU(inplace=True))
+                    for _ in range(rgbnet_depth-2)
+                ],
+                nn.Linear(rgbnet_width, 3),
+            )
+            nn.init.constant_(self.rgbnet[-1].bias, 0)
+            print('YONO: feature voxel grid', self.k0)
+            print('YONO: mlp', self.rgbnet)
+        elif rgbnet_dim <= 0:
             # color voxel grid  (coarse stage)
             self.k0_dim = 3
-            self.k0 = grid.create_grid(
+            self.k0 = yono_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max,
                 config=self.k0_config)
@@ -192,7 +206,7 @@ class YONOModel(nn.Module):
         else:
             # feature voxel grid + shallow MLP  (fine stage)
             self.k0_dim = rgbnet_dim
-            self.k0 = grid.create_grid(
+            self.k0 = yono_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max,
                 config=self.k0_config)
@@ -217,7 +231,7 @@ class YONOModel(nn.Module):
         if mask_cache_world_size is None:
             mask_cache_world_size = self.world_size
         mask = torch.ones(list(mask_cache_world_size), dtype=torch.bool)
-        self.mask_cache = grid.MaskGrid(
+        self.mask_cache = yono_grid.MaskGrid(
             path=None, mask=mask,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max)
 
@@ -269,7 +283,7 @@ class YONOModel(nn.Module):
                 torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
             ), -1)
             self_alpha = F.max_pool3d(self.activate_density(self.density.get_dense_grid()), kernel_size=3, padding=1, stride=1)[0,0]
-            self.mask_cache = grid.MaskGrid(
+            self.mask_cache = yono_grid.MaskGrid(
                 path=None, mask=self.mask_cache(self_grid_xyz) & (self_alpha>self.fast_color_thres),
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max)
 
@@ -288,17 +302,18 @@ class YONOModel(nn.Module):
         cache_grid_alpha = F.max_pool3d(cache_grid_alpha, kernel_size=3, padding=1, stride=1)[0,0]
         self.mask_cache.mask &= (cache_grid_alpha > self.fast_color_thres)
         new_p = self.mask_cache.mask.float().mean().item()
-        print(f'dcvgo: update mask_cache {ori_p:.4f} => {new_p:.4f}')
+        print(f'YONO: update mask_cache {ori_p:.4f} => {new_p:.4f}')
 
     def update_occupancy_cache_lt_nviews(self, rays_o_tr, rays_d_tr, imsz, render_kwargs, maskout_lt_nviews):
-        print('dcvgo: update mask_cache lt_nviews start')
+        # TODO: Check or remove this function. This is untested and unused for now.
+        print('YONO: update mask_cache lt_nviews start')
         eps_time = time.time()
         count = torch.zeros_like(self.density.get_dense_grid()).long()
         device = count.device
         for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
-            ones = grid.DenseGrid(1, self.world_size, self.xyz_min, self.xyz_max)
+            ones = yono_grid.DenseGrid(1, self.world_size, self.xyz_min, self.xyz_max)
             for rays_o, rays_d in zip(rays_o_.split(8192), rays_d_.split(8192)):
-                ray_pts, indexs, inner_mask, t = self.sample_ray(
+                ray_pts, indexs, inner_mask, t, rays_d_e = self.sample_ray(
                         ori_rays_o=rays_o.to(device), ori_rays_d=rays_d.to(device),
                         **render_kwargs)
                 ones(ray_pts).sum().backward()
@@ -306,9 +321,9 @@ class YONOModel(nn.Module):
         ori_p = self.mask_cache.mask.float().mean().item()
         self.mask_cache.mask &= (count >= maskout_lt_nviews)[0,0]
         new_p = self.mask_cache.mask.float().mean().item()
-        print(f'dcvgo: update mask_cache {ori_p:.4f} => {new_p:.4f}')
+        print(f'YONO: update mask_cache {ori_p:.4f} => {new_p:.4f}')
         eps_time = time.time() - eps_time
-        print(f'dcvgo: update mask_cache lt_nviews finish (eps time:', eps_time, 'sec)')
+        print(f'YONO: update mask_cache lt_nviews finish (eps time:', eps_time, 'sec)')
 
     def density_total_variation_add_grad(self, weight, dense_mode):
         w = weight * self.world_size.max() / 128
@@ -361,7 +376,11 @@ class YONOModel(nn.Module):
         assert 'indexs' in render_kwargs, "The image indexes should be provided in render kwargs in the YONO model."
         if 'indexs' in render_kwargs:
             indexs = render_kwargs['indexs'].unsqueeze(1).repeat(1, ray_pts.shape[1], 1)
-        return ray_pts, indexs, inner_mask.squeeze(-1), t
+        if self.yono_vector_grid:
+            rays_d_extend = rays_d[:,None,:] * torch.ones_like(t[None,:,None])
+        else: 
+            rays_d_extend = None
+        return ray_pts, indexs, inner_mask.squeeze(-1), t, rays_d_extend
 
     def forward(self, rays_o, rays_d, viewdirs, global_step=None, is_train=False, **render_kwargs):
         '''Volume rendering
@@ -377,7 +396,7 @@ class YONOModel(nn.Module):
         ret_dict = {}
         N = len(rays_o)
         # sample points on rays
-        ray_pts, indexs, inner_mask, t = self.sample_ray(
+        ray_pts, indexs, inner_mask, t, rays_d_e = self.sample_ray(
                 ori_rays_o=rays_o, ori_rays_d=rays_d, is_train=global_step is not None, **render_kwargs)
         n_max = len(t)
         interval = render_kwargs['stepsize'] * self.voxel_size_ratio
@@ -389,6 +408,8 @@ class YONOModel(nn.Module):
         dist = (ray_pts[:,1:] - ray_pts[:,:-1]).norm(dim=-1)
         mask[:, 1:] |= ub360_utils_cuda.cumdist_thres(dist, dist_thres)
         ray_pts = ray_pts[mask]
+        if rays_d_e is not None:
+            rays_d_e = rays_d_e[mask]
         indexs = indexs[mask]
         inner_mask = inner_mask[mask]
         t = t[None].repeat(N,1)[mask]
@@ -398,6 +419,8 @@ class YONOModel(nn.Module):
         # skip known free space
         mask = self.mask_cache(ray_pts)
         ray_pts = ray_pts[mask]
+        if rays_d_e is not None:
+            rays_d_e = rays_d_e[mask]
         indexs = indexs[mask]
         inner_mask = inner_mask[mask]
         t = t[mask]
@@ -410,6 +433,8 @@ class YONOModel(nn.Module):
         if self.fast_color_thres > 0:
             mask = (alpha > self.fast_color_thres)
             ray_pts = ray_pts[mask]
+            if rays_d_e is not None:
+                rays_d_e = rays_d_e[mask]
             indexs = indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
@@ -422,7 +447,9 @@ class YONOModel(nn.Module):
         weights, alphainv_last = Alphas2Weights.apply(alpha, ray_id, N)
         if self.fast_color_thres > 0:
             mask = (weights > self.fast_color_thres)
-            ray_pts = ray_pts[mask]            
+            ray_pts = ray_pts[mask]        
+            if rays_d_e is not None:
+                rays_d_e = rays_d_e[mask]    
             indexs = indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
@@ -437,9 +464,24 @@ class YONOModel(nn.Module):
             appear_feat = self.appear_embeddings(indexs.long()[:, 0])
         else:
             appear_feat = None
+            
         # query for color
-        k0 = self.k0(ray_pts)
-        if self.rgbnet is None:
+        if self.yono_vector_grid:
+            k0 = self.k0.vector_forward(ray_pts, rays_d_e)
+        else:    
+            k0 = self.k0(ray_pts)
+        
+        if self.yono_vector_grid:
+            # YONO inference procedure
+            viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
+            viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
+            viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
+            assert appear_feat is None or len(appear_feat) == len(k0), "Tensor sizes are not matched!"
+            rgb_feat = torch.cat([k0, viewdirs_emb, appear_feat], -1) if appear_feat is not None \
+                else torch.cat([k0, viewdirs_emb], -1)
+            rgb_logit = self.rgbnet(rgb_feat)
+            rgb = torch.sigmoid(rgb_logit)
+        elif self.rgbnet is None:
             # no view-depend effect
             rgb = torch.sigmoid(k0)
         else:
