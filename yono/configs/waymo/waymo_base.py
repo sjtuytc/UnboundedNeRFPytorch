@@ -71,6 +71,7 @@ fine_model_and_render = dict(
     density_type='DenseGrid',
     k0_type='DenseGrid',
     bg_len=0.2,  # very important
+    viewbase_pe=8,
     # # TensorRF settings
     # density_type='TensoRFGrid', 
     # k0_type='TensoRFGrid', 

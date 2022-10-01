@@ -4,6 +4,7 @@ expname = f'sep30_waymo_{cam_id}_tt'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
+
 data = dict(
     datadir='data/sep19_ordered_dataset',
     factor=2,
@@ -19,6 +20,7 @@ data = dict(
     #     'zdelta': 0.5,
     # },
     sample_cam=cam_id,
+    test_rotate_angle=9, # rotate angle in testing phase
     # sample_idxs=[1127, 11009, 9805, 9426, 5859, 6315]
 )
 

@@ -261,7 +261,8 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
 
     # Create the test split
     te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
-        get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos)
+        get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+                       rotate_angle=data_cfg.test_rotate_angle)
     for _ in te_c2w:
         i_split[2].append(loop_id)
         loop_id += 1
