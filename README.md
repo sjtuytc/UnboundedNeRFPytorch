@@ -157,9 +157,9 @@ bash scripts/block_nerf_eval.sh
 Run the following commands to train the sub-modules (the blocks):
 ```bash
 export BLOCK_INDEX=0
-bash scripts/block_nerf_train.sh BLOCK_INDEX                      # For the Block-NeRF algorithm. The training tensorboard log is at the logs/. Using "tensorboard dev --logdir logs/" to see the tensorboard log. 
+bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Block-NeRF algorithm. The training tensorboard log is at the logs/. Using "tensorboard dev --logdir logs/" to see the tensorboard log. 
 
-# bash scripts/mega_nerf_train_sub_modules.sh BLOCK_INDEX         # For the Mega-NeRF algorithm. The sample training log is at[docs/sample_logs/mega_nerf_train_sub_modules.txt](docs/sample_logs/mega_nerf_train_sub_modules.txt) . You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
+# bash scripts/mega_nerf_train_sub_modules.sh ${BLOCK_INDEX}      # For the Mega-NeRF algorithm. The sample training log is at[docs/sample_logs/mega_nerf_train_sub_modules.txt](docs/sample_logs/mega_nerf_train_sub_modules.txt) . You can also train multiple modules simutaneously via the [parscript](https://github.com/mtli/parscript) to launch all the training procedures simutaneuously. I personally don't use parscript but use the slurm launching scripts to launch all the required modules. The training time without multi-processing is around one day.
 
 # If you are running the Mega-NeRF algorithm, you need to merge the trained modules:
 # ```bash
