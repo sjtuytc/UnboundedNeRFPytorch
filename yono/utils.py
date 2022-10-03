@@ -21,7 +21,7 @@ def resize_and_to_8b(input_images, res):
     b_images = to8b(rgb_images)
     return b_images
 
-def create_optimizer_or_freeze_model(model, cfg_train, global_step):
+def create_optimizer_or_freeze_model(model, cfg_train, global_step, verbose=True):
     decay_steps = cfg_train.lrate_decay * 1000
     decay_factor = 0.1 ** (global_step/decay_steps)
 
@@ -36,17 +36,20 @@ def create_optimizer_or_freeze_model(model, cfg_train, global_step):
 
         param = getattr(model, k)
         if param is None:
-            print(f'create_optimizer_or_freeze_model: param {k} not exist')
+            if verbose:
+                print(f'create_optimizer_or_freeze_model: param {k} not exist')
             continue
 
         lr = getattr(cfg_train, f'lrate_{k}') * decay_factor
         if lr > 0:
-            print(f'create_optimizer_or_freeze_model: param {k} lr {lr}')
+            if verbose:
+                print(f'create_optimizer_or_freeze_model: param {k} lr {lr}')
             if isinstance(param, nn.Module):
                 param = param.parameters()
             param_group.append({'params': param, 'lr': lr, 'skip_zero_grad': (k in cfg_train.skip_zero_grad_fields)})
         else:
-            print(f'create_optimizer_or_freeze_model: param {k} freeze')
+            if verbose:
+                print(f'create_optimizer_or_freeze_model: param {k} freeze')
             param.requires_grad = False
     return MaskedAdam(param_group)
 

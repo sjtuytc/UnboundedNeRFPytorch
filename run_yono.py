@@ -10,6 +10,7 @@ from yono.run_train import run_train
 from yono.run_render import run_render
 from yono.run_gen_cam_paths import run_gen_cam_paths
 from yono.run_sfm import run_sfm
+from yono.yono_ckpt_manager import YONOCheckpointManager
 
 
 def config_parser():
@@ -75,6 +76,7 @@ if __name__=='__main__':
     parser = config_parser()
     args = parser.parse_args()
     cfg = mmcv.Config.fromfile(args.config)
+    # create exp name with exp_id
     cfg.expname = cfg.expname + args.exp_id
     cfg.sample_num = args.sample_num
     # init enviroment
@@ -88,6 +90,15 @@ if __name__=='__main__':
     # load images / poses / camera settings / data split
     data_dict = load_everything(args=args, cfg=cfg)
     program = args.program
+    if cfg.data.dataset_type == "waymo":
+        args.ckpt_manager = YONOCheckpointManager(args, cfg)
+        args.num_per_block = cfg.data.num_per_block
+        if args.num_per_block > 0:
+            args.block_num = int(len(data_dict['i_train']) // args.num_per_block)
+            print(f"Running in {args.block_num} blocks where each block contains {args.num_per_block} number of images.")
+    else:
+        args.ckpt_manager = None
+        args.num_per_block = cfg.data.num_per_block = -1
 
     # launch the corresponding program
     if program == "export_bbox":
@@ -95,10 +106,23 @@ if __name__=='__main__':
     elif program == "export_coarse":
         run_export_coarse(args=args, cfg=cfg, device=device)
     elif program == "train":
-        run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
-        print("Training finished. Run rendering.")
-        # render after training
-        run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
+        if args.block_num > 1:   # more than one blocks
+            args.no_reload=True
+            print("Closing reload functions in training multiple blocks.")
+            all_training_indexs = data_dict['i_train'].copy()
+            for block_id in range(args.block_num):
+                args.running_block_id = block_id
+                s, e = block_id * args.num_per_block, (block_id + 1) * args.num_per_block
+                data_dict['i_train'] = all_training_indexs[s:e]
+                run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
+            print("Training finished. Run multi-block rendering.")
+            data_dict['i_train'] = all_training_indexs  # recover data dict
+            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
+        else:
+            args.running_block_id = -1
+            run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
+            print("Training finished. Run rendering.")
+            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'render':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'gen_trace':

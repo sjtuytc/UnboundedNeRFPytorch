@@ -5,7 +5,7 @@ visualize_poses = False
 alpha_init = 1e-2
 stepsize = 0.5
 _mpi_depth = 256
-maskout_near_cam_vox = False
+maskout_near_cam_vox = False  # changed
 pervoxel_lr = False
 unbounded_inward = True
 if visualize_poses:  # for debugging only
@@ -45,6 +45,8 @@ fine_train = dict(
     N_iters=30000,
     N_rand=4096,
     ray_sampler='flatten',
+    # N_rand=4096,
+    # ray_sampler='random',
     weight_distortion=weight_distortion,
     pg_scale=[1000,2000,3000,4000,5000,6000,7000],
     tv_before=1e9,
@@ -72,6 +74,7 @@ fine_model_and_render = dict(
     k0_type='DenseGrid',
     bg_len=0.2,  # very important
     viewbase_pe=8,
+    maskout_near_cam_vox=True,
     # # TensorRF settings
     # density_type='TensoRFGrid', 
     # k0_type='TensoRFGrid', 

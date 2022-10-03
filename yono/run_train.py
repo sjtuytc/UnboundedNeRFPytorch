@@ -16,42 +16,48 @@ from yono.yono_model import yono_get_training_rays
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-def create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
+def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
     model_kwargs = copy.deepcopy(cfg_model)
     num_voxels = model_kwargs.pop('num_voxels')
     if len(cfg_train.pg_scale):
         num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
+    verbose = args.block_num <= 1
 
     if cfg.data.dataset_type == "waymo":
-        print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
+        if verbose:
+            print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
         if cfg.sample_num <= 0:
             raise NotImplementedError("YONO model must receive a sample_num arguments.")
         model_kwargs['sample_num'] = cfg.sample_num
         model = YONOModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels,
+            num_voxels=num_voxels, verbose=verbose,
             **model_kwargs)
     elif cfg.data.ndc:
-        print(f'scene_rep_reconstruction ({stage}): \033[96muse multiplane images\033[0m')
+        if verbose:
+            print(f'scene_rep_reconstruction ({stage}): \033[96muse multiplane images\033[0m')
         model = dmpigo.DirectMPIGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels,
             **model_kwargs)
     elif cfg.data.unbounded_inward:
-        print(f'scene_rep_reconstruction ({stage}): \033[96muse contraced voxel grid (covering unbounded)\033[0m')
+        if verbose:
+            print(f'scene_rep_reconstruction ({stage}): \033[96muse contraced voxel grid (covering unbounded)\033[0m')
         model = dcvgo.DirectContractedVoxGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels,
             **model_kwargs)
     else:
-        print(f'scene_rep_reconstruction ({stage}): \033[96muse dense voxel grid\033[0m')
+        if verbose:
+            print(f'scene_rep_reconstruction ({stage}): \033[96muse dense voxel grid\033[0m')
         model = dvgo.DirectVoxGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels,
             mask_cache_path=coarse_ckpt_path,
             **model_kwargs)
     model = model.to(device)
-    optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0)
+    verbose = args.block_num <= 1
+    optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0, verbose=verbose)
     return model, optimizer
 
 
@@ -121,10 +127,13 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     # init model and optimizer
     if reload_ckpt_path is None:
         print(f'scene_rep_reconstruction ({stage}): train from scratch')
-        model, optimizer = create_new_model(cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
+        model, optimizer = create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
+    elif cfg.data.dataset_type == "waymo":
+        print(f'scene_rep_reconstruction ({stage}): reload YONO model from {reload_ckpt_path}')
+        model, optimizer, start = args.ckpt_manager.load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     else:
         print(f'scene_rep_reconstruction ({stage}): reload from {reload_ckpt_path}')
         model, optimizer, start = load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
@@ -278,29 +287,38 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         
         if global_step%args.i_weights==0:
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
+            if cfg.data.dataset_type == "waymo":
+                args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
+            else:
+                torch.save({
+                    'global_step': global_step,
+                    'model_kwargs': model.get_kwargs(),
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                }, path)
+                print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', path)
+
+    # final save
+    if global_step != -1:      
+        if cfg.data.dataset_type == "waymo": 
+            args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
+        else:               
             torch.save({
                 'global_step': global_step,
                 'model_kwargs': model.get_kwargs(),
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-            }, path)
-            print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', path)
-
-
-    # final save
-    if global_step != -1:                              
-        torch.save({
-            'global_step': global_step,
-            'model_kwargs': model.get_kwargs(),
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-        }, last_ckpt_path)
-        print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', last_ckpt_path)
+            }, last_ckpt_path)
+            print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', last_ckpt_path)
 
 
 def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
     # init
-    print('train: start')
+    running_block_id = args.running_block_id
+    if running_block_id >= 0:
+        print(f"Training block id: {running_block_id}.")
+    else:
+        print('Training: start.')
     eps_time = time.time()
     os.makedirs(os.path.join(cfg.basedir, cfg.expname), exist_ok=True)
     with open(os.path.join(cfg.basedir, cfg.expname, 'args.txt'), 'w') as file:
@@ -309,7 +327,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
             file.write('{} = {}\n'.format(arg, attr))
     cfg.dump(os.path.join(cfg.basedir, cfg.expname, 'config.py'))
 
-    # coarse geometry searching (only works for inward bounded scenes)
+    # coarse geometry searching (only works for inward bounded scenes, not for waymo)
     eps_coarse = time.time()
     xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)
     if cfg.coarse_train.N_iters > 0:
@@ -348,8 +366,10 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
             coarse_ckpt_path=coarse_ckpt_path)
     eps_fine = time.time() - eps_fine
     eps_time_str = f'{eps_fine//3600:02.0f}:{eps_fine//60%60:02.0f}:{eps_fine%60:02.0f}'
-    print('train: fine detail reconstruction in', eps_time_str)
+    if running_block_id >= 0:
+        print('train: fine detail reconstruction in', eps_time_str)
 
     eps_time = time.time() - eps_time
     eps_time_str = f'{eps_time//3600:02.0f}:{eps_time//60%60:02.0f}:{eps_time%60:02.0f}'
-    print('train: finish (eps time', eps_time_str, ')')
+    if running_block_id >= 0:
+        print('train: finish (eps time', eps_time_str, ')')

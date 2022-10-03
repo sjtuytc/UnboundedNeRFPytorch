@@ -81,20 +81,22 @@ def _compute_bbox_by_cam_frustrm_bounded(cfg, HW, Ks, poses, i_train, near, far)
 
 
 def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **kwargs):
-    print('compute_bbox_by_cam_frustrm: start')
+    verbose = args.block_num <= 1
+    if verbose:
+        print('compute_bbox_by_cam_frustrm: start')
     if cfg.data.dataset_type == "waymo":
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_waymo(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.unbounded_inward:
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_unbounded(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
-
     else:
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_bounded(
                 cfg, HW, Ks, poses, i_train, near, far)
-    print('compute_bbox_by_cam_frustrm: xyz_min', xyz_min)
-    print('compute_bbox_by_cam_frustrm: xyz_max', xyz_max)
-    print('compute_bbox_by_cam_frustrm: finish')
+    if verbose:
+        print('compute_bbox_by_cam_frustrm: xyz_min', xyz_min)
+        print('compute_bbox_by_cam_frustrm: xyz_max', xyz_max)
+        print('compute_bbox_by_cam_frustrm: finish')
     return xyz_min, xyz_max
 
 @torch.no_grad()

@@ -138,14 +138,11 @@ def ptstocam(pts, c2w):
 
 
 def poses_avg(poses):
-
     hwf = poses[0, :3, -1:]
-
     center = poses[:, :3, 3].mean(0)
     vec2 = normalize(poses[:, :3, 2].sum(0))
     up = poses[:, :3, 1].sum(0)
     c2w = np.concatenate([viewmatrix(vec2, up, center), hwf], 1)
-
     return c2w
 
 
@@ -209,7 +206,9 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
     if 'sample_cam' in data_cfg:
         metadata = sample_metadata_by_cam(metadata, data_cfg['sample_cam'])
     if args.sample_num > 0:
-        sample_idxs = list(range(args.sample_num))
+        sample_idxs = list(range(0, args.sample_num * data_cfg['sample_interval'], data_cfg['sample_interval']))
+        assert args.sample_num * data_cfg['sample_interval'] < len(metadata['train']['file_path']), \
+            f"Not enough data to train with given sample interval: {data_cfg['sample_interval']}!"
     elif 'sample_idxs' in data_cfg:
         sample_idxs = data_cfg['sample_idxs']
     else:
@@ -249,6 +248,7 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
         imgs = tr_im_path + val_im_path  # do not load all the images
     else:
         imgs = []
+        print(f"Loading all the images to disk.")
         for path in tqdm(tr_im_path):
             imgs.append(imageio.imread(os.path.join(basedir, path)) / 255.)
         for path in tqdm(val_im_path):

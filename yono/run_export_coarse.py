@@ -5,7 +5,9 @@ from yono.load_everything import load_existing_model
 
 
 def run_export_coarse(args, cfg, device, save_path=None):
-    print('Export coarse visualization...')
+    verbose = args.block_num <= 1
+    if verbose:
+        print('Export coarse visualization...')
     with torch.no_grad():
         ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'coarse_last.tar')
         # model = utils.load_model(dvgo.DirectVoxGO, ckpt_path).to(device)
@@ -16,4 +18,3 @@ def run_export_coarse(args, cfg, device, save_path=None):
     if save_path is None:
         save_path = args.export_coarse_only
     np.savez_compressed(save_path, alpha=alpha, rgb=rgb)
-    print('done')

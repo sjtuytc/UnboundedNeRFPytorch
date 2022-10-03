@@ -110,7 +110,50 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
 
 
 def run_render(args, cfg, data_dict, device):
-    # load model for rendring
+    # block-by-block rendering
+    if args.block_num > 1:
+        if args.render_train:
+            model_class = YONOModel  # only support YONOModel currently
+            ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
+            testsavedir = os.path.join(cfg.basedir, cfg.expname, f'render_train_fine_last')
+            os.makedirs(testsavedir, exist_ok=True)
+            print('All results are dumped into', testsavedir)
+            all_rgbs = []
+            all_training_indexs = data_dict['i_train'].copy()
+            for idx, cp in enumerate(ckpt_paths):
+                args.running_block_id = idx
+                s, e = idx * args.num_per_block, (idx + 1) * args.num_per_block
+                data_dict['i_train'] = all_training_indexs[s:e]
+                ckpt_name = cp.split('/')[-1][:-4]
+                model = utils.load_model(model_class, cp).to(device)
+                stepsize = cfg.fine_model_and_render.stepsize
+                render_viewpoints_kwargs = {
+                    'model': model,
+                    'ndc': cfg.data.ndc,
+                    'render_kwargs': {
+                        'near': data_dict['near'],
+                        'far': data_dict['far'],
+                        'bg': 1 if cfg.data.white_bkgd else 0,
+                        'stepsize': stepsize,
+                        'inverse_y': cfg.data.inverse_y,
+                        'flip_x': cfg.data.flip_x,
+                        'flip_y': cfg.data.flip_y,
+                        'render_depth': True,
+                    }
+                }
+                rgbs, depths, bgmaps = render_viewpoints(cfg=cfg, render_poses=data_dict['poses'][data_dict['i_train']],
+                HW=data_dict['HW'][data_dict['i_train']], Ks=data_dict['Ks'][data_dict['i_train']],
+                gt_imgs=[data_dict['images'][i].cpu().numpy() for i in data_dict['i_train']],
+                savedir=testsavedir, dump_images=args.dump_images, eval_ssim=args.eval_ssim, 
+                eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
+                **render_viewpoints_kwargs)
+                all_rgbs += rgbs.tolist()
+            all_rgbs = np.array(all_rgbs)
+            imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(all_rgbs), fps=15, quality=8)
+        else:
+            raise NotImplementedError
+        return
+    # rendering normal cases
     if args.render_test or args.render_train or args.render_video:
         if args.ft_path:
             ckpt_path = args.ft_path
@@ -125,6 +168,7 @@ def run_render(args, cfg, data_dict, device):
             model_class = dcvgo.DirectContractedVoxGO
         else:
             model_class = dvgo.DirectVoxGO
+
         model = utils.load_model(model_class, ckpt_path).to(device)
         stepsize = cfg.fine_model_and_render.stepsize
         render_viewpoints_kwargs = {
@@ -201,6 +245,4 @@ def run_render(args, cfg, data_dict, device):
         dmin, dmax = np.percentile(depths_vis[bgmaps < 0.1], q=[5, 95])
         depth_vis = plt.get_cmap('rainbow')(1 - np.clip((depths_vis - dmin) / (dmax - dmin), 0, 1)).squeeze()[..., :3]
         imageio.mimwrite(os.path.join(testsavedir, 'video.depth.mp4'), utils.to8b(depth_vis), fps=30, quality=8)
-
-    print('Done')
-
+    return

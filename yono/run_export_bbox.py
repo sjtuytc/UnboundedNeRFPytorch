@@ -7,7 +7,9 @@ from yono.bbox_compute import compute_bbox_by_cam_frustrm
 
 
 def run_export_bbox_cams(args, cfg, data_dict, save_path=None): 
-    print('Export bbox and cameras...')
+    verbose = args.block_num <= 1
+    if verbose:
+        print('Export bbox and cameras...')
     if save_path is None:
         save_path = args.export_bbox_and_cams_only
     xyz_min, xyz_max = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)
@@ -29,4 +31,3 @@ def run_export_bbox_cams(args, cfg, data_dict, save_path=None):
     np.savez_compressed(save_path,
         xyz_min=xyz_min.cpu().numpy(), xyz_max=xyz_max.cpu().numpy(),
         cam_lst=np.array(cam_lst))
-    print('done')
