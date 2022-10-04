@@ -299,7 +299,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', path)
 
     # final save
-    if global_step != -1:      
+    if global_step != -1:
         if cfg.data.dataset_type == "waymo": 
             args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
         else:               

@@ -314,7 +314,7 @@ class YONOModel(nn.Module):
                 path=None, mask=self.mask_cache(self_grid_xyz) & (self_alpha>self.fast_color_thres),
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max)
 
-        print('dcvgo: scale_volume_grid finish')
+        print('YONO: scale_volume_grid finish')
 
     @torch.no_grad()
     def update_occupancy_cache(self):

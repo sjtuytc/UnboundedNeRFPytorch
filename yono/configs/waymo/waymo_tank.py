@@ -20,7 +20,7 @@ data = dict(
     #     'zdelta': 0.5,
     # },
     sample_cam=cam_id,
-    test_rotate_angle=9, # rotate angle in testing phase
+    test_rotate_angle=50, # rotate angle in testing phase
     # sample_idxs=[1127, 11009, 9805, 9426, 5859, 6315]
     sample_interval=1,
     num_per_block=5,  # run this num in block

@@ -57,8 +57,8 @@ def config_parser():
     # logging/saving options
     parser.add_argument("--i_print",   type=int, default=500,
                         help='frequency of console printout and metric loggin')
-    parser.add_argument("--i_weights", type=int, default=100000,
-                        help='frequency of weight ckpt saving')
+    parser.add_argument("--i_weights", type=int, default=1000000,
+                        help='frequency of weight ckpt saving, by default not save ckpts during training.')
     return parser
 
 
@@ -107,7 +107,7 @@ if __name__=='__main__':
         run_export_coarse(args=args, cfg=cfg, device=device)
     elif program == "train":
         if args.block_num > 1:   # more than one blocks
-            args.no_reload=True
+            args.no_reload=True  # forbid reload from the disk
             print("Closing reload functions in training multiple blocks.")
             all_training_indexs = data_dict['i_train'].copy()
             for block_id in range(args.block_num):
