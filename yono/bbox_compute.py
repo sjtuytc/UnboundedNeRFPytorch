@@ -32,14 +32,18 @@ def _compute_bbox_by_cam_frustrm_waymo(cfg, HW, Ks, poses, i_train, near_clip):
         xs.append(c2w[:, 3][0].item())
         ys.append(c2w[:, 3][1].item())
         zs.append(c2w[:, 3][2].item())
+    
+    # # use full data statistics
+    # for (H, W), K, c2w in tqdm(zip(HW, Ks, poses), total=len(HW)):
+    #     xs.append(c2w[:, 3][0].item())
+    #     ys.append(c2w[:, 3][1].item())
+    #     zs.append(c2w[:, 3][2].item())
+        
     zmin, zmax = min(zs), max(zs)
     xmin, xmax = min(xs), max(xs)
     ymin, ymax = min(ys), max(ys)
-    # xyz_min = [xmin - 0.20, ymin-0.05, zmin-0.05]
-    # xyz_max = [xmax + 0.03, ymax+0.05, zmax+0.05]
-    # ~19
-    xyz_min = [xmin - 0.05, ymin-0.01, zmin-0.01]
-    xyz_max = [xmax + 0.05, ymax+0.01, zmax+0.01]
+    xyz_min = [xmin - 0.05, ymin - 0.01, zmin - 0.01]
+    xyz_max = [xmax + 0.05, ymax + 0.01, zmax + 0.01]
     xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)
     # # Find a tightest cube that cover all camera centers
     # near = -0.1

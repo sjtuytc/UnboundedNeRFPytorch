@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch_scatter import segment_coo
+from yono.grid import DenseGrid
 
 from . import yono_grid
 from .dvgo import Raw2Alpha, Alphas2Weights
@@ -117,12 +118,12 @@ class YONOModel(nn.Module):
                  rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, apperance_emb_dim=-1, verbose=True,
                  **kwargs):
         super(YONOModel, self).__init__()
-        # xyz_min/max are the boundary that separates fg and bg scene
         xyz_min = torch.Tensor(xyz_min)
         xyz_max = torch.Tensor(xyz_max)
         assert len(((xyz_max - xyz_min) * 100000).long().unique()), 'scene bbox must be a cube in DirectContractedVoxGO'
         self.register_buffer('scene_center', (xyz_min + xyz_max) * 0.5)
         self.register_buffer('scene_radius', (xyz_max - xyz_min) * 0.5)
+        # xyz_min/max are the boundary that separates fg and bg scene in NDC.
         self.register_buffer('xyz_min', torch.Tensor([-1,-1,-1]) - bg_len)
         self.register_buffer('xyz_max', torch.Tensor([1,1,1]) + bg_len)
         if isinstance(fast_color_thres, dict):
@@ -380,11 +381,12 @@ class YONOModel(nn.Module):
             ray_id:           [M]    the index of the ray of each point.
             step_id:          [M]    the i'th step on a ray of each point.
         '''
-        rays_o = (ori_rays_o - self.scene_center) / self.scene_radius
+        # NDC coordinates
+        rays_o = (ori_rays_o - self.scene_center) / self.scene_radius  
         rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
         N_inner = int(2 / (2+2*self.bg_len) * self.world_len / stepsize) + 1
         N_outer = N_inner
-        # sample far-away points.
+
         b_inner = torch.linspace(0, 2, N_inner+1)
         b_outer = 2 / torch.linspace(1, 1/128, N_outer+1)
         t = torch.cat([
@@ -566,6 +568,15 @@ class YONOModel(nn.Module):
                         reduce='sum')
             ret_dict.update({'depth': depth})
         return ret_dict
+    
+    def export_geometry_for_visualize(self, save_path):
+        with torch.no_grad():
+            dense_grid = self.density.get_dense_grid()
+            alpha = self.activate_density(dense_grid).squeeze().cpu().numpy()
+            color_grid = self.k0.get_dense_grid()
+            rgb = torch.sigmoid(color_grid).squeeze().permute(1,2,3,0).cpu().numpy()
+            np.savez_compressed(save_path, alpha=alpha, rgb=rgb)
+            print(f"Geometry is saved at {save_path}.")
 
 
 class DistortionLoss(torch.autograd.Function):
@@ -593,4 +604,3 @@ class DistortionLoss(torch.autograd.Function):
         return grad, None, None, None
 
 distortion_loss = DistortionLoss.apply
-

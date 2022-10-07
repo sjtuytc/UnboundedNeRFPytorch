@@ -327,7 +327,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
             file.write('{} = {}\n'.format(arg, attr))
     cfg.dump(os.path.join(cfg.basedir, cfg.expname, 'config.py'))
 
-    # coarse geometry searching (only works for inward bounded scenes, not for waymo)
+    # coarse geometry searching (originally only for inward bounded scenes, extended to support waymo)
     eps_coarse = time.time()
     xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)
     if cfg.coarse_train.N_iters > 0:

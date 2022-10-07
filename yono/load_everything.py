@@ -15,8 +15,7 @@ def load_everything(args, cfg):
         data_dict = load_common_data(cfg.data)
 
     # remove useless field
-    kept_keys = {
-            'hwf', 'HW', 'Ks', 'near', 'far', 'near_clip',
+    kept_keys = {'hwf', 'HW', 'Ks', 'near', 'far', 'near_clip',
             'i_train', 'i_val', 'i_test', 'irregular_shape',
             'poses', 'render_poses', 'images'}
     for k in list(data_dict.keys()):

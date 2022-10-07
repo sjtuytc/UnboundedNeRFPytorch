@@ -1,12 +1,14 @@
 _base_ = '../default.py'
 basedir = './logs/waymo'
 visualize_poses = False
-alpha_init = 1e-2  # default: 1e-4
+alpha_init = 1e-2
 stepsize = 0.5
 _mpi_depth = 256
 maskout_near_cam_vox = False  # changed
 pervoxel_lr = False
 unbounded_inward = True
+cam_id = 73
+expname = f'aug2_waymo_{cam_id}_tt'
 if visualize_poses:  # for debugging only
     coarse_iter = 600
     fast_color_thres=stepsize/_mpi_depth/5
@@ -32,6 +34,15 @@ data = dict(
     rand_bkgd=False,      # random background
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
+    datadir='data/sep19_ordered_dataset',
+    factor=2,
+    near_clip = 0.1,
+    near = 0.1,
+    far = 0.01,
+    sample_cam=cam_id,
+    test_rotate_angle=50, # rotate angle in testing phase
+    sample_interval=1,
+    num_per_block=-1,  # run this num in block
 )
 
 coarse_train = dict(
@@ -41,13 +52,11 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters=30000,
+    N_iters=40000, # 40k for whole training procedure
     N_rand=4096,
     ray_sampler='flatten',
-    # N_rand=4096,
-    # ray_sampler='random',
     weight_distortion=weight_distortion,
-    pg_scale=[1000,2000,3000,4000,5000,6000,7000],
+    pg_scale=[1000,2000,3000,4000,5000,],
     tv_before=1e9,
     tv_dense_before=10000,
     weight_tv_density=1e-6,
@@ -80,4 +89,8 @@ fine_model_and_render = dict(
     # k0_type='TensoRFGrid', 
     # density_config=dict(n_comp=8),
     # k0_config=dict(n_comp=24),
+)
+
+vis = dict(
+    height_rate = 0.6 # camera direction frustrum height
 )

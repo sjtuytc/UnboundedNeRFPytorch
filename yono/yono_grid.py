@@ -36,6 +36,7 @@ class DenseGrid(nn.Module):
         '''
         shape = xyz.shape[:-1]
         xyz = xyz.reshape(1,1,1,-1,3)
+        # scale to [-1, 1]
         ind_norm = ((xyz - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
         out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
         out = out.reshape(self.channels,-1).T.reshape(*shape,self.channels)

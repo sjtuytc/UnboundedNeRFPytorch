@@ -45,7 +45,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         viewdirs = viewdirs.flatten(0,-2)
         if cfg.data.dataset_type == "waymo":
             indexs = torch.zeros_like(rays_o)
-            indexs.copy_(torch.tensor(i).long().to(rays_o.device))
+            indexs.copy_(torch.tensor(i).long().to(rays_o.device))  # add image index
             render_result_chunks = [
                 {k: v for k, v in model(ro, rd, vd, **{**render_kwargs, "indexs": ind}).items() if k in keys}
                 for ro, rd, vd, ind in zip(rays_o.split(8192, 0), rays_d.split(8192, 0), 
@@ -109,15 +109,20 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     return rgbs, depths, bgmaps
 
 
-def run_render(args, cfg, data_dict, device):
+def run_render(args, cfg, data_dict, device, debug=True):
     # block-by-block rendering
     if args.block_num > 1:
+        print("Merging trained blocks ...")
+        model_class = YONOModel                 # only support YONOModel currently
+        ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
+        exp_dir = os.path.join(cfg.basedir, cfg.expname)
+        # merged_model = args.ckpt_manager.merge_blocks(ckpt_paths, device, model_class, exp_dir)
         if args.render_train:
             model_class = YONOModel                 # only support YONOModel currently
             ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
-            testsavedir = os.path.join(cfg.basedir, cfg.expname, f'render_train_fine_last')
-            os.makedirs(testsavedir, exist_ok=True)
-            print('All results are dumped into', testsavedir)
+            train_save_dir = os.path.join(cfg.basedir, cfg.expname, f'render_train_fine_last')
+            os.makedirs(train_save_dir, exist_ok=True)
+            print('All results are dumped into', train_save_dir)
             all_rgbs = []
             all_training_indexs = data_dict['i_train'].copy()
             for idx, cp in enumerate(ckpt_paths):
@@ -127,6 +132,7 @@ def run_render(args, cfg, data_dict, device):
                 data_dict['i_train'] = all_training_indexs[s:e]
                 ckpt_name = cp.split('/')[-1][:-4]
                 model = utils.load_model(model_class, cp).to(device)
+                # model = merged_model
                 stepsize = cfg.fine_model_and_render.stepsize
                 render_viewpoints_kwargs = {
                     'model': model,
@@ -145,12 +151,16 @@ def run_render(args, cfg, data_dict, device):
                 rgbs, depths, bgmaps = render_viewpoints(cfg=cfg, render_poses=data_dict['poses'][data_dict['i_train']],
                 HW=data_dict['HW'][data_dict['i_train']], Ks=data_dict['Ks'][data_dict['i_train']],
                 gt_imgs=[data_dict['images'][i].cpu().numpy() for i in data_dict['i_train']],
-                savedir=testsavedir, dump_images=args.dump_images, eval_ssim=args.eval_ssim, 
+                savedir=train_save_dir, dump_images=args.dump_images, eval_ssim=args.eval_ssim, 
                 eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
                 **render_viewpoints_kwargs)
                 all_rgbs += rgbs.tolist()
-            all_rgbs = np.array(all_rgbs)
-            imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(all_rgbs), fps=15, quality=8)
+                # if idx > 3 and debug:
+                #     save_all_rgbs = np.array(all_rgbs)
+                #     imageio.mimwrite(os.path.join(train_save_dir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
+                #     pdb.set_trace()
+            save_all_rgbs = np.array(all_rgbs)
+            imageio.mimwrite(os.path.join(train_save_dir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
 
         if args.render_test:
             model_class = YONOModel                 # only support YONOModel currently
@@ -163,13 +173,12 @@ def run_render(args, cfg, data_dict, device):
                 gt_imgs = [data_dict['images'][i].cpu().numpy() for i in data_dict['i_test']]
             ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
             all_rgbs = []
-            all_training_indexs = data_dict['i_test'].copy()
+            all_test_indexs = data_dict['i_test'].copy()
             for idx, cp in enumerate(ckpt_paths):
                 args.running_block_id = idx
                 s, e = idx * args.num_per_block, (idx + 1) * args.num_per_block
                 # Here we assume the i_test's order follows the block order.
-                # data_dict['i_test'] = all_training_indexs[s:e]
-                data_dict['i_test'] = all_training_indexs[40:60]
+                data_dict['i_test'] = all_test_indexs[s:e]
                 ckpt_name = cp.split('/')[-1][:-4]
                 model = utils.load_model(model_class, cp).to(device)
                 stepsize = cfg.fine_model_and_render.stepsize
@@ -188,16 +197,14 @@ def run_render(args, cfg, data_dict, device):
                     }
                 }
                 rgbs, depths, bgmaps = render_viewpoints(
-                cfg=cfg, render_poses=data_dict['poses'][data_dict['i_test']],
-                HW=data_dict['HW'][data_dict['i_test']], Ks=data_dict['Ks'][data_dict['i_test']], gt_imgs=gt_imgs,
+                cfg=cfg, render_poses=data_dict['poses'][data_dict['i_test']], HW=data_dict['HW'][data_dict['i_test']], 
+                Ks=data_dict['Ks'][data_dict['i_test']], gt_imgs=gt_imgs,
                 savedir=testsavedir, dump_images=args.dump_images,
                 eval_ssim=args.eval_ssim, eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
                 **render_viewpoints_kwargs)
                 all_rgbs += rgbs.tolist()
-                if idx > 5:
-                    pdb.set_trace()
-                save_all_rgbs = np.array(all_rgbs)
-                imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
+            save_all_rgbs = np.array(all_rgbs)
+            imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
         return
     # rendering normal cases
     if args.render_test or args.render_train or args.render_video:
@@ -231,6 +238,8 @@ def run_render(args, cfg, data_dict, device):
                 'render_depth': True,
             },
         }
+        geometry_path = os.path.join(cfg.basedir, cfg.expname, f'geometry.npz')
+        model.export_geometry_for_visualize(geometry_path)
 
     # render trainset and eval
     if args.render_train:

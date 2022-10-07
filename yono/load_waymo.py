@@ -17,6 +17,7 @@ from tqdm import tqdm
 import json
 from scipy.spatial.transform import Rotation as R
 from yono.common_data_loaders.load_llff import normalize
+from yono.trajectory_generators.waymo_traj import *
 
 ########################################################################################################################
 # camera coordinate system: x-->right, y-->down, z-->scene (opencv/colmap convention)
@@ -165,40 +166,8 @@ def find_most_freq_ele(one_list):
     freq_count = one_list.count(most_freq_ele)
     return most_freq_ele, freq_count
 
-
-def get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, test_num=100, rotate_angle=9):
-    # We assume the metadata has been sorted here.
-    start_c2w, end_c2w = np.array(tr_c2w[0]), np.array(tr_c2w[-1])
-    start_rot, end_rot = start_c2w[:3, :3], end_c2w[:3, :3]
     
-    # get base information, this is where we started
-    base_pos = train_pos[0]
-    base_quat = R.from_matrix(start_rot).as_quat()
-    
-    # generate rotating matries
-    rotate_interval = rotate_angle / test_num
-    cur_R = R.from_quat(base_quat).as_matrix()
-    all_rot = [cur_R]
-    for i in range(test_num - 1):
-        rotate_r = R.from_euler('y', -rotate_interval, degrees=True)
-        cur_R = np.matmul(cur_R, rotate_r.as_matrix())
-        all_rot.append(cur_R)
-    all_c2ws = [start_c2w.copy() for i in range(test_num)]  # initialize
-    for i, c2w in enumerate(all_c2ws):
-        all_c2ws[i][:3, :3] = all_rot[i]
-        all_c2ws[i][:3, 3] = base_pos
-        
-    assert train_HW[0] == train_HW[-1], "image shapes are not the same for the first and the last frame."
-    test_HW = [train_HW[0] for i in range(test_num)]
-    assert tr_K[0] == tr_K[-1], "Ks are not the same for the first and the last frame."
-    test_K = [tr_K[0] for i in range(test_num)]
-    assert tr_cam_idx[0] == tr_cam_idx[-1], "cameras are not the same for the first and the last frame"
-    test_cam_idxs = [tr_cam_idx[0] for i in range(test_num)]
-    test_pos = [base_pos for i in range(test_num)]
-    return all_c2ws, test_HW, test_K, test_cam_idxs, test_pos
-
-    
-def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose=True):
+def load_waymo(args, data_cfg, ):
     load_img = False if args.program == "gen_trace" else True
     basedir = data_cfg.datadir
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
@@ -260,8 +229,11 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
                        for i in range(len(metadata['val']['height']))]).tolist()
 
     # Create the test split
-    te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
-        get_test_poses(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+    # te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
+    #     gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+    #                    rotate_angle=data_cfg.test_rotate_angle)
+    te_c2w, test_HW, test_K, test_cam_idxs = \
+        gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
                        rotate_angle=data_cfg.test_rotate_angle)
     for _ in te_c2w:
         i_split[2].append(loop_id)
@@ -276,8 +248,9 @@ def load_waymo(args, data_cfg, rerotate=True, normalize_pose=True, recenter_pose
     if load_img:
         imgs = np.stack(imgs)
     cam_idxs += test_cam_idxs
-    positions += test_pos
-    return imgs, poses, HW, all_K, cam_idxs, i_split, positions
+    # positions += test_pos
+    return imgs, poses, HW, all_K, cam_idxs, i_split
+    # return imgs, poses, HW, all_K, cam_idxs, i_split, positions
 
 
 def inward_nearfar_heuristic(cam_o, ratio=0.05):
@@ -292,7 +265,7 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
 def load_waymo_data(args, data_cfg):
     K, depths = None, None
     near_clip = None
-    images, poses, HW, K, cam_idxs, i_split, positions = load_waymo(args, data_cfg)
+    images, poses, HW, K, cam_idxs, i_split = load_waymo(args, data_cfg)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
@@ -305,30 +278,11 @@ def load_waymo_data(args, data_cfg):
     if 'far' in data_cfg:
         far = data_cfg['far']
     Ks = np.array(K)
-    # # Cast intrinsics to right types
-    # H, W, focal = hwf
-    # H, W = int(H), int(W)
-    # hwf = [H, W, focal]
-    # HW = np.array([im.shape[:2] for im in images])
     irregular_shape = False
-
-    # if K is None:
-    #     K = np.array([
-    #         [focal, 0, 0.5*W],
-    #         [0, focal, 0.5*H],
-    #         [0, 0, 1]
-    #     ])
-
-    # if len(K.shape) == 2:
-    #     Ks = K[None].repeat(len(poses), axis=0)
-    # else:
-    #     Ks = K
-
     data_dict = dict(
         HW=HW, Ks=Ks, near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,
-        poses=poses, images=images, depths=depths, cam_idxs=cam_idxs, 
-        positions=positions, irregular_shape=irregular_shape
+        poses=poses, images=images, depths=depths, cam_idxs=cam_idxs, irregular_shape=irregular_shape
     )
     data_dict['poses'] = torch.tensor(data_dict['poses']).float()
     data_dict['images'] = torch.tensor(data_dict['images']).float()
