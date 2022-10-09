@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pathlib import Path
 
 
-COPYFILE = False  # change it to true to rename and copy image files
+COPYFILE = True  # change it to true to rename and copy image files
 
 
 def get_pix2cam(focals, width, height):
