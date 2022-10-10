@@ -91,7 +91,7 @@ if __name__=='__main__':
     data_dict = load_everything(args=args, cfg=cfg)
     args.block_num = -1
     program = args.program
-    if cfg.data.dataset_type == "waymo":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         args.ckpt_manager = YONOCheckpointManager(args, cfg)
         args.num_per_block = cfg.data.num_per_block
         if args.num_per_block > 0:

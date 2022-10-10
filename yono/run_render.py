@@ -43,7 +43,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rays_o = rays_o.flatten(0,-2)
         rays_d = rays_d.flatten(0,-2)
         viewdirs = viewdirs.flatten(0,-2)
-        if cfg.data.dataset_type == "waymo":
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
             indexs = torch.zeros_like(rays_o)
             indexs.copy_(torch.tensor(i).long().to(rays_o.device))  # add image index
             render_result_chunks = [
@@ -213,7 +213,7 @@ def run_render(args, cfg, data_dict, device, debug=True):
         else:
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
         ckpt_name = ckpt_path.split('/')[-1][:-4]
-        if cfg.data.dataset_type == "waymo":
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
             model_class = YONOModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO

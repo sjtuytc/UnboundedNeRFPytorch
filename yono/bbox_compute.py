@@ -67,6 +67,27 @@ def _compute_bbox_by_cam_frustrm_waymo(cfg, HW, Ks, poses, i_train, near_clip):
     return xyz_min, xyz_max
 
 
+def _compute_bbox_by_cam_frustrm_mega(cfg, HW, Ks, poses, i_train, near_clip):
+    xs, ys, zs = [], [], []
+    for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
+        xs.append(c2w[:, 3][0].item())
+        ys.append(c2w[:, 3][1].item())
+        zs.append(c2w[:, 3][2].item())
+    zmin, zmax = min(zs), max(zs)
+    xmin, xmax = min(xs), max(xs)
+    ymin, ymax = min(ys), max(ys)
+    x_distance, y_distance, z_distance = abs(xmax - xmin), abs(ymax - ymin), abs(zmax - zmin)
+    boundary_ratio = 0.01
+    xyz_min = [xmin - boundary_ratio*x_distance, ymin - boundary_ratio * y_distance, zmin - boundary_ratio * z_distance]
+    xyz_max = [xmax + boundary_ratio*x_distance, ymax + boundary_ratio * y_distance, zmax + boundary_ratio * z_distance]
+    xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)
+    center = (xyz_min + xyz_max) * 0.5
+    radius = (center - xyz_min).max() * cfg.data.unbounded_inner_r
+    xyz_min = center - radius
+    xyz_max = center + radius
+    return xyz_min, xyz_max
+
+
 def _compute_bbox_by_cam_frustrm_bounded(cfg, HW, Ks, poses, i_train, near, far):
     xyz_min = torch.Tensor([np.inf, np.inf, np.inf])
     xyz_max = -xyz_min
@@ -90,6 +111,9 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
         print('compute_bbox_by_cam_frustrm: start')
     if cfg.data.dataset_type == "waymo":
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_waymo(
+                cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
+    elif cfg.data.dataset_type == "mega":
+        xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_mega(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.unbounded_inward:
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_unbounded(

@@ -9,47 +9,11 @@ import shutil
 import torch
 from tqdm import tqdm
 from pathlib import Path
+from PIL import Image
 
 
 COPYFILE = True  # change it to true to rename and copy image files
-
-
-def get_pix2cam(focals, width, height):
-    fx = np.array(focals)
-    fy = np.array(focals)
-    cx = np.array(width) * .5
-    cy = np.array(height) * .5
-    arr0 = np.zeros_like(cx)
-    arr1 = np.ones_like(cx)
-    k_inv = np.array([
-        [arr1 / fx, arr0, -cx / fx],
-        [arr0, -arr1 / fy, cy / fy],
-        [arr0, arr0, -arr1],
-    ])
-    k_inv = np.moveaxis(k_inv, -1, 0)
-    return k_inv.tolist()
-
-
-def reorder_meta(meta_dict):
-    cam2images_pos = {}
-    old_name_2_new_name = {}
-    # collect images by cams
-    for one_key in tqdm(meta_dict):
-        cur_value = meta_dict[one_key]
-        cam_idx = cur_value['cam_idx']
-        if cam_idx not in cam2images_pos:
-            cam2images_pos[cam_idx] = [[one_key, cur_value['origin_pos']]]
-        else:
-            cam2images_pos[cam_idx].append([one_key, cur_value['origin_pos']])
-    for one_cam in cam2images_pos:
-        pos_list = cam2images_pos[one_cam]
-        pos_list.sort(key=lambda row: (row[1][1], row[1][0]))
-        for idx, ele in enumerate(pos_list):
-            old_name = ele[0]
-            new_name = str(one_cam) + "_" + str(idx)
-            old_name_2_new_name[old_name] = new_name
-    return old_name_2_new_name
-    
+IMAGE_DOWNSCALE = 4
     
 def form_unified_dict(meta_root, save_prefix='images_train', split_prefix='train'):
     all_metas = sorted(os.listdir(meta_root))
@@ -71,14 +35,23 @@ def form_unified_dict(meta_root, save_prefix='images_train', split_prefix='train
         full_save_path = os.path.join(save_dataset_root, final_path)
         if COPYFILE:
             shutil.copyfile(ori_path, full_save_path)
+        img = Image.open(full_save_path).convert('RGB')
+        if IMAGE_DOWNSCALE != 1:
+            img = img.resize((cur_meta['W'] // IMAGE_DOWNSCALE, cur_meta['H'] // IMAGE_DOWNSCALE), 
+                             Image.Resampling.LANCZOS)
+        img = img.save(full_save_path)
         file_paths.append(final_path)
         if len(cur_meta['c2w']) < 4:
             cur_meta['c2w'].append([0.0, 0.0, 0.0, 1.0])
             c2ws.append(cur_meta['c2w'])
-        widths.append(cur_meta['W'])
-        heights.append(cur_meta['H'])
+        widths.append(cur_meta['W'] / IMAGE_DOWNSCALE)
+        heights.append(cur_meta['H'] / IMAGE_DOWNSCALE)
+        
         distortion.append(cur_meta['distortion'].numpy().tolist())
-        intrisincs.append(cur_meta['intrinsics'].numpy().tolist())
+        fx, fy, half_w, half_h = cur_meta['intrinsics'].numpy().tolist()
+        fx, fy, half_w, half_h = fx / IMAGE_DOWNSCALE, fy / IMAGE_DOWNSCALE, half_w / IMAGE_DOWNSCALE, half_h / IMAGE_DOWNSCALE
+        K = [[fx, 0, half_w, 0], [0, fy, half_h, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+        intrisincs.append(K)
     return_metas = {'file_path': file_paths, 'cam2world': np.array(c2ws).tolist(), 'width': np.array(widths).tolist(),
                     'height': np.array(heights).tolist(), 'K': intrisincs,}
     return return_metas
@@ -93,7 +66,7 @@ train_rgb_p = os.path.join(train_p, 'rgbs')
 val_meta_p = os.path.join(val_p, 'metadata')
 val_rgb_p = os.path.join(val_p, 'rgbs')
 
-save_dataset_root = Path(os.path.join(f"data/oct9_meta", data_name))
+save_dataset_root = Path(os.path.join(f"data/oct9_mega", data_name))
 save_dataset_root.mkdir(parents=True, exist_ok=True)
 os.makedirs(os.path.join(save_dataset_root, 'images_train'), exist_ok=True)
 os.makedirs(os.path.join(save_dataset_root, 'images_val'), exist_ok=True)

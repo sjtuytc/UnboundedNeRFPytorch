@@ -3,13 +3,13 @@ import torch
 import torch.nn.functional as F
 import os,pdb
 import copy
+import numpy as np
 from tqdm import tqdm, trange
 from yono.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
 from yono import utils, dvgo, dcvgo, dmpigo
 from yono.yono_model import YONOModel
 from yono.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
-import numpy as np
 from yono.run_export_bbox import run_export_bbox_cams
 from yono.run_export_coarse import run_export_coarse
 from yono.yono_model import yono_get_training_rays
@@ -23,7 +23,7 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
         num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
     verbose = args.block_num <= 1
 
-    if cfg.data.dataset_type == "waymo":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
         if cfg.sample_num <= 0:
@@ -69,7 +69,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
     indexs_train = None
-    if cfg.data.dataset_type == "waymo":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = yono_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
         ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
@@ -131,7 +131,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
-    elif cfg.data.dataset_type == "waymo":
+    elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         print(f'scene_rep_reconstruction ({stage}): reload YONO model from {reload_ckpt_path}')
         model, optimizer, start = args.ckpt_manager.load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     else:
@@ -149,7 +149,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         'flip_y': cfg.data.flip_y,
     }
     rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
-    gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
+        gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
     
     # view-count-based learning rate
     if cfg_train.pervoxel_lr:
@@ -287,7 +287,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         
         if global_step%args.i_weights==0:
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
-            if cfg.data.dataset_type == "waymo":
+            if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
                 args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
             else:
                 torch.save({
@@ -300,7 +300,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
 
     # final save
     if global_step != -1:
-        if cfg.data.dataset_type == "waymo": 
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega": 
             args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
         else:               
             torch.save({
@@ -352,7 +352,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
 
     # fine detail reconstruction
     eps_fine = time.time()
-    if cfg.coarse_train.N_iters == 0 or cfg.data.dataset_type == "waymo":
+    if cfg.coarse_train.N_iters == 0 or cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         xyz_min_fine, xyz_max_fine = xyz_min_coarse.clone(), xyz_max_coarse.clone()
     else:
         xyz_min_fine, xyz_max_fine = compute_bbox_by_coarse_geo(

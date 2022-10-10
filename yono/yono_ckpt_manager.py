@@ -24,7 +24,7 @@ class YONOCheckpointManager:
 
     def load_existing_model(self, args, cfg, cfg_train, reload_ckpt_path, device):
         # not used in training
-        if cfg.data.dataset_type == "waymo":
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
             model_class = YONOModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO

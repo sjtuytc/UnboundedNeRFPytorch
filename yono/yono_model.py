@@ -423,7 +423,8 @@ class YONOModel(nn.Module):
         '''
         assert len(rays_o.shape)==2 and rays_o.shape[-1]==3, 'Only support point queries in [N, 3] format'
         if isinstance(self._fast_color_thres, dict) and global_step in self._fast_color_thres:
-            print(f'dcvgo: update fast_color_thres {self.fast_color_thres} => {self._fast_color_thres[global_step]}')
+            if self.verbose:
+                print(f'YONO: update fast_color_thres {self.fast_color_thres} => {self._fast_color_thres[global_step]}')
             self.fast_color_thres = self._fast_color_thres[global_step]
 
         ret_dict = {}
