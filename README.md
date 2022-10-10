@@ -47,7 +47,7 @@ The other features of this project would be:
 
 - [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
 
-- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The general NeRF QQ big group is 706949479 (300+ friends are already in this group). The contributors of this project are listed at the bottom of this page.
+- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page.
 
 
 Hope our efforts could help your research or projects!
