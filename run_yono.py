@@ -29,6 +29,8 @@ def config_parser():
                         help='Random seed')
     parser.add_argument("--sample_num", type=int, default=-1,
                         help='Sample number of data points in the dataset, used for debugging.')
+    parser.add_argument("--num_per_block", type=int, default=-1,
+                        help='Number of images per block. Set to -1 to forbid block training.')
     parser.add_argument("--no_reload", action='store_true',
                         help='do not reload weights from saved ckpt')
     parser.add_argument("--no_reload_optimizer", action='store_true',
@@ -93,13 +95,12 @@ if __name__=='__main__':
     program = args.program
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         args.ckpt_manager = YONOCheckpointManager(args, cfg)
-        args.num_per_block = cfg.data.num_per_block
         if args.num_per_block > 0:
             args.block_num = int(len(data_dict['i_train']) // args.num_per_block)
             print(f"Running in {args.block_num} blocks where each block contains {args.num_per_block} number of images.")
     else:
         args.ckpt_manager = None
-        args.num_per_block = cfg.data.num_per_block = -1
+        args.num_per_block = -1
 
     # launch the corresponding program
     if program == "export_bbox":

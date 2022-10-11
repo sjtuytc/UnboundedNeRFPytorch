@@ -57,7 +57,8 @@ def form_unified_dict(meta_root, save_prefix='images_train', split_prefix='train
     return return_metas
 
 
-data_name = 'building'
+# data_name = 'building'
+data_name = 'rubble'
 root_dir = f"data/mega/{data_name}/{data_name}-pixsfm"
 train_p = os.path.join(root_dir, 'train')
 val_p = os.path.join(root_dir, 'val')

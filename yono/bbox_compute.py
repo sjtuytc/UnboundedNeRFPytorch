@@ -77,7 +77,7 @@ def _compute_bbox_by_cam_frustrm_mega(cfg, HW, Ks, poses, i_train, near_clip):
     xmin, xmax = min(xs), max(xs)
     ymin, ymax = min(ys), max(ys)
     x_distance, y_distance, z_distance = abs(xmax - xmin), abs(ymax - ymin), abs(zmax - zmin)
-    boundary_ratio = 0.01
+    boundary_ratio = cfg.data.boundary_ratio
     xyz_min = [xmin - boundary_ratio*x_distance, ymin - boundary_ratio * y_distance, zmin - boundary_ratio * z_distance]
     xyz_max = [xmax + boundary_ratio*x_distance, ymax + boundary_ratio * y_distance, zmax + boundary_ratio * z_distance]
     xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)

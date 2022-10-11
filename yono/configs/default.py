@@ -3,6 +3,7 @@ from copy import deepcopy
 expname = None                    # experiment name
 basedir = './logs/'               # where to store ckpts and logs
 
+
 ''' Template of data options
 '''
 data = dict(
@@ -34,6 +35,7 @@ data = dict(
     # Below are unbounded inward-facing specific settings.
     unbounded_inward=False,
     unbounded_inner_r=1.0,
+    boundary_ratio = 0.01, # used in YONO model.
 )
 
 ''' Template of training options
