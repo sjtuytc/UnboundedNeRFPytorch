@@ -9,6 +9,8 @@ python run_yono.py --program train --config yono/configs/tankstemple_unbounded/P
 # -----------------------------------------------------------------------
 # building
 python run_yono.py --program train --config yono/configs/mega/building_block.py --sample_num 100 --render_train --exp_id 12
-# rubble
 python run_yono.py --program train --config yono/configs/mega/building_block.py --sample_num 100 --render_train --exp_id 12
+# rubble
 python run_yono.py --program train --config yono/configs/mega/rubble.py --sample_num 100 --render_train --num_per_block 5 --exp_id 4
+# quad
+python run_yono.py --program train --config yono/configs/mega/quad.py --sample_num 100 --render_train --num_per_block 5 --exp_id 1

@@ -5,6 +5,7 @@ https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 import os
 import pdb
 import glob
+from tkinter.tix import HList
 import scipy
 import imageio
 import numpy as np
@@ -56,6 +57,25 @@ def sample_metadata_by_cam(metadata, cam_idx):
                 sample_idxs.append(idx)
         for one_k in metadata[split]:
             metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
+    return metadata
+    
+
+def find_most_freq_ele(one_list):
+    most_freq_ele = max(set(one_list), key = one_list.count)
+    freq_count = one_list.count(most_freq_ele)
+    return most_freq_ele, freq_count
+
+
+def sample_metadata_by_shape(metadata):
+    # only leave images with the same shape
+    w_list, h_list = metadata['train']['width'], metadata['train']['height']
+    wh_list = list(zip(w_list, h_list))
+    wh_most_freq, _ = find_most_freq_ele(wh_list)
+    for split in metadata:
+        cur_wh_list = list(zip(metadata[split]['width'], metadata[split]['height']))
+        filtered_idx = [idx for idx in range(len(cur_wh_list)) if cur_wh_list[idx] == wh_most_freq]
+        for one_k in metadata[split]:
+            metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], filtered_idx)
     return metadata
     
 
@@ -116,6 +136,7 @@ def load_mega(args, data_cfg, ):
     else:
         sample_idxs = None
     # metadata = sort_metadata_by_pos(metadata)
+    metadata = sample_metadata_by_shape(metadata)  # sample the most common shape
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
 
     # The validation datasets are from the official val split, 

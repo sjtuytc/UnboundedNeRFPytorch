@@ -16,9 +16,9 @@ def rotate_rot_matrix_by_degree(rot, rot_degree, axis='y'):
 
 
 def gen_dummy_trajs(metadata, tr_c2w, train_HW, tr_K, test_num=100):
-    assert all_equal(train_HW), "image shapes are not all the same."
+    # assert all_equal(train_HW), "image shapes are not all the same."
     test_HW = [train_HW[0] for i in range(test_num)]
-    assert all_equal(tr_K), "Ks are not all the same."
+    # assert all_equal(tr_K), "Ks are not all the same."
     test_K = [tr_K[0] for i in range(test_num)]
     all_c2ws = tr_c2w.copy()[:test_num]  # initialize
     all_c2ws = [np.array(c2w) for c2w in all_c2ws]
