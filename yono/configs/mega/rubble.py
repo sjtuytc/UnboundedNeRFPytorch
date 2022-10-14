@@ -9,6 +9,8 @@ maskout_near_cam_vox = False  # changed
 pervoxel_lr = False
 unbounded_inward = True
 expname = f'oct11_mega_{data_name}'
+mega_dataset_root = "data/oct9_mega"
+
 if visualize_poses:  # for debugging only
     coarse_iter = 600
     fast_color_thres=stepsize/_mpi_depth/5
@@ -35,7 +37,7 @@ data = dict(
     rand_bkgd=False,      # random background
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=False,
-    datadir=f'data/oct9_mega/{data_name}',
+    datadir=mega_dataset_root + f'/{data_name}',
     boundary_ratio=1.0,
     factor=2, # not used
     near_clip = 0.1,
@@ -95,4 +97,11 @@ fine_model_and_render = dict(
 
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
+)
+
+
+# artistic radiance fields
+arf = dict(
+    style_root = mega_dataset_root + "/styles",
+    style_id = 5,
 )

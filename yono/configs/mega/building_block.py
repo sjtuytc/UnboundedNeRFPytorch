@@ -8,6 +8,7 @@ _mpi_depth = 256
 maskout_near_cam_vox = False  # changed
 pervoxel_lr = False
 unbounded_inward = True
+mega_dataset_root = "data/oct9_mega"
 expname = f'oct9_mega_{data_name}'
 if visualize_poses:  # for debugging only
     coarse_iter = 600
@@ -95,4 +96,10 @@ fine_model_and_render = dict(
 
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
+)
+
+# artistic radiance fields
+arf = dict(
+    style_root = mega_dataset_root + "/styles",
+    style_id = 132,
 )

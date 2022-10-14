@@ -7,6 +7,7 @@ from yono import utils, dvgo, dcvgo, dmpigo
 from yono.yono_model import YONOModel
 import pdb
 from yono.utils import resize_and_to_8b
+from yono.arf import ARF
 
 
 @torch.no_grad()
@@ -110,6 +111,11 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
 
 
 def run_render(args, cfg, data_dict, device, debug=True):
+    # initilize stylizer when needed
+    if 'arf' in cfg:
+        stylizer = ARF(cfg, data_dict, device)
+    else:
+        stylizer = None
     # block-by-block rendering
     if args.block_num > 1:
         print("Merging trained blocks ...")
@@ -154,13 +160,14 @@ def run_render(args, cfg, data_dict, device, debug=True):
                 savedir=train_save_dir, dump_images=args.dump_images, eval_ssim=args.eval_ssim, 
                 eval_lpips_alex=args.eval_lpips_alex, eval_lpips_vgg=args.eval_lpips_vgg,
                 **render_viewpoints_kwargs)
+                if stylizer is not None:
+                    rgbs, _ = stylizer.match_colors_for_image_set(rgbs, train_save_dir)
                 all_rgbs += rgbs.tolist()
-                # if idx > 3 and debug:
-                #     save_all_rgbs = np.array(all_rgbs)
-                #     imageio.mimwrite(os.path.join(train_save_dir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
-                #     pdb.set_trace()
             save_all_rgbs = np.array(all_rgbs)
-            imageio.mimwrite(os.path.join(train_save_dir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
+            save_name = 'video.rgb.mp4'
+            if stylizer is not None:
+                save_name = f'video.rgb.style.{cfg.arf.style_id}.mp4'
+            imageio.mimwrite(os.path.join(train_save_dir, save_name), utils.to8b(save_all_rgbs), fps=15, quality=8)
 
         if args.render_test:
             model_class = YONOModel                 # only support YONOModel currently
