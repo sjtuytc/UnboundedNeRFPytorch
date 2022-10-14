@@ -1,10 +1,10 @@
 import torch
 import pdb
-from yono.common_data_loaders.load_common_data import load_common_data
-from yono.load_waymo import load_waymo_data
-from yono.load_mega import load_mega_data
-from yono import utils, dvgo, dcvgo, dmpigo
-from yono.yono_model import YONOModel
+from comvog.common_data_loaders.load_common_data import load_common_data
+from comvog.load_waymo import load_waymo_data
+from comvog.load_mega import load_mega_data
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.comvog_model import ComVoGModel
 
 
 def load_everything(args, cfg):
@@ -40,7 +40,7 @@ def load_everything(args, cfg):
 
 def load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device):
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-        model_class = YONOModel
+        model_class = ComVoGModel
     elif cfg.data.ndc:
         model_class = dmpigo.DirectMPIGO
     elif cfg.data.unbounded_inward:

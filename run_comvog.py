@@ -3,14 +3,14 @@ import mmcv
 import numpy as np
 import pdb
 import torch
-from yono.load_everything import load_everything
-from yono.run_export_bbox import *
-from yono.run_export_coarse import run_export_coarse
-from yono.run_train import run_train
-from yono.run_render import run_render
-from yono.run_gen_cam_paths import run_gen_cam_paths
-from yono.run_sfm import run_sfm
-from yono.yono_ckpt_manager import YONOCheckpointManager
+from comvog.load_everything import load_everything
+from comvog.run_export_bbox import *
+from comvog.run_export_coarse import run_export_coarse
+from comvog.run_train import run_train
+from comvog.run_render import run_render
+from comvog.run_gen_cam_paths import run_gen_cam_paths
+from comvog.run_sfm import run_sfm
+from comvog.comvog_ckpt_manager import ComVoGCheckpointManager
 
 
 def config_parser():
@@ -94,7 +94,7 @@ if __name__=='__main__':
     args.block_num = -1
     program = args.program
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-        args.ckpt_manager = YONOCheckpointManager(args, cfg)
+        args.ckpt_manager = ComVoGCheckpointManager(args, cfg)
         if args.num_per_block > 0:
             args.block_num = int(len(data_dict['i_train']) // args.num_per_block)
             print(f"Running in {args.block_num} blocks where each block contains {args.num_per_block} number of images.")

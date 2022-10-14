@@ -101,5 +101,5 @@ vis = dict(
 # artistic radiance fields
 arf = dict(
     style_root = mega_dataset_root + "/styles",
-    style_id = 132,
+    style_id = 34,
 )

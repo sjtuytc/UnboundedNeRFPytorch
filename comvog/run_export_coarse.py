@@ -1,7 +1,7 @@
 import torch
 import os
 import numpy as np
-from yono.load_everything import load_existing_model
+from comvog.load_everything import load_existing_model
 
 
 def run_export_coarse(args, cfg, device, save_path=None):

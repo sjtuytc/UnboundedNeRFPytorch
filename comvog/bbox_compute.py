@@ -1,8 +1,8 @@
 import torch
 import numpy as np
-from yono import utils, dvgo
+from comvog import utils, dvgo
 import time
-from yono.load_everything import load_existing_model
+from comvog.load_everything import load_existing_model
 from tqdm import tqdm
 import pdb
 

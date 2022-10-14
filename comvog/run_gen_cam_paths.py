@@ -2,13 +2,13 @@ import pdb, os, cv2
 from turtle import onkey
 from random import sample
 import imageio
-from yono import utils
+from comvog import utils
 import numpy as np
 from scipy.spatial.distance import cdist
 from scipy.spatial.transform import Rotation as R
 from pathlib import Path
-from yono import utils, dvgo, dcvgo, dmpigo
-from yono.bbox_compute import compute_bbox_by_cam_frustrm
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.bbox_compute import compute_bbox_by_cam_frustrm
 import shutil
 
 

@@ -2,8 +2,8 @@ import numpy as np
 import os
 import pdb
 from pathlib import Path
-from yono import utils, dvgo, dcvgo, dmpigo
-from yono.bbox_compute import compute_bbox_by_cam_frustrm
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.bbox_compute import compute_bbox_by_cam_frustrm
 
 
 def run_export_bbox_cams(args, cfg, data_dict, save_path=None): 

@@ -5,14 +5,14 @@ import os,pdb
 import copy
 import numpy as np
 from tqdm import tqdm, trange
-from yono.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
-from yono import utils, dvgo, dcvgo, dmpigo
-from yono.yono_model import YONOModel
-from yono.load_everything import load_existing_model
+from comvog.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.comvog_model import ComVoGModel
+from comvog.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
-from yono.run_export_bbox import run_export_bbox_cams
-from yono.run_export_coarse import run_export_coarse
-from yono.yono_model import yono_get_training_rays
+from comvog.run_export_bbox import run_export_bbox_cams
+from comvog.run_export_coarse import run_export_coarse
+from comvog.comvog_model import comvog_get_training_rays
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -25,11 +25,11 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
 
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
         if verbose:
-            print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use YONO model. \033[0m')
+            print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
         if cfg.sample_num <= 0:
-            raise NotImplementedError("YONO model must receive a sample_num arguments.")
+            raise NotImplementedError("ComVoG model must receive a sample_num arguments.")
         model_kwargs['sample_num'] = cfg.sample_num
-        model = YONOModel(
+        model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels, verbose=verbose,
             **model_kwargs)
@@ -70,7 +70,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
 
     indexs_train = None
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = yono_get_training_rays(
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = comvog_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
         ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
         flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
@@ -132,7 +132,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
     elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-        print(f'scene_rep_reconstruction ({stage}): reload YONO model from {reload_ckpt_path}')
+        print(f'scene_rep_reconstruction ({stage}): reload ComVoG model from {reload_ckpt_path}')
         model, optimizer, start = args.ckpt_manager.load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     else:
         print(f'scene_rep_reconstruction ({stage}): reload from {reload_ckpt_path}')
@@ -185,7 +185,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 model.scale_volume_grid(cur_voxels)
             elif isinstance(model, dmpigo.DirectMPIGO):
                 model.scale_volume_grid(cur_voxels, model.mpi_depth)
-            elif isinstance(model, YONOModel):
+            elif isinstance(model, ComVoGModel):
                 model.scale_volume_grid(cur_voxels)
             else:
                 raise NotImplementedError

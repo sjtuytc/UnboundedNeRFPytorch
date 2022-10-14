@@ -1,16 +1,16 @@
-from yono.yono_model import YONOModel
-from yono import utils, dvgo, dcvgo, dmpigo
+from comvog.comvog_model import ComVoGModel
+from comvog import utils, dvgo, dcvgo, dmpigo
 import torch
 import pdb
 import os
 from tqdm import tqdm
-from yono.run_train import create_new_model
+from comvog.run_train import create_new_model
 import torch.nn.functional as F
 
 
-class YONOCheckpointManager:
+class ComVoGCheckpointManager:
     def __init__(self, args, cfg) -> None:
-        super(YONOCheckpointManager, self).__init__()
+        super(ComVoGCheckpointManager, self).__init__()
         self.args = args
         self.cfg = cfg
 
@@ -25,7 +25,7 @@ class YONOCheckpointManager:
     def load_existing_model(self, args, cfg, cfg_train, reload_ckpt_path, device):
         # not used in training
         if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-            model_class = YONOModel
+            model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO
         elif cfg.data.unbounded_inward:

@@ -87,7 +87,7 @@ Hope our efforts could help your research or projects!
    sudo apt-get install imagemagick  # required sudo accesss
    conda install pytorch-scatter -c pyg  # or install via https://github.com/rusty1s/pytorch_scatter
    python setup.py install
-   cd yono/cuda/
+   cd comvog/cuda/
    python setup.py install
    cd ../../
    ```
@@ -195,7 +195,7 @@ bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Bloc
 2. Run COLMAP to reconstruct scenes. This would probably cost a long time.
 
 	```bash
-	python yono/tools/imgs2poses.py data/Madoka
+	python comvog/tools/imgs2poses.py data/Madoka
 	```
    You can replace data/Madoka by your data folder.
    If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in the colmap_wrapper.py.
@@ -203,14 +203,14 @@ bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Bloc
 3. Training NeRF scenes.
 
 	```bash
-	python run_yono.py --config configs/custom/Madoka.py
+	python run_comvog.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
 
 4. Validating the training results to generate a fly-through video.
 
 	```bash
-	python run_yono.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
+	python run_comvog.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
 	```
 </details>
 

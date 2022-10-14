@@ -1,4 +1,3 @@
-# transfer formats from mega-nerf to YONO supported formats
 import os
 import json
 import numpy as np

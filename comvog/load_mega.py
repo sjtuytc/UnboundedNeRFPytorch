@@ -13,9 +13,9 @@ import torch
 from tqdm import tqdm
 import json
 from scipy.spatial.transform import Rotation as R
-from yono.common_data_loaders.load_llff import normalize
-from yono.trajectory_generators.waymo_traj import *
-from yono.trajectory_generators.mega_traj import *
+from comvog.common_data_loaders.load_llff import normalize
+from comvog.trajectory_generators.waymo_traj import *
+from comvog.trajectory_generators.mega_traj import *
 
 ########################################################################################################################
 # camera coordinate system: x-->right, y-->down, z-->scene (opencv/colmap convention)

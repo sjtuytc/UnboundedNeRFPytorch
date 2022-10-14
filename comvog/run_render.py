@@ -3,11 +3,10 @@ import imageio
 import torch
 from tqdm import tqdm, trange
 import numpy as np
-from yono import utils, dvgo, dcvgo, dmpigo
-from yono.yono_model import YONOModel
-import pdb
-from yono.utils import resize_and_to_8b
-from yono.arf import ARF
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.comvog_model import ComVoGModel
+from comvog.utils import resize_and_to_8b
+from comvog.arf import ARF
 
 
 @torch.no_grad()
@@ -119,12 +118,12 @@ def run_render(args, cfg, data_dict, device, debug=True):
     # block-by-block rendering
     if args.block_num > 1:
         print("Merging trained blocks ...")
-        model_class = YONOModel                 # only support YONOModel currently
+        model_class = ComVoGModel                 # only support ComVoGModel currently
         ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
         exp_dir = os.path.join(cfg.basedir, cfg.expname)
         # merged_model = args.ckpt_manager.merge_blocks(ckpt_paths, device, model_class, exp_dir)
         if args.render_train:
-            model_class = YONOModel                 # only support YONOModel currently
+            model_class = ComVoGModel                 # only support ComVoGModel currently
             ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
             train_save_dir = os.path.join(cfg.basedir, cfg.expname, f'render_train_fine_last')
             os.makedirs(train_save_dir, exist_ok=True)
@@ -170,7 +169,7 @@ def run_render(args, cfg, data_dict, device, debug=True):
             imageio.mimwrite(os.path.join(train_save_dir, save_name), utils.to8b(save_all_rgbs), fps=15, quality=8)
 
         if args.render_test:
-            model_class = YONOModel                 # only support YONOModel currently
+            model_class = ComVoGModel                 # only support ComVoGModel currently
             testsavedir = os.path.join(cfg.basedir, cfg.expname, f'render_test_fine_last')
             os.makedirs(testsavedir, exist_ok=True)
             print('All results are dumped into', testsavedir)
@@ -221,7 +220,7 @@ def run_render(args, cfg, data_dict, device, debug=True):
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
         ckpt_name = ckpt_path.split('/')[-1][:-4]
         if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
-            model_class = YONOModel
+            model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO
         elif cfg.data.unbounded_inward:
