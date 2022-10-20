@@ -7,6 +7,7 @@ from comvog.load_everything import load_everything
 from comvog.run_export_bbox import *
 from comvog.run_export_coarse import run_export_coarse
 from comvog.run_train import run_train
+from comvog.run_block_train import run_block_train_and_merge
 from comvog.run_render import run_render
 from comvog.run_gen_cam_paths import run_gen_cam_paths
 from comvog.run_sfm import run_sfm
@@ -109,16 +110,8 @@ if __name__=='__main__':
         run_export_coarse(args=args, cfg=cfg, device=device)
     elif program == "train":
         if args.block_num > 1:   # more than one blocks
-            args.no_reload=True  # forbid reload from the disk
-            print("Closing reload functions in training multiple blocks.")
-            all_training_indexs = data_dict['i_train'].copy()
-            for block_id in range(args.block_num):
-                args.running_block_id = block_id
-                s, e = block_id * args.num_per_block, (block_id + 1) * args.num_per_block
-                data_dict['i_train'] = all_training_indexs[s:e]
-                run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
-            print("Training finished. Run multi-block rendering.")
-            data_dict['i_train'] = all_training_indexs  # recover data dict
+            run_block_train_and_merge(args, cfg, data_dict, export_cam=True, export_geometry=True)
+            # render supports the block mode already
             run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
         else:
             args.running_block_id = -1

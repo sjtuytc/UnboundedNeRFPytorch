@@ -113,7 +113,7 @@ class ComVoGModel(nn.Module):
     def __init__(self, xyz_min, xyz_max, num_voxels=0, num_voxels_base=0, alpha_init=None,
                  mask_cache_world_size=None, fast_color_thres=0, bg_len=0.2, contracted_norm='inf',
                  density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
-                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, apperance_emb_dim=-1, verbose=True,
+                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, apperance_emb_dim=-1, verbose=False,
                  **kwargs):
         super(ComVoGModel, self).__init__()
         xyz_min = torch.Tensor(xyz_min)

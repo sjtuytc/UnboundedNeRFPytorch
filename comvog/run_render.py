@@ -1,4 +1,5 @@
 import os
+import pdb
 import imageio
 import torch
 from tqdm import tqdm, trange
@@ -115,13 +116,32 @@ def run_render(args, cfg, data_dict, device, debug=True):
         stylizer = ARF(cfg, data_dict, device)
     else:
         stylizer = None
+    model_class = ComVoGModel                 # only support ComVoGModel currently
+    merged_ckpt_path = os.path.join(cfg.basedir, cfg.expname, f'fine_last_merged.tar')
+    use_merged = os.path.exists(merged_ckpt_path)
+    if use_merged:
+        merged_model = utils.load_model(model_class, merged_ckpt_path).to(device)
+    else:
+        merged_model = None
+    render_viewpoints_kwargs = {
+        'model': None,
+        'ndc': cfg.data.ndc,
+        'render_kwargs': {
+            'near': data_dict['near'],
+            'far': data_dict['far'],
+            'bg': 1 if cfg.data.white_bkgd else 0,
+            'stepsize': cfg.fine_model_and_render.stepsize,
+            'inverse_y': cfg.data.inverse_y,
+            'flip_x': cfg.data.flip_x,
+            'flip_y': cfg.data.flip_y,
+            'render_depth': True,
+        }
+    }
+    
     # block-by-block rendering
-    if args.block_num > 1:
+    if args.block_num > 1 and not use_merged:
         print("Merging trained blocks ...")
-        model_class = ComVoGModel                 # only support ComVoGModel currently
         ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
-        exp_dir = os.path.join(cfg.basedir, cfg.expname)
-        # merged_model = args.ckpt_manager.merge_blocks(ckpt_paths, device, model_class, exp_dir)
         if args.render_train:
             model_class = ComVoGModel                 # only support ComVoGModel currently
             ckpt_paths = [os.path.join(cfg.basedir, cfg.expname, f'fine_last_{i}.tar') for i in range(args.block_num)]
@@ -135,24 +155,8 @@ def run_render(args, cfg, data_dict, device, debug=True):
                 s, e = idx * args.num_per_block, (idx + 1) * args.num_per_block
                 # Here we assume the i_train's order follows the block order.
                 data_dict['i_train'] = all_training_indexs[s:e]
-                ckpt_name = cp.split('/')[-1][:-4]
                 model = utils.load_model(model_class, cp).to(device)
-                # model = merged_model
-                stepsize = cfg.fine_model_and_render.stepsize
-                render_viewpoints_kwargs = {
-                    'model': model,
-                    'ndc': cfg.data.ndc,
-                    'render_kwargs': {
-                        'near': data_dict['near'],
-                        'far': data_dict['far'],
-                        'bg': 1 if cfg.data.white_bkgd else 0,
-                        'stepsize': stepsize,
-                        'inverse_y': cfg.data.inverse_y,
-                        'flip_x': cfg.data.flip_x,
-                        'flip_y': cfg.data.flip_y,
-                        'render_depth': True,
-                    }
-                }
+                render_viewpoints_kwargs['model'] = model
                 rgbs, depths, bgmaps = render_viewpoints(cfg=cfg, render_poses=data_dict['poses'][data_dict['i_train']],
                 HW=data_dict['HW'][data_dict['i_train']], Ks=data_dict['Ks'][data_dict['i_train']],
                 gt_imgs=[data_dict['images'][i].cpu().numpy() for i in data_dict['i_train']],
@@ -185,23 +189,8 @@ def run_render(args, cfg, data_dict, device, debug=True):
                 s, e = idx * args.num_per_block, (idx + 1) * args.num_per_block
                 # Here we assume the i_test's order follows the block order.
                 data_dict['i_test'] = all_test_indexs[s:e]
-                ckpt_name = cp.split('/')[-1][:-4]
                 model = utils.load_model(model_class, cp).to(device)
-                stepsize = cfg.fine_model_and_render.stepsize
-                render_viewpoints_kwargs = {
-                    'model': model,
-                    'ndc': cfg.data.ndc,
-                    'render_kwargs': {
-                        'near': data_dict['near'],
-                        'far': data_dict['far'],
-                        'bg': 1 if cfg.data.white_bkgd else 0,
-                        'stepsize': stepsize,
-                        'inverse_y': cfg.data.inverse_y,
-                        'flip_x': cfg.data.flip_x,
-                        'flip_y': cfg.data.flip_y,
-                        'render_depth': True,
-                    }
-                }
+                render_viewpoints_kwargs['model'] = model
                 rgbs, depths, bgmaps = render_viewpoints(
                 cfg=cfg, render_poses=data_dict['poses'][data_dict['i_test']], HW=data_dict['HW'][data_dict['i_test']], 
                 Ks=data_dict['Ks'][data_dict['i_test']], gt_imgs=gt_imgs,
@@ -212,7 +201,7 @@ def run_render(args, cfg, data_dict, device, debug=True):
             save_all_rgbs = np.array(all_rgbs)
             imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(save_all_rgbs), fps=15, quality=8)
         return
-    # rendering normal cases
+    # rendering merged model or normal cases
     if args.render_test or args.render_train or args.render_video:
         if args.ft_path:
             ckpt_path = args.ft_path
@@ -228,7 +217,10 @@ def run_render(args, cfg, data_dict, device, debug=True):
         else:
             model_class = dvgo.DirectVoxGO
 
-        model = utils.load_model(model_class, ckpt_path).to(device)
+        if use_merged:
+            model = merged_model
+        else:
+            model = utils.load_model(model_class, ckpt_path).to(device)
         stepsize = cfg.fine_model_and_render.stepsize
         render_viewpoints_kwargs = {
             'model': model,

@@ -6,5 +6,5 @@ CUDA_VISIBLE_DEVICES=8 python run_comvog.py --program export_bbox --config ${CON
 CUDA_VISIBLE_DEVICES=3 python run_comvog.py --program export_coarse --config ${CONFIG} --export_coarse_only data/sep26_2/cam_coarse.npz --sample_num 100
 # the following commands require a local desktop
 python data_preprocess/visualize_cameras.py --data_path data/samples/block_0 --multi_scale
-python tools/vis_train.py data/sep13_block0/cam.npz
-python tools/vis_volume.py coarse_mic.npz 0.001 --cam data/sep13_block0/cam_coarse.npz
+python comvog/tools/vis_train.py data/sep13_block0/cam.npz
+python comvog/tools/vis_volume.py coarse_mic.npz 0.001 --cam data/sep13_block0/cam_coarse.npz
