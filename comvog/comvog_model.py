@@ -167,7 +167,7 @@ class ComVoGModel(nn.Module):
         
         self.appear_dim = apperance_emb_dim
         self.sample_num = kwargs['sample_num']
-        if apperance_emb_dim > 0:    # use apperance embeddings
+        if apperance_emb_dim > 0 and self.sample_num > 0:    # use apperance embeddings
             self.appear_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
                                         embedding_dim=self.appear_dim)
         else:
@@ -284,12 +284,42 @@ class ComVoGModel(nn.Module):
             torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size[1]),
             torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
         ), -1)
-        nearest_dist = torch.stack([
-            (self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)
-            for co in cam_o.split(100)  # for memory saving
-        ]).amin(0)
+        nearest_dist = torch.stack([(self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)for co in cam_o.split(10)]).amin(0)
         self.density.grid[nearest_dist[None,None] <= near_clip] = -100
         
+    def voxel_count_views(self, rays_o_tr, rays_d_tr, imsz, near, far, stepsize, downrate=1, irregular_shape=False):
+        print('ComVoG: voxel_count_views start')
+        far = 1e9  # the given far can be too small while rays stop when hitting scene bbox
+        eps_time = time.time()
+        N_samples = int(np.linalg.norm(np.array(self.world_size.cpu())+1) / stepsize) + 1
+        rng = torch.arange(N_samples)[None].float()
+        count = torch.zeros_like(self.density.get_dense_grid())
+        device = rng.device
+        for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
+            ones = comvog_grid.DenseGrid(1, self.world_size, self.xyz_min, self.xyz_max)
+            if irregular_shape:
+                rays_o_ = rays_o_.split(10000)
+                rays_d_ = rays_d_.split(10000)
+            else:
+                rays_o_ = rays_o_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
+                rays_d_ = rays_d_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
+
+            for rays_o, rays_d in zip(rays_o_, rays_d_):
+                vec = torch.where(rays_d==0, torch.full_like(rays_d, 1e-6), rays_d)
+                rate_a = (self.xyz_max - rays_o) / vec
+                rate_b = (self.xyz_min - rays_o) / vec
+                t_min = torch.minimum(rate_a, rate_b).amax(-1).clamp(min=near, max=far)
+                t_max = torch.maximum(rate_a, rate_b).amin(-1).clamp(min=near, max=far)
+                step = stepsize * self.voxel_size * rng
+                interpx = (t_min[...,None] + step/rays_d.norm(dim=-1,keepdim=True))
+                rays_pts = rays_o[...,None,:] + rays_d[...,None,:] * interpx[...,None]
+                ones(rays_pts).sum().backward()
+            with torch.no_grad():
+                count += (ones.grid.grad > 1)
+        eps_time = time.time() - eps_time
+        print('ComVoG: voxel_count_views finish (eps time:', eps_time, 'sec)')
+        return count
+    
     @torch.no_grad()
     def scale_volume_grid(self, num_voxels):
         if self.verbose:
@@ -384,9 +414,9 @@ class ComVoGModel(nn.Module):
         rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
         N_inner = int(2 / (2+2*self.bg_len) * self.world_len / stepsize) + 1
         N_outer = N_inner
-
-        b_inner = torch.linspace(0, 2, N_inner+1)
-        b_outer = 2 / torch.linspace(1, 1/128, N_outer+1)
+        t_boundary = 1.5  # default t_boundary=2
+        b_inner = torch.linspace(0, t_boundary, N_inner+1)
+        b_outer = t_boundary / torch.linspace(1, 1/128, N_outer+1)
         t = torch.cat([
             (b_inner[1:] + b_inner[:-1]) * 0.5,
             (b_outer[1:] + b_outer[:-1]) * 0.5,
@@ -398,12 +428,22 @@ class ComVoGModel(nn.Module):
             norm = ray_pts.norm(dim=-1, keepdim=True)
         else:
             raise NotImplementedError
-        inner_mask = (norm<=1)
+        seperate_boundary = 1.0
+        inner_mask = (norm<=seperate_boundary)
+        B = 1 + self.bg_len
+        A = B * seperate_boundary - seperate_boundary ** 2
         ray_pts = torch.where(
             inner_mask,
             ray_pts,
-            ray_pts / norm * ((1+self.bg_len) - self.bg_len/norm)
+            ray_pts / norm * (B - A/norm)
         )
+        # B = 1 + self.bg_len
+        # A = seperate_boundary * (B - seperate_boundary)
+        # ray_pts = torch.where(
+        #     inner_mask,
+        #     - ray_pts + B * ray_pts / norm,
+        #     A / ray_pts
+        # )
         assert 'indexs' in render_kwargs, "The image indexes should be provided in render kwargs in the ComVoG model."
         if 'indexs' in render_kwargs:
             indexs = render_kwargs['indexs'].unsqueeze(1).repeat(1, ray_pts.shape[1], 1)
@@ -533,10 +573,11 @@ class ComVoGModel(nn.Module):
                 index=ray_id,
                 out=torch.zeros([N, 3]),
                 reduce='sum')
-        if render_kwargs.get('rand_bkgd', False) and is_train:
-            rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
-        else:
-            rgb_marched += (alphainv_last.unsqueeze(-1) * render_kwargs['bg'])
+        rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
+        # if render_kwargs.get('rand_bkgd', False) and is_train:
+        #     rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
+        # else:
+        #     rgb_marched += (alphainv_last.unsqueeze(-1) * render_kwargs['bg'])
         wsum_mid = segment_coo(
                 src=weights[inner_mask],
                 index=ray_id[inner_mask],

@@ -26,6 +26,25 @@ def _compute_bbox_by_cam_frustrm_unbounded(cfg, HW, Ks, poses, i_train, near_cli
     return xyz_min, xyz_max
 
 
+def comvog_compute_bbox_by_cam_frustrm_nerfpp(cfg, HW, Ks, poses, i_train, near_clip):
+    # Find a tightest cube that cover all camera centers
+    xyz_min = torch.Tensor([np.inf, np.inf, np.inf])
+    xyz_max = -xyz_min
+    for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
+        rays_o, rays_d, viewdirs = dvgo.get_rays_of_a_view(
+                H=H, W=W, K=K, c2w=c2w,
+                ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+        pts = rays_o + rays_d * near_clip
+        xyz_min = torch.minimum(xyz_min, pts.amin((0,1)))
+        xyz_max = torch.maximum(xyz_max, pts.amax((0,1)))
+    center = (xyz_min + xyz_max) * 0.5
+    radius = (center - xyz_min).max() * cfg.data.unbounded_inner_r
+    xyz_min = center - radius
+    xyz_max = center + radius
+    return xyz_min, xyz_max
+
+
 def comvog_compute_bbox_by_cam_frustrm_waymo(cfg, HW, Ks, poses, i_train, near_clip):
     xs, ys, zs = [], [], []
     for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
@@ -93,6 +112,9 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.dataset_type == "mega":
         xyz_min, xyz_max = comvog_compute_bbox_by_cam_frustrm_mega(
+                cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
+    elif cfg.data.dataset_type == "nerfpp":
+        xyz_min, xyz_max = comvog_compute_bbox_by_cam_frustrm_nerfpp(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.unbounded_inward:
         xyz_min, xyz_max = _compute_bbox_by_cam_frustrm_unbounded(

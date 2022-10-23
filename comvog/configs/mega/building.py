@@ -82,14 +82,13 @@ fine_model_and_render = dict(
     world_bound_scale=1,
     contracted_norm='l2',
     rgbnet_dim=12, # default
-    # rgbnet_dim=-1, # changed to -1 to prevent rgbnet
     rgbnet_direct=True,
     density_type='DenseGrid',
     k0_type='DenseGrid',
     bg_len=0.2,  # default
     viewbase_pe=8,
-    maskout_near_cam_vox=True, 
-    # maskout_near_cam_vox=False, # changed to False because it might often trigger OOM error
+    # maskout_near_cam_vox=True, 
+    maskout_near_cam_vox=True, # changed to False because it might often trigger OOM error
     # # TensorRF settings
     # density_type='TensoRFGrid', 
     # k0_type='TensoRFGrid', 

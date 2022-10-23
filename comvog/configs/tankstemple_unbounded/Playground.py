@@ -1,6 +1,6 @@
 _base_ = './tt_default.py'
 
-expname = 'sep30_dvgo_Playground_unbounded_baseline'
+expname = 'oct22_dvgo_Playground_unbounded_baseline'
 
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
@@ -10,5 +10,5 @@ data = dict(
 )
 
 fine_train = dict(
-    N_iters=30000,  # a quick validation
+    N_iters=40000,  # a quick validation
 )

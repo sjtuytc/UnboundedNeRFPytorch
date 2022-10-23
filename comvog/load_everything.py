@@ -39,7 +39,7 @@ def load_everything(args, cfg):
 
 
 def load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device):
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == 'nerfpp':
         model_class = ComVoGModel
     elif cfg.data.ndc:
         model_class = dmpigo.DirectMPIGO

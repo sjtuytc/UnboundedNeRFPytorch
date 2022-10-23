@@ -25,11 +25,9 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
         num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
     verbose = args.block_num <= 1
 
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
-        if cfg.sample_num <= 0:
-            raise NotImplementedError("ComVoG model must receive a sample_num arguments.")
         model_kwargs['sample_num'] = cfg.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
@@ -71,7 +69,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
     indexs_train = None
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = comvog_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
         ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
@@ -135,7 +133,7 @@ def block_scene_rep_reconstruction(block_id, train_index, args, cfg, cfg_model, 
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[train_index,:3,3], near)
-    elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         print(f'scene_rep_reconstruction ({stage}): reload ComVoG model from {reload_ckpt_path}')
         model, optimizer, start = args.ckpt_manager.load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     else:
@@ -292,7 +290,7 @@ def block_scene_rep_reconstruction(block_id, train_index, args, cfg, cfg_model, 
 
     # final save
     if global_step != -1:
-        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega": 
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp": 
             args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
         else:               
             torch.save({
@@ -319,9 +317,8 @@ def run_training_pipeline(args, cfg, data_dict, block_id, all_training_indexs, c
             attr = getattr(args, arg)
             file.write('{} = {}\n'.format(arg, attr))
     cfg.dump(os.path.join(cfg.basedir, cfg.expname, 'config.py'))
-
-    xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, HW=data_dict['HW'], Ks=data_dict['Ks'], poses=data_dict['poses'],
-                                                                 i_train=all_training_indexs, near=data_dict['near'], far=data_dict['far'])
+    data_dict['i_train'] = all_training_indexs
+    xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)
     print('ComVoG train: skip coarse geometry searching')
     coarse_ckpt_path = None
 

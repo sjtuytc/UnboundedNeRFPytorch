@@ -126,7 +126,6 @@ def load_common_data(args):
         images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir)
         print('Loaded nerf_pp', images.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
-
         near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
         near = 0
 

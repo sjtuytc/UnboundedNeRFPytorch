@@ -94,7 +94,7 @@ if __name__=='__main__':
     data_dict = load_everything(args=args, cfg=cfg)
     args.block_num = -1
     program = args.program
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == 'nerfpp':
         args.ckpt_manager = ComVoGCheckpointManager(args, cfg)
         if args.num_per_block > 0:
             args.block_num = int(len(data_dict['i_train']) // args.num_per_block)

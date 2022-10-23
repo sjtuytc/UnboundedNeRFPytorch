@@ -1,3 +1,4 @@
+from imp import reload
 import time
 import torch
 import torch.nn.functional as F
@@ -21,13 +22,11 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
     num_voxels = model_kwargs.pop('num_voxels')
     if len(cfg_train.pg_scale):
         num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
-    verbose = args.block_num <= 1
+    verbose = False
 
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
-        if cfg.sample_num <= 0:
-            raise NotImplementedError("ComVoG model must receive a sample_num arguments.")
         model_kwargs['sample_num'] = cfg.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
@@ -69,7 +68,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
     indexs_train = None
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = comvog_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
         ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
@@ -131,7 +130,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
-    elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    elif cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         print(f'scene_rep_reconstruction ({stage}): reload ComVoG model from {reload_ckpt_path}')
         model, optimizer, start = args.ckpt_manager.load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
     else:
@@ -152,7 +151,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
     
     # view-count-based learning rate
-    if cfg_train.pervoxel_lr:
+    if cfg_train.pervoxel_lr and reload_ckpt_path is None:
         def per_voxel_init():
             cnt = model.voxel_count_views(
                     rays_o_tr=rays_o_tr, rays_d_tr=rays_d_tr, imsz=imsz, near=near, far=far,
@@ -204,18 +203,31 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 indexs = indexs_tr[sel_i]
             else:
                 indexs = None
-        elif cfg_train.ray_sampler == 'random':
-            sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
-            sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
-            sel_c = torch.randint(rgb_tr.shape[2], [cfg_train.N_rand])
-            target = rgb_tr[sel_b, sel_r, sel_c]
-            rays_o = rays_o_tr[sel_b, sel_r, sel_c]
-            rays_d = rays_d_tr[sel_b, sel_r, sel_c]
-            viewdirs = viewdirs_tr[sel_b, sel_r, sel_c]
-            if indexs_tr is not None:
-                indexs = indexs_tr[sel_b, sel_r, sel_c]
+        elif cfg_train.ray_sampler == 'random':  # fixed function
+            if len(rgb_tr.shape) == 3:
+                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
+                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
+                sel_c = torch.randint(rgb_tr.shape[2], [cfg_train.N_rand])
+                target = rgb_tr[sel_b, sel_r, sel_c]
+                rays_o = rays_o_tr[sel_b, sel_r, sel_c]
+                rays_d = rays_d_tr[sel_b, sel_r, sel_c]
+                viewdirs = viewdirs_tr[sel_b, sel_r, sel_c]
+                if indexs_tr is not None:
+                    indexs = indexs_tr[sel_b, sel_r, sel_c]
+                else:
+                    indexs = None
             else:
-                indexs = None
+                assert len(rgb_tr.shape) == 2, "tgb_tr's shape is not correct."
+                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
+                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
+                target = rgb_tr[sel_b]
+                rays_o = rays_o_tr[sel_b]
+                rays_d = rays_d_tr[sel_b]
+                viewdirs = viewdirs_tr[sel_b]
+                if indexs_tr is not None:
+                    indexs = indexs_tr[sel_b]
+                else:
+                    indexs = None
         else:
             raise NotImplementedError
 
@@ -287,7 +299,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         
         if global_step%args.i_weights==0:
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
-            if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+            if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
                 args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
             else:
                 torch.save({

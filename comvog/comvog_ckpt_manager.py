@@ -25,7 +25,7 @@ class ComVoGCheckpointManager:
 
     def load_existing_model(self, args, cfg, cfg_train, reload_ckpt_path, device):
         # not used in training
-        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or  cfg.data.dataset_type == "nerfpp":
             model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO
@@ -75,10 +75,9 @@ class ComVoGCheckpointManager:
             print(f"Meging grid {idx} / {len(paths[1:])}: {cur_cp} ...")
             cur_m, _ = self.load_model(model_class, cur_cp)
             cur_m = cur_m.to(device)
-            # pdb.set_trace()
             for key in merged_state_dict:
                 print(f"Merging model key: {key} ...")
-                if key in ['density.grid', 'k0.grid']:
+                if key in ['density.grid', 'k0.grid'] or 'rgb' in key:
                     g1, g2 = merged_state_dict[key], cur_m.state_dict()[key]
                     merged_g = torch.min(g1, g2)
                     # merged_g = torch.max(g1, g2)
@@ -88,7 +87,9 @@ class ComVoGCheckpointManager:
                 # else:
                 #     merged_state_dict[key] = merged_model.state_dict()[key]
             # del cur_m
-            # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
+        if "mask_cache.mask" in merged_state_dict:
+            merged_state_dict.pop("mask_cache.mask")
         merged_model.load_state_dict(merged_state_dict, strict=False)
         merged_model.update_occupancy_cache()
         # merged_model.export_geometry_for_visualize(os.path.join(exp_folder, "debug.npz"))
