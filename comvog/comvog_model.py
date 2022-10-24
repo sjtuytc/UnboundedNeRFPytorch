@@ -173,12 +173,6 @@ class ComVoGModel(nn.Module):
         else:
             self.appear_embeddings = None
             self.appear_dim = 0
-        
-        pose_refinement = True       # not implemented yet.
-        if pose_refinement > 0:
-            self.c2w_rot_res, self.c2w_pos_res = None, None
-        else:
-            self.c2w_rot_res, self.c2w_pos_res = None, None
 
         # rgbnet configurations
         self.vector_grid = False
@@ -429,21 +423,13 @@ class ComVoGModel(nn.Module):
         else:
             raise NotImplementedError
         seperate_boundary = 1.0
-        inner_mask = (norm<=seperate_boundary)
         B = 1 + self.bg_len
         A = B * seperate_boundary - seperate_boundary ** 2
         ray_pts = torch.where(
-            inner_mask,
+            norm<=seperate_boundary,
             ray_pts,
             ray_pts / norm * (B - A/norm)
         )
-        # B = 1 + self.bg_len
-        # A = seperate_boundary * (B - seperate_boundary)
-        # ray_pts = torch.where(
-        #     inner_mask,
-        #     - ray_pts + B * ray_pts / norm,
-        #     A / ray_pts
-        # )
         assert 'indexs' in render_kwargs, "The image indexes should be provided in render kwargs in the ComVoG model."
         if 'indexs' in render_kwargs:
             indexs = render_kwargs['indexs'].unsqueeze(1).repeat(1, ray_pts.shape[1], 1)
@@ -451,6 +437,7 @@ class ComVoGModel(nn.Module):
             rays_d_extend = rays_d[:,None,:] * torch.ones_like(t[None,:,None])
         else: 
             rays_d_extend = None
+        inner_mask = norm<=seperate_boundary  # this variable is not important
         return ray_pts, indexs, inner_mask.squeeze(-1), t, rays_d_extend
 
     def forward(self, rays_o, rays_d, viewdirs, global_step=None, is_train=False, **render_kwargs):
@@ -475,10 +462,15 @@ class ComVoGModel(nn.Module):
         ray_id, step_id = create_full_step_id(ray_pts.shape[:2])
 
         # skip oversampled points outside scene bbox
-        mask = inner_mask.clone()
-        dist_thres = (2+2*self.bg_len) / self.world_len * render_kwargs['stepsize'] * 0.95
+        mask = inner_mask.clone() # default
+        # --------------------------------------Mask threshold --------------------------------------
+        thre_factor = 0.0   # default=0.95
+        dist_thres = (2+2*self.bg_len) / self.world_len * render_kwargs['stepsize'] * thre_factor
         dist = (ray_pts[:,1:] - ray_pts[:,:-1]).norm(dim=-1)
         mask[:, 1:] |= ub360_utils_cuda.cumdist_thres(dist, dist_thres)
+        # -------------------------------------------------------------------------------------------------------
+        
+        # --------------------------------------Inner Mask threshold ----------------------------
         ray_pts = ray_pts[mask]
         if rays_d_e is not None:
             rays_d_e = rays_d_e[mask]
@@ -487,6 +479,7 @@ class ComVoGModel(nn.Module):
         t = t[None].repeat(N,1)[mask]
         ray_id = ray_id[mask.flatten()]
         step_id = step_id[mask.flatten()]
+        # -------------------------------------------------------------------------------------------------------
 
         # skip known free space
         mask = self.mask_cache(ray_pts)
@@ -502,6 +495,8 @@ class ComVoGModel(nn.Module):
         # query for alpha w/ post-activation
         density = self.density(ray_pts)
         alpha = self.activate_density(density, interval)
+        
+        # apply fast color thresh
         if self.fast_color_thres > 0:
             mask = (alpha > self.fast_color_thres)
             ray_pts = ray_pts[mask]

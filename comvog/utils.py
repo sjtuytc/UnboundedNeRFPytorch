@@ -1,4 +1,5 @@
 import os, math, cv2
+import pdb
 import numpy as np
 import scipy.signal
 from typing import List, Optional
@@ -9,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from comvog.masked_adam import MaskedAdam
+import torch.optim
 
 
 ''' Misc
@@ -21,7 +23,7 @@ def resize_and_to_8b(input_images, res):
     b_images = to8b(rgb_images)
     return b_images
 
-def create_optimizer_or_freeze_model(model, cfg_train, global_step, verbose=True):
+def create_optimizer_or_freeze_model(model, cfg_train, global_step, verbose=False):
     decay_steps = cfg_train.lrate_decay * 1000
     decay_factor = 0.1 ** (global_step/decay_steps)
 

@@ -57,11 +57,19 @@ fine_train = dict(
     ray_sampler='flatten',
     weight_distortion=weight_distortion,
     pg_scale=[1000,2000,3000,4000,5000,6000,7000],
-    tv_before=1e9,
+    tv_before=1e9,  # always use tv
     tv_dense_before=10000,
+    tv_after=0, # start from beginning
+    tv_every=1,
     weight_tv_density=1e-6,
     weight_tv_k0=1e-7,
-    pervoxel_lr=True,
+    pervoxel_lr=False,
+    lrate_decay=20,             # default
+    lrate_density=1e-1,         # default lr of density voxel grid
+    lrate_k0=1e-1,                # lr of color/feature voxel grid
+    lrate_rgbnet=1e-3,            # default lr of the mlp to preduct view-dependent color
+    weight_entropy_last=1e-3,  # default
+    weight_rgbper=1e-2, # default
 )
 
 coarse_model_and_render = dict(
