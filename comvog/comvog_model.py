@@ -108,6 +108,26 @@ def comvog_get_training_rays(rgb_tr_ori, train_poses, HW, Ks, ndc, inverse_y, fl
     return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz
 
 
+class NeRFPosEmbedding(nn.Module):
+    def __init__(self, num_freqs: int, logscale=True):
+        """
+        Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
+        """
+        super(NeRFPosEmbedding, self).__init__()
+
+        if logscale:
+            self.freq_bands = 2 ** torch.linspace(0, num_freqs - 1, num_freqs)
+        else:
+            self.freq_bands = torch.linspace(1, 2 ** (num_freqs - 1), num_freqs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = [x]
+        for freq in self.freq_bands:
+            out += [torch.sin(freq * x), torch.cos(freq * x)]
+
+        return torch.cat(out, -1)
+
+
 '''Model'''
 class ComVoGModel(nn.Module):
     def __init__(self, xyz_min, xyz_max, num_voxels=0, num_voxels_base=0, alpha_init=None,
@@ -152,7 +172,7 @@ class ComVoGModel(nn.Module):
         self.density_config = density_config
         self.density = comvog_grid.create_grid(
             density_type, channels=1, world_size=self.world_size,
-            xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+            xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
             config=self.density_config)
         
         # init color representation
@@ -180,7 +200,7 @@ class ComVoGModel(nn.Module):
             self.k0_dim = 9  # rgb * 3
             self.k0 = comvog_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=False,
                 config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)
@@ -202,7 +222,7 @@ class ComVoGModel(nn.Module):
             self.k0_dim = 3
             self.k0 = comvog_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                xyz_min=self.xyz_min, xyz_max=self.xyz_max,  use_nerf_pos=False,
                 config=self.k0_config)
             self.rgbnet = None
         else:
@@ -210,10 +230,10 @@ class ComVoGModel(nn.Module):
             self.k0_dim = rgbnet_dim
             self.k0 = comvog_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
                 config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
-            dim0 = (3+3*viewbase_pe*2)
+            dim0 = (3+3*viewbase_pe*2)  # view freq dim
             dim0 += self.k0_dim
             dim0 += self.appear_dim
             self.rgbnet = nn.Sequential(
@@ -424,11 +444,12 @@ class ComVoGModel(nn.Module):
             raise NotImplementedError
         seperate_boundary = 1.0
         B = 1 + self.bg_len
-        A = B * seperate_boundary - seperate_boundary ** 2
+        order = 1  # default order = 1
+        A = B * (seperate_boundary**order) - seperate_boundary ** (order + 1)
         ray_pts = torch.where(
             norm<=seperate_boundary,
             ray_pts,
-            ray_pts / norm * (B - A/norm)
+            ray_pts / norm * (B - A/ (norm ** order))
         )
         assert 'indexs' in render_kwargs, "The image indexes should be provided in render kwargs in the ComVoG model."
         if 'indexs' in render_kwargs:
@@ -531,11 +552,11 @@ class ComVoGModel(nn.Module):
             appear_feat = self.appear_embeddings(indexs.long()[:, 0])
         else:
             appear_feat = None
-            
+        
         # query for color
         if self.vector_grid:
             k0 = self.k0.vector_forward(ray_pts, rays_d_e)
-        else:    
+        else:
             k0 = self.k0(ray_pts)
         
         if self.vector_grid:

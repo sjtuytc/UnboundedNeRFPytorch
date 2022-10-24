@@ -26,7 +26,8 @@ def find_files(dir, exts):
         return []
 
 
-def load_data_split(split_dir, skip=1, try_load_min_depth=True, only_img_files=False):
+def load_data_split(split_dir, skip=1, try_load_min_depth=True, only_img_files=False,
+                    training_ids=None):
 
     def parse_txt(filename):
         assert os.path.isfile(filename)
@@ -68,7 +69,20 @@ def load_data_split(split_dir, skip=1, try_load_min_depth=True, only_img_files=F
         assert(len(mindepth_files) == cam_cnt)
     else:
         mindepth_files = [None, ] * cam_cnt
-
+    
+    # sample by training ids
+    if training_ids is not None:
+        final_training_ids = []
+        for idx, ele in enumerate(intrinsics_files):
+            if int(ele.split("/")[-1].replace(".txt", "")) in training_ids:
+                final_training_ids.append(idx)
+        training_ids = final_training_ids
+        training_ids = [id - 1 for id in training_ids]  # image id start with 1
+        intrinsics_files = [intrinsics_files[id] for id in training_ids]
+        pose_files = [pose_files[id] for id in training_ids]
+        img_files = [img_files[id] for id in training_ids]
+        mask_files = [mask_files[id] for id in training_ids]
+        mindepth_files = [mindepth_files[id] for id in training_ids]
     return intrinsics_files, pose_files, img_files, mask_files, mindepth_files
 
 
@@ -103,8 +117,8 @@ def rerotate_poses(poses, render_poses):
     return poses, render_poses
 
 
-def load_nerfpp_data(basedir, rerotate=True):
-    tr_K, tr_c2w, tr_im_path = load_data_split(os.path.join(basedir, 'train'))[:3]
+def load_nerfpp_data(basedir, rerotate=True, training_ids=None):
+    tr_K, tr_c2w, tr_im_path = load_data_split(os.path.join(basedir, 'train'), training_ids=training_ids)[:3]
     assert len(tr_im_path) > 0, f"Images are not found in {basedir}"
     te_K, te_c2w, te_im_path = load_data_split(os.path.join(basedir, 'test'))[:3]
     assert len(tr_K) == len(tr_c2w) and len(tr_K) == len(tr_im_path)

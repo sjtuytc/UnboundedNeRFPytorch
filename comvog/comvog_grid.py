@@ -18,16 +18,44 @@ def create_grid(type, **kwargs):
         raise NotImplementedError
 
 
+class NeRFPosEmbedding(nn.Module):
+    def __init__(self, num_freqs: int, logscale=True):
+        """
+        Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
+        """
+        super(NeRFPosEmbedding, self).__init__()
+        if logscale:
+            self.freq_bands = 2 ** torch.linspace(0, num_freqs - 1, num_freqs)
+        else:
+            self.freq_bands = torch.linspace(1, 2 ** (num_freqs - 1), num_freqs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = [x]
+        for freq in self.freq_bands:
+            out += [torch.sin(freq * x), torch.cos(freq * x)]
+        return torch.cat(out, -1)
+
+
 ''' Dense 3D grid
 '''
 class DenseGrid(nn.Module):
-    def __init__(self, channels, world_size, xyz_min, xyz_max, **kwargs):
+    def __init__(self, channels, world_size, xyz_min, xyz_max, use_nerf_pos, **kwargs):
         super(DenseGrid, self).__init__()
         self.channels = channels
         self.world_size = world_size
         self.register_buffer('xyz_min', torch.Tensor(xyz_min))
         self.register_buffer('xyz_max', torch.Tensor(xyz_max))
-        self.grid = nn.Parameter(torch.zeros([1, channels, *world_size]))
+        if use_nerf_pos:
+            self.nerf_pos_num_freq = 3
+            self.nerf_pos = NeRFPosEmbedding(num_freqs=self.nerf_pos_num_freq)
+            self.pos_embed_output_dim = 1 + self.nerf_pos_num_freq * 2
+            grid_channels = channels * self.pos_embed_output_dim
+        else:
+            self.nerf_pos_num_freq = -1
+            self.pos_embed_output_dim = -1
+            self.nerf_pos = None
+            grid_channels = channels
+        self.grid = nn.Parameter(torch.zeros([1, grid_channels, *world_size]))
 
     def vector_forward(self, xyz, rays_d_e):
         '''
@@ -56,8 +84,24 @@ class DenseGrid(nn.Module):
         shape = xyz.shape[:-1]
         xyz = xyz.reshape(1,1,1,-1,3)
         ind_norm = ((xyz - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
-        out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
-        out = out.reshape(self.channels,-1).T.reshape(*shape,self.channels)
+        # if self.nerf_pos is not None:
+        #     out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
+        #     pos_embed = self.nerf_pos(ind_norm)
+        #     out = out.squeeze().T
+        #     res = pos_embed.squeeze() * out
+        #     out = res.mean(-1).reshape(*shape,self.channels)
+        if self.nerf_pos is not None:
+            pos_embed = self.nerf_pos(ind_norm).squeeze()
+            out = 0
+            for i in range(self.pos_embed_output_dim):
+                cur_grid = self.grid.squeeze()[i * self.channels:(i+1) * self.channels]
+                cur_pos_embed = pos_embed[:, 3*i:3*(i+1)].unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                out += F.grid_sample(cur_grid.unsqueeze(0), cur_pos_embed, mode='bilinear', align_corners=True)
+            out /= self.pos_embed_output_dim
+            out = out.reshape(self.channels, -1).T.reshape(*shape, self.channels)  # only works for channels = 1
+        else:
+            out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
+            out = out.reshape(self.channels,-1).T.reshape(*shape, self.channels)
         if self.channels == 1:
             out = out.squeeze(-1)
         return out

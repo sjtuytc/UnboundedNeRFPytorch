@@ -172,9 +172,9 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     global_step = -1
     for global_step in trange(1+start, 1+cfg_train.N_iters):
 
-        # renew occupancy grid
-        if model.mask_cache is not None and (global_step + 500) % 1000 == 0:
-            model.update_occupancy_cache()
+        # # renew occupancy grid
+        # if model.mask_cache is not None and (global_step + 500) % 1000 == 0:
+        #     model.update_occupancy_cache()
 
         # progress scaling checkpoint
         if global_step in cfg_train.pg_scale:
@@ -278,11 +278,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             if cfg_train.weight_tv_k0>0:
                 model.k0_total_variation_add_grad(
                     cfg_train.weight_tv_k0/len(rays_o), global_step<cfg_train.tv_dense_before)
-
         optimizer.step()
         psnr_lst.append(psnr.item())
 
-        # update lr
+        # update lr, continuously decaying
         decay_steps = cfg_train.lrate_decay * 1000
         decay_factor = 0.1 ** (1/decay_steps)
         for i_opt_g, param_group in enumerate(optimizer.param_groups):

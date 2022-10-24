@@ -123,7 +123,8 @@ def load_common_data(args):
                 images[i] = images[i] * masks[i][...,None]
 
     elif args.dataset_type == 'nerfpp':
-        images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir)
+        images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir, 
+                                                                        training_ids=args.training_ids)
         print('Loaded nerf_pp', images.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
         near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
