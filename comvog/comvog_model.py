@@ -474,9 +474,9 @@ class ComVoGModel(nn.Module):
             self.fast_color_thres = self._fast_color_thres[global_step]
 
         ret_dict = {}
-        N = len(rays_o)
+        num_rays = len(rays_o)
         # sample points on rays
-        ray_pts, indexs, inner_mask, t, rays_d_e = self.sample_ray(
+        ray_pts, ray_indexs, inner_mask, t, rays_d_e = self.sample_ray(
                 ori_rays_o=rays_o, ori_rays_d=rays_d, is_train=global_step is not None, **render_kwargs)
         n_max = len(t)
         interval = render_kwargs['stepsize'] * self.voxel_size_ratio
@@ -484,36 +484,10 @@ class ComVoGModel(nn.Module):
 
         # skip oversampled points outside scene bbox
         mask = inner_mask.clone() # default
-        # --------------------------------------Mask threshold --------------------------------------
-        thre_factor = 0.0   # default=0.95
-        dist_thres = (2+2*self.bg_len) / self.world_len * render_kwargs['stepsize'] * thre_factor
-        dist = (ray_pts[:,1:] - ray_pts[:,:-1]).norm(dim=-1)
-        mask[:, 1:] |= ub360_utils_cuda.cumdist_thres(dist, dist_thres)
-        # -------------------------------------------------------------------------------------------------------
-        
-        # --------------------------------------Inner Mask threshold ----------------------------
-        ray_pts = ray_pts[mask]
-        if rays_d_e is not None:
-            rays_d_e = rays_d_e[mask]
-        indexs = indexs[mask]
-        inner_mask = inner_mask[mask]
-        t = t[None].repeat(N,1)[mask]
-        ray_id = ray_id[mask.flatten()]
-        step_id = step_id[mask.flatten()]
-        
-        # -------------------------------------------------------------------------------------------------------
 
-        # skip known free space
-        mask = self.mask_cache(ray_pts)
-        ray_pts = ray_pts[mask]
-        if rays_d_e is not None:
-            rays_d_e = rays_d_e[mask]
-        indexs = indexs[mask]
-        inner_mask = inner_mask[mask]
-        t = t[mask]
-        ray_id = ray_id[mask]
-        step_id = step_id[mask]
-
+        # changing shapes, only needed when the above procedures are commented out
+        t = t[None].repeat(num_rays, 1)
+        
         # query for alpha w/ post-activation
         density = self.density(ray_pts)
         alpha = self.activate_density(density, interval)
@@ -524,24 +498,24 @@ class ComVoGModel(nn.Module):
             ray_pts = ray_pts[mask]
             if rays_d_e is not None:
                 rays_d_e = rays_d_e[mask]
-            indexs = indexs[mask]
+            ray_indexs = ray_indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
-            ray_id = ray_id[mask]
-            step_id = step_id[mask]
+            # changed because the above masking functions are removed
+            ray_id = ray_id[mask.flatten()]
+            step_id = step_id[mask.flatten()]
             density = density[mask]
             alpha = alpha[mask]
 
-        #---------------------------------------------------------------------------------------------------
-
         # compute accumulated transmittance
-        weights, alphainv_last = Alphas2Weights.apply(alpha, ray_id, N)
+        weights, alphainv_last = Alphas2Weights.apply(alpha, ray_id, num_rays)
         if self.fast_color_thres > 0:
             mask = (weights > self.fast_color_thres)
+            # print(f"Masked ratio: {1 - mask.sum() / mask.numel()}.")
             ray_pts = ray_pts[mask]        
             if rays_d_e is not None:
                 rays_d_e = rays_d_e[mask]    
-            indexs = indexs[mask]
+            ray_indexs = ray_indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
             ray_id = ray_id[mask]
@@ -549,13 +523,11 @@ class ComVoGModel(nn.Module):
             density = density[mask]
             alpha = alpha[mask]
             weights = weights[mask]
-
-        # get appearance features
-        if self.img_embeddings is not None:
-            img_embeddings = self.img_embeddings(indexs.long()[:, 0])
         else:
-            img_embeddings = None
-        # pdb.set_trace()
+            ray_pts = ray_pts.reshape(-1, ray_pts.shape[-1])
+            weights = weights.reshape(-1)
+            inner_mask = inner_mask.reshape(-1)
+
         # query for color
         if self.vector_grid:
             k0 = self.k0.vector_forward(ray_pts, rays_d_e)
@@ -567,9 +539,7 @@ class ComVoGModel(nn.Module):
             viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
             viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
             viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
-            assert img_embeddings is None or len(img_embeddings) == len(k0), "Tensor sizes are not matched!"
-            rgb_feat = torch.cat([k0, viewdirs_emb, img_embeddings], -1) if img_embeddings is not None \
-                else torch.cat([k0, viewdirs_emb], -1)
+            rgb_feat = torch.cat([k0, viewdirs_emb], -1)
             rgb_logit = self.rgbnet(rgb_feat)
             rgb = torch.sigmoid(rgb_logit)
         elif self.rgbnet is None:
@@ -588,18 +558,16 @@ class ComVoGModel(nn.Module):
         rgb_marched = segment_coo(
                 src=(weights.unsqueeze(-1) * rgb),
                 index=ray_id,
-                out=torch.zeros([N, 3]),
+                out=torch.zeros([num_rays, 3]),
                 reduce='sum')
-        pdb.set_trace()
-        rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
-        # if render_kwargs.get('rand_bkgd', False) and is_train:
-        #     rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
-        # else:
-        #     rgb_marched += (alphainv_last.unsqueeze(-1) * render_kwargs['bg'])
+
+        if render_kwargs.get('rand_bkgd', False):
+            rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
+        
         wsum_mid = segment_coo(
                 src=weights[inner_mask],
                 index=ray_id[inner_mask],
-                out=torch.zeros([N]),
+                out=torch.zeros([num_rays]),
                 reduce='sum')
         s = 1 - 1/(1+t)  # [0, inf] => [0, 1]
         ret_dict.update({
@@ -622,7 +590,7 @@ class ComVoGModel(nn.Module):
                 depth = segment_coo(
                         src=(weights * s),
                         index=ray_id,
-                        out=torch.zeros([N]),
+                        out=torch.zeros([num_rays]),
                         reduce='sum')
             ret_dict.update({'depth': depth})
         return ret_dict

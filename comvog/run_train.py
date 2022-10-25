@@ -171,11 +171,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     time0 = time.time()
     global_step = -1
     for global_step in trange(1+start, 1+cfg_train.N_iters):
-
-        # # renew occupancy grid
-        # if model.mask_cache is not None and (global_step + 500) % 1000 == 0:
-        #     model.update_occupancy_cache()
-
         # progress scaling checkpoint
         if global_step in cfg_train.pg_scale:
             n_rest_scales = len(cfg_train.pg_scale)-cfg_train.pg_scale.index(global_step)-1
@@ -245,8 +240,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             **render_kwargs)
         # gradient descent step
         optimizer.zero_grad(set_to_none=True)
-        loss = cfg_train.weight_main * F.mse_loss(render_result['rgb_marched'], target)
-        psnr = utils.mse2psnr(loss.detach())
+        psnr_loss = F.mse_loss(render_result['rgb_marched'], target)
+        freq_loss = F.mse_loss(torch.fft.fft(render_result['rgb_marched']).real, torch.fft.fft(target).real)
+        psnr = utils.mse2psnr(psnr_loss.detach())
+        loss = cfg_train.weight_main * psnr_loss + freq_loss
         if cfg_train.weight_entropy_last > 0:
             pout = render_result['alphainv_last'].clamp(1e-6, 1-1e-6)
             entropy_last_loss = -(pout*torch.log(pout) + (1-pout)*torch.log(1-pout)).mean()

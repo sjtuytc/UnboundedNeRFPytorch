@@ -19,15 +19,19 @@ else:
     unbounded_inward = True
     coarse_iter = 0
     fast_color_thres={
-            '_delete_': True,
-            0   : alpha_init*stepsize/10,
-            1500: min(alpha_init, 1e-4)*stepsize/5,
-            2500: min(alpha_init, 1e-4)*stepsize/2,
-            3500: min(alpha_init, 1e-4)*stepsize/1.5,
-            4500: min(alpha_init, 1e-4)*stepsize,
-            5500: min(alpha_init, 1e-4),
-            6500: 1e-4,
+            '_delete_': True,                           # to ignore the base config
+            0   : 1e-4,                                 # 0.5e-5
         }
+    # fast_color_thres={   # default
+    #         '_delete_': True,                           # to ignore the base config
+    #         0   : alpha_init*stepsize/10,               # 0.5e-5
+    #         1500: min(alpha_init, 1e-4)*stepsize/5,     # 1e-5
+    #         2500: min(alpha_init, 1e-4)*stepsize/2,     # 2.5e-5
+    #         3500: min(alpha_init, 1e-4)*stepsize/1.5,   
+    #         4500: min(alpha_init, 1e-4)*stepsize,
+    #         5500: min(alpha_init, 1e-4),
+    #         6500: 1e-4,
+    #     }
     maskout_near_cam_vox = False
     pervoxel_lr = False
     weight_distortion = -1
@@ -72,12 +76,14 @@ fine_train = dict(
     weight_tv_density=1e-6,
     weight_tv_k0=1e-7,
     pervoxel_lr=False,
-    lrate_decay=20,             # default
-    lrate_density=1e-1,         # default lr of density voxel grid
+    lrate_decay=20,               # default
+    lrate_density=1e-1,           # default lr of density voxel grid
     lrate_k0=1e-1,                # lr of color/feature voxel grid
     lrate_rgbnet=1e-3,            # default lr of the mlp to preduct view-dependent color
-    weight_entropy_last=1e-3,  # default
-    weight_rgbper=1e-2, # default
+    weight_entropy_last=1e-3,     # default
+    weight_rgbper=1e-2,           # default
+    weight_nearclip=0,
+    weight_main=3.0,              # default = 1
 )
 
 coarse_model_and_render = dict(
