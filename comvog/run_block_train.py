@@ -28,7 +28,7 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
-        model_kwargs['sample_num'] = cfg.sample_num
+        model_kwargs['sample_num'] = args.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels, verbose=verbose,

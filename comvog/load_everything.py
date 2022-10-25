@@ -18,7 +18,7 @@ def load_everything(args, cfg):
         return data_dict
     else:
         data_dict = load_common_data(cfg.data)
-
+    
     # remove useless field
     kept_keys = {'hwf', 'HW', 'Ks', 'near', 'far', 'near_clip',
             'i_train', 'i_val', 'i_test', 'irregular_shape',
@@ -35,7 +35,9 @@ def load_everything(args, cfg):
     data_dict['poses'] = torch.Tensor(data_dict['poses'])
     if args.sample_num > 0:
         data_dict['i_train'] = data_dict['i_train'][:args.sample_num]
-    return data_dict
+    else:
+        args.sample_num = len(data_dict['i_train'])
+    return data_dict, args
 
 
 def load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device):

@@ -133,7 +133,7 @@ class ComVoGModel(nn.Module):
     def __init__(self, xyz_min, xyz_max, num_voxels=0, num_voxels_base=0, alpha_init=None,
                  mask_cache_world_size=None, fast_color_thres=0, bg_len=0.2, contracted_norm='inf',
                  density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
-                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, apperance_emb_dim=-1, verbose=False,
+                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, img_emb_dim=-1, verbose=False,
                  **kwargs):
         super(ComVoGModel, self).__init__()
         xyz_min = torch.Tensor(xyz_min)
@@ -185,14 +185,15 @@ class ComVoGModel(nn.Module):
         self.k0_type = k0_type
         self.k0_config = k0_config
         
-        self.appear_dim = apperance_emb_dim
+        self.img_embed_dim = img_emb_dim
         self.sample_num = kwargs['sample_num']
-        if apperance_emb_dim > 0 and self.sample_num > 0:    # use apperance embeddings
-            self.appear_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
-                                        embedding_dim=self.appear_dim)
+
+        if img_emb_dim > 0 and self.sample_num > 0:    # use apperance embeddings
+            self.img_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
+                                        embedding_dim=self.img_embed_dim)
         else:
-            self.appear_embeddings = None
-            self.appear_dim = 0
+            self.img_embeddings = None
+            self.img_embed_dim = 0
 
         # rgbnet configurations
         self.vector_grid = False
@@ -205,7 +206,7 @@ class ComVoGModel(nn.Module):
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)
             dim0 += 3  # real k0 dim is 3
-            dim0 += self.appear_dim
+            dim0 += self.img_embed_dim
             self.rgbnet = nn.Sequential(
                 nn.Linear(dim0, rgbnet_width), nn.ReLU(inplace=True),
                 *[
@@ -235,7 +236,6 @@ class ComVoGModel(nn.Module):
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)  # view freq dim
             dim0 += self.k0_dim
-            dim0 += self.appear_dim
             self.rgbnet = nn.Sequential(
                 nn.Linear(dim0, rgbnet_width), nn.ReLU(inplace=True),
                 *[
@@ -500,6 +500,7 @@ class ComVoGModel(nn.Module):
         t = t[None].repeat(N,1)[mask]
         ray_id = ray_id[mask.flatten()]
         step_id = step_id[mask.flatten()]
+        
         # -------------------------------------------------------------------------------------------------------
 
         # skip known free space
@@ -531,6 +532,8 @@ class ComVoGModel(nn.Module):
             density = density[mask]
             alpha = alpha[mask]
 
+        #---------------------------------------------------------------------------------------------------
+
         # compute accumulated transmittance
         weights, alphainv_last = Alphas2Weights.apply(alpha, ray_id, N)
         if self.fast_color_thres > 0:
@@ -548,11 +551,11 @@ class ComVoGModel(nn.Module):
             weights = weights[mask]
 
         # get appearance features
-        if self.appear_embeddings is not None:
-            appear_feat = self.appear_embeddings(indexs.long()[:, 0])
+        if self.img_embeddings is not None:
+            img_embeddings = self.img_embeddings(indexs.long()[:, 0])
         else:
-            appear_feat = None
-        
+            img_embeddings = None
+        # pdb.set_trace()
         # query for color
         if self.vector_grid:
             k0 = self.k0.vector_forward(ray_pts, rays_d_e)
@@ -564,8 +567,8 @@ class ComVoGModel(nn.Module):
             viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
             viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
             viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
-            assert appear_feat is None or len(appear_feat) == len(k0), "Tensor sizes are not matched!"
-            rgb_feat = torch.cat([k0, viewdirs_emb, appear_feat], -1) if appear_feat is not None \
+            assert img_embeddings is None or len(img_embeddings) == len(k0), "Tensor sizes are not matched!"
+            rgb_feat = torch.cat([k0, viewdirs_emb, img_embeddings], -1) if img_embeddings is not None \
                 else torch.cat([k0, viewdirs_emb], -1)
             rgb_logit = self.rgbnet(rgb_feat)
             rgb = torch.sigmoid(rgb_logit)
@@ -577,18 +580,17 @@ class ComVoGModel(nn.Module):
             viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
             viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
             viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
-            assert appear_feat is None or len(appear_feat) == len(k0), "Tensor sizes are not matched!"
-            rgb_feat = torch.cat([k0, viewdirs_emb, appear_feat], -1) if appear_feat is not None \
-                else torch.cat([k0, viewdirs_emb], -1)
+            rgb_feat = torch.cat([k0, viewdirs_emb], -1)
             rgb_logit = self.rgbnet(rgb_feat)
             rgb = torch.sigmoid(rgb_logit)
 
-        # Ray marching
+        # Ray marching, rendering equations here.
         rgb_marched = segment_coo(
                 src=(weights.unsqueeze(-1) * rgb),
                 index=ray_id,
                 out=torch.zeros([N, 3]),
                 reduce='sum')
+        pdb.set_trace()
         rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
         # if render_kwargs.get('rand_bkgd', False) and is_train:
         #     rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))

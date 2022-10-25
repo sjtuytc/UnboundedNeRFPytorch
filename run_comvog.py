@@ -81,7 +81,6 @@ if __name__=='__main__':
     cfg = mmcv.Config.fromfile(args.config)
     # create exp name with exp_id
     cfg.expname = cfg.expname + args.exp_id
-    cfg.sample_num = args.sample_num
     # init enviroment
     if torch.cuda.is_available():
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -91,7 +90,7 @@ if __name__=='__main__':
     seed_everything()
 
     # load images / poses / camera settings / data split
-    data_dict = load_everything(args=args, cfg=cfg)
+    data_dict, args = load_everything(args=args, cfg=cfg)
     args.block_num = -1
     program = args.program
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == 'nerfpp':

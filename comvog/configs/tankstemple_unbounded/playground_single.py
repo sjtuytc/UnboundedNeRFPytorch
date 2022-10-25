@@ -58,7 +58,8 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters=40000,
+    # N_iters=40000,
+    N_iters=100000,
     N_rand=2048,  # reduce this to fit into memory
     # N_rand=4096,  # default
     ray_sampler='flatten',

@@ -27,7 +27,7 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
-        model_kwargs['sample_num'] = cfg.sample_num
+        model_kwargs['sample_num'] = args.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels=num_voxels, verbose=verbose,
@@ -281,11 +281,11 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         optimizer.step()
         psnr_lst.append(psnr.item())
 
-        # update lr, continuously decaying
-        decay_steps = cfg_train.lrate_decay * 1000
-        decay_factor = 0.1 ** (1/decay_steps)
-        for i_opt_g, param_group in enumerate(optimizer.param_groups):
-            param_group['lr'] = param_group['lr'] * decay_factor
+        # # update lr, continuously decaying
+        # decay_steps = cfg_train.lrate_decay * 1000
+        # decay_factor = 0.1 ** (1/decay_steps)
+        # for i_opt_g, param_group in enumerate(optimizer.param_groups):
+        #     param_group['lr'] = param_group['lr'] * decay_factor
 
         # check log & save
         if global_step%args.i_print==0:
