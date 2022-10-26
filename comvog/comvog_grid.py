@@ -72,7 +72,6 @@ class DenseGrid(nn.Module):
             out = out.squeeze(-1)
         num_points = len(out) # num_points
         reshaped_out = out.reshape(num_points, 3, 3)
-        # final_color = (x_color) ^ 2 + (y_color) ^ 2 + (z_color) ^ 2
         final_out = reshaped_out * rays_d_e.reshape(num_points,1,3)
         final_out = final_out.sum(2)
         return final_out
@@ -84,12 +83,6 @@ class DenseGrid(nn.Module):
         shape = xyz.shape[:-1]
         xyz = xyz.reshape(1,1,1,-1,3)
         ind_norm = ((xyz - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
-        # if self.nerf_pos is not None:
-        #     out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
-        #     pos_embed = self.nerf_pos(ind_norm)
-        #     out = out.squeeze().T
-        #     res = pos_embed.squeeze() * out
-        #     out = res.mean(-1).reshape(*shape,self.channels)
         if self.nerf_pos is not None:
             pos_embed = self.nerf_pos(ind_norm).squeeze()
             out = 0

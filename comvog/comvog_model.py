@@ -556,24 +556,18 @@ class ComVoGModel(nn.Module):
 
         # Ray marching, rendering equations here.
         rgb_marched = segment_coo(
-                src=(weights.unsqueeze(-1) * rgb),
+                src=weights.unsqueeze(-1) * rgb,
                 index=ray_id,
                 out=torch.zeros([num_rays, 3]),
                 reduce='sum')
-
+        
         if render_kwargs.get('rand_bkgd', False):
             rgb_marched += (alphainv_last.unsqueeze(-1) * torch.rand_like(rgb_marched))
         
-        wsum_mid = segment_coo(
-                src=weights[inner_mask],
-                index=ray_id[inner_mask],
-                out=torch.zeros([num_rays]),
-                reduce='sum')
         s = 1 - 1/(1+t)  # [0, inf] => [0, 1]
         ret_dict.update({
             'alphainv_last': alphainv_last,
             'weights': weights,
-            'wsum_mid': wsum_mid,
             'rgb_marched': rgb_marched,
             'raw_density': density,
             'raw_alpha': alpha,
