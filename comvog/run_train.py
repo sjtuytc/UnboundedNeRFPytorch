@@ -12,15 +12,17 @@ from comvog.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 from comvog.run_export_bbox import run_export_bbox_cams
 from comvog.run_export_coarse import run_export_coarse
-from comvog.comvog_model import comvog_get_training_rays
+from comvog.comvog_model import comvog_get_training_rays, FourierMSELoss
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
     model_kwargs = copy.deepcopy(cfg_model)
-    num_voxels = model_kwargs.pop('num_voxels')
+    num_voxels_density = model_kwargs.pop('num_voxels_density')
+    num_voxels_rgb = model_kwargs.pop('num_voxels_rgb')
     if len(cfg_train.pg_scale):
-        num_voxels = int(num_voxels / (2**len(cfg_train.pg_scale)))
+        num_voxels_density = int(num_voxels_density / (2**len(cfg_train.pg_scale)))
+        num_voxels_rgb = int(num_voxels_rgb / (2**len(cfg_train.pg_scale)))
     verbose = False
 
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
@@ -29,30 +31,10 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
         model_kwargs['sample_num'] = args.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels, verbose=verbose,
+            num_voxels_density=num_voxels_density, num_voxels_rgb=num_voxels_rgb, verbose=verbose,
             **model_kwargs)
-    elif cfg.data.ndc:
-        if verbose:
-            print(f'scene_rep_reconstruction ({stage}): \033[96muse multiplane images\033[0m')
-        model = dmpigo.DirectMPIGO(
-            xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels,
-            **model_kwargs)
-    elif cfg.data.unbounded_inward:
-        if verbose:
-            print(f'scene_rep_reconstruction ({stage}): \033[96muse contraced voxel grid (covering unbounded)\033[0m')
-        model = dcvgo.DirectContractedVoxGO(
-            xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels,
-            **model_kwargs)
-    else:
-        if verbose:
-            print(f'scene_rep_reconstruction ({stage}): \033[96muse dense voxel grid\033[0m')
-        model = dvgo.DirectVoxGO(
-            xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels,
-            mask_cache_path=coarse_ckpt_path,
-            **model_kwargs)
+    elif cfg.data.ndc or cfg.data.unbounded_inward:
+        raise RuntimeError("These settings are no longer supported in ComVoG.")
     model = model.to(device)
     verbose = args.block_num <= 1
     optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0, verbose=verbose)
@@ -135,6 +117,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     else:
         print(f'scene_rep_reconstruction ({stage}): reload from {reload_ckpt_path}')
         model, optimizer, start = load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device=device)
+    
+    # init loss
+    fourier_mse_loss = FourierMSELoss(num_freqs=7, logscale=True)
+    
     # init rendering setup
     render_kwargs = {
         'near': data_dict['near'],
@@ -173,13 +159,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         # progress scaling checkpoint
         if global_step in cfg_train.pg_scale:
             n_rest_scales = len(cfg_train.pg_scale)-cfg_train.pg_scale.index(global_step)-1
-            cur_voxels = int(cfg_model.num_voxels / (2**n_rest_scales))
-            if isinstance(model, (dvgo.DirectVoxGO, dcvgo.DirectContractedVoxGO)):
-                model.scale_volume_grid(cur_voxels)
-            elif isinstance(model, dmpigo.DirectMPIGO):
-                model.scale_volume_grid(cur_voxels, model.mpi_depth)
-            elif isinstance(model, ComVoGModel):
-                model.scale_volume_grid(cur_voxels)
+            cur_voxels_density = int(cfg_model.num_voxels_density / (2**n_rest_scales))
+            cur_voxels_rgb = int(cfg_model.num_voxels_rgb / (2**n_rest_scales))
+            if isinstance(model, ComVoGModel):
+                model.scale_volume_grid(cur_voxels_density, cur_voxels_rgb)
             else:
                 raise NotImplementedError
             optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0)
@@ -234,15 +217,14 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 indexs = indexs.to(device)
 
         render_kwargs['indexs'] = indexs  # to avoid change the model interface
-        # volumetric rendering
+        # forward model here and get rendered results
         render_result = model(rays_o, rays_d, viewdirs, global_step=global_step, is_train=True,
             **render_kwargs)
-        # gradient descent step
         optimizer.zero_grad(set_to_none=True)
         psnr_loss = F.mse_loss(render_result['rgb_marched'], target)
-        freq_loss = F.mse_loss(torch.fft.fft(render_result['rgb_marched']).real, torch.fft.fft(target).real)
+        freq_loss = fourier_mse_loss(render_result['rgb_marched'], target)
         psnr = utils.mse2psnr(psnr_loss.detach())
-        loss = cfg_train.weight_main * psnr_loss + freq_loss
+        loss = cfg_train.weight_main * psnr_loss + cfg_train.weight_freq * freq_loss
         if cfg_train.weight_entropy_last > 0:
             pout = render_result['alphainv_last'].clamp(1e-6, 1-1e-6)
             entropy_last_loss = -(pout*torch.log(pout) + (1-pout)*torch.log(1-pout)).mean()
@@ -287,15 +269,15 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         if global_step%args.i_print==0:
             eps_time = time.time() - time0
             eps_time_str = f'{eps_time//3600:02.0f}:{eps_time//60%60:02.0f}:{eps_time%60:02.0f}'
-            tqdm.write(f'scene_rep_reconstruction ({stage}): iter {global_step:6d} / '
+            tqdm.write(f'training iter {global_step:6d} / '
                        f'Loss: {loss.item():.9f} / PSNR: {np.mean(psnr_lst):5.2f} / '
                        f'Eps: {eps_time_str}')
             psnr_lst = []
         
-        if global_step%args.i_weights==0:
+        if global_step==1+start:  # test saving function at start
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
             if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
-                args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
+                args.ckpt_manager.save_model(global_step, model, optimizer, path)
             else:
                 torch.save({
                     'global_step': global_step,

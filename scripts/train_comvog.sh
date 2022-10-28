@@ -6,7 +6,7 @@ python run_comvog.py --program train --config comvog/configs/waymo/waymo_block.p
 # using blocks
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block 200 --render_train --render_test --render_video --exp_id 4
 # not using blocks
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 46
+python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 53
 # original DVGOv2 training
 # python run_comvog.py --program train --config comvog/configs/waymo/block_0_tt.py
 # -----------------------------------------------------------------------

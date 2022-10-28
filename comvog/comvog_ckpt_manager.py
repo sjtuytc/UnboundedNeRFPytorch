@@ -48,6 +48,7 @@ class ComVoGCheckpointManager:
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
             }, save_path)
+        print(f'Saved checkpoints at', save_path)
 
     def load_model(self, model_class, ckpt_path):
         ckpt = torch.load(ckpt_path)

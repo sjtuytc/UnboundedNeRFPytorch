@@ -1,3 +1,4 @@
+from inspect import getmembers
 import os
 import time
 import functools
@@ -128,11 +129,43 @@ class NeRFPosEmbedding(nn.Module):
         return torch.cat(out, -1)
 
 
+class FourierMSELoss(nn.Module):
+    def __init__(self,):
+        super(FourierMSELoss, self).__init__()
+
+    def forward(self, pred, gt):
+        fft_dim = -1
+        pred_fft = torch.fft.fft(pred, dim=fft_dim)
+        gt_fft = torch.fft.fft(gt, dim=fft_dim)
+        pred_real, pred_imag = pred_fft.real, pred_fft.imag
+        gt_real, gt_imag = gt_fft.real, gt_fft.imag
+        real_loss = F.mse_loss(pred_real, gt_real)
+        return real_loss
+    
+class FourierMSELoss(nn.Module):
+    def __init__(self, num_freqs=7, logscale=True):
+        super(FourierMSELoss, self).__init__()
+        # self.nerf_pos = NeRFPosEmbedding(num_freqs=num_freqs, logscale=logscale)
+
+    def forward(self, pred, gt):
+        # pred_embed = self.nerf_pos(pred)
+        # gt_embed = self.nerf_pos(gt)
+        # return F.mse_loss(pred_embed, gt_embed)
+        fft_dim = -1
+        pred_fft = torch.fft.fft(pred, dim=fft_dim)
+        gt_fft = torch.fft.fft(gt, dim=fft_dim)
+        pred_real, pred_imag = pred_fft.real, pred_fft.imag
+        gt_real, gt_imag = gt_fft.real, gt_fft.imag
+        real_loss = F.mse_loss(pred_real, gt_real)
+        # imag_loss = F.mse_loss(pred_imag, gt_imag)
+        return real_loss
+
+
 '''Model'''
 class ComVoGModel(nn.Module):
-    def __init__(self, xyz_min, xyz_max, num_voxels=0, num_voxels_base=0, alpha_init=None,
-                 mask_cache_world_size=None, fast_color_thres=0, bg_len=0.2, contracted_norm='inf',
-                 density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
+    def __init__(self, xyz_min, xyz_max, num_voxels_density=0, num_voxels_base_density=0, num_voxels_rgb=0,
+                 num_voxels_base_rgb=0, num_voxels_viewdir=0, alpha_init=None, mask_cache_world_size=None, fast_color_thres=0, 
+                 bg_len=0.2, contracted_norm='inf', density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
                  rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, img_emb_dim=-1, verbose=False,
                  **kwargs):
         super(ComVoGModel, self).__init__()
@@ -155,11 +188,15 @@ class ComVoGModel(nn.Module):
         self.verbose = verbose
 
         # determine based grid resolution
-        self.num_voxels_base = num_voxels_base
-        self.voxel_size_base = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_base).pow(1/3)
+        self.num_voxels_base_density = num_voxels_base_density
+        self.voxel_size_base_density = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_base_density).pow(1/3)
+        self.num_voxels_base_rgb = num_voxels_base_rgb
+        self.voxel_size_base_rgb = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_base_rgb).pow(1/3)
+        self.num_voxels_viewdir = num_voxels_viewdir
+        self.voxel_size_viewdir = ((torch.Tensor([1,1,1]) - torch.Tensor([-1,-1,-1])).prod() / self.num_voxels_viewdir).pow(1/3)
 
         # determine init grid resolution
-        self._set_grid_resolution(num_voxels)
+        self._set_grid_resolution(num_voxels_density, num_voxels_rgb)
 
         # determine the density bias shift
         self.alpha_init = alpha_init
@@ -171,7 +208,7 @@ class ComVoGModel(nn.Module):
         self.density_type = density_type
         self.density_config = density_config
         self.density = comvog_grid.create_grid(
-            density_type, channels=1, world_size=self.world_size,
+            density_type, channels=1, world_size=self.world_size_density,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
             config=self.density_config)
         
@@ -200,7 +237,7 @@ class ComVoGModel(nn.Module):
         if self.vector_grid:
             self.k0_dim = 9  # rgb * 3
             self.k0 = comvog_grid.create_grid(
-                k0_type, channels=self.k0_dim, world_size=self.world_size,
+                k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=False,
                 config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
@@ -222,7 +259,7 @@ class ComVoGModel(nn.Module):
             # color voxel grid  (coarse stage)
             self.k0_dim = 3
             self.k0 = comvog_grid.create_grid(
-                k0_type, channels=self.k0_dim, world_size=self.world_size,
+                k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max,  use_nerf_pos=False,
                 config=self.k0_config)
             self.rgbnet = None
@@ -230,7 +267,7 @@ class ComVoGModel(nn.Module):
             # feature voxel grid + shallow MLP  (fine stage)
             self.k0_dim = rgbnet_dim
             self.k0 = comvog_grid.create_grid(
-                k0_type, channels=self.k0_dim, world_size=self.world_size,
+                k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
                 config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
@@ -248,37 +285,51 @@ class ComVoGModel(nn.Module):
             if self.verbose:
                 print('ComVoG: feature voxel grid', self.k0)
                 print('ComVoG: mlp', self.rgbnet)
-
+        
+        use_view_grid = num_voxels_viewdir > 0
+        if use_view_grid:
+            self.vd = comvog_grid.create_grid(k0_type, channels=3, world_size=self.world_size_viewdir,
+                                            xyz_min=torch.Tensor([-1, -1, -1]), xyz_max=torch.Tensor([1, 1, 1]),
+                                            use_nerf_pos=False,)
+        else:
+            self.vd = None
         # Using the coarse geometry if provided (used to determine known free space and unknown space)
         # Re-implement as occupancy grid
         if mask_cache_world_size is None:
-            mask_cache_world_size = self.world_size
+            mask_cache_world_size = self.world_size_density
         mask = torch.ones(list(mask_cache_world_size), dtype=torch.bool)
         self.mask_cache = comvog_grid.MaskGrid(
             path=None, mask=mask,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max)
 
-    def _set_grid_resolution(self, num_voxels):
+    def _set_grid_resolution(self, num_voxels_density, num_voxels_rgb):
         # Determine grid resolution
-        self.num_voxels = num_voxels
-        self.voxel_size = ((self.xyz_max - self.xyz_min).prod() / num_voxels).pow(1/3)
-        self.world_size = ((self.xyz_max - self.xyz_min) / self.voxel_size).long()
-        self.world_len = self.world_size[0].item()
-        self.voxel_size_ratio = self.voxel_size / self.voxel_size_base
-        if self.verbose:
-            print('ComVoG: voxel_size      ', self.voxel_size)
-            print('ComVoG: world_size      ', self.world_size)
-            print('ComVoG: voxel_size_base ', self.voxel_size_base)
-            print('ComVoG: voxel_size_ratio', self.voxel_size_ratio)
+        self.num_voxels_density = num_voxels_density
+        self.num_voxels_rgb = num_voxels_rgb
+        self.voxel_size_density = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_density).pow(1/3)
+        self.voxel_size_rgb = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_rgb).pow(1/3)
+        self.voxel_size_viewdir = ((torch.Tensor([1,1,1]) - torch.Tensor([-1,-1,-1])).prod() / self.num_voxels_viewdir).pow(1/3)
+        self.world_size_density = ((self.xyz_max - self.xyz_min) / self.voxel_size_density).long()
+        self.world_size_rgb = ((self.xyz_max - self.xyz_min) / self.voxel_size_rgb).long()
+        self.world_size_viewdir = (torch.Tensor([1,1,1]) - torch.Tensor([-1,-1,-1]) / self.voxel_size_viewdir).long()
+        self.world_len_density = self.world_size_density[0].item()
+        self.world_len_rgb = self.world_size_rgb[0].item()
+        self.world_len_viewdir = self.world_size_viewdir[0].item()
+        self.voxel_size_ratio_density = self.voxel_size_density / self.voxel_size_base_density
+        self.voxel_size_ratio_rgb = self.voxel_size_rgb / self.voxel_size_base_rgb
 
     def get_kwargs(self):
         return {
             'xyz_min': self.xyz_min.cpu().numpy(),
             'xyz_max': self.xyz_max.cpu().numpy(),
-            'num_voxels': self.num_voxels,
-            'num_voxels_base': self.num_voxels_base,
+            'num_voxels_density': self.num_voxels_density,
+            'num_voxels_rgb': self.num_voxels_rgb,
+            'num_voxels_viewdir': self.num_voxels_viewdir,
+            'num_voxels_base_density': self.num_voxels_base_density,
+            'num_voxels_base_rgb': self.num_voxels_base_rgb,
             'alpha_init': self.alpha_init,
-            'voxel_size_ratio': self.voxel_size_ratio,
+            'voxel_size_ratio_density': self.voxel_size_ratio_density,
+            'voxel_size_ratio_rgb': self.voxel_size_ratio_rgb,
             'mask_cache_world_size': list(self.mask_cache.mask.shape),
             'fast_color_thres': self.fast_color_thres,
             'contracted_norm': self.contracted_norm,
@@ -294,69 +345,35 @@ class ComVoGModel(nn.Module):
     def maskout_near_cam_vox(self, cam_o, near_clip):
         # maskout grid points that between cameras and their near planes
         self_grid_xyz = torch.stack(torch.meshgrid(
-            torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size[0]),
-            torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size[1]),
-            torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
+            torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size_density[0]),
+            torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size_density[1]),
+            torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size_density[2]),
         ), -1)
         nearest_dist = torch.stack([(self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)for co in cam_o.split(10)]).amin(0)
         self.density.grid[nearest_dist[None,None] <= near_clip] = -100
         
     def voxel_count_views(self, rays_o_tr, rays_d_tr, imsz, near, far, stepsize, downrate=1, irregular_shape=False):
-        print('ComVoG: voxel_count_views start')
-        far = 1e9  # the given far can be too small while rays stop when hitting scene bbox
-        eps_time = time.time()
-        N_samples = int(np.linalg.norm(np.array(self.world_size.cpu())+1) / stepsize) + 1
-        rng = torch.arange(N_samples)[None].float()
-        count = torch.zeros_like(self.density.get_dense_grid())
-        device = rng.device
-        for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
-            ones = comvog_grid.DenseGrid(1, self.world_size, self.xyz_min, self.xyz_max)
-            if irregular_shape:
-                rays_o_ = rays_o_.split(10000)
-                rays_d_ = rays_d_.split(10000)
-            else:
-                rays_o_ = rays_o_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
-                rays_d_ = rays_d_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
-
-            for rays_o, rays_d in zip(rays_o_, rays_d_):
-                vec = torch.where(rays_d==0, torch.full_like(rays_d, 1e-6), rays_d)
-                rate_a = (self.xyz_max - rays_o) / vec
-                rate_b = (self.xyz_min - rays_o) / vec
-                t_min = torch.minimum(rate_a, rate_b).amax(-1).clamp(min=near, max=far)
-                t_max = torch.maximum(rate_a, rate_b).amin(-1).clamp(min=near, max=far)
-                step = stepsize * self.voxel_size * rng
-                interpx = (t_min[...,None] + step/rays_d.norm(dim=-1,keepdim=True))
-                rays_pts = rays_o[...,None,:] + rays_d[...,None,:] * interpx[...,None]
-                ones(rays_pts).sum().backward()
-            with torch.no_grad():
-                count += (ones.grid.grad > 1)
-        eps_time = time.time() - eps_time
-        print('ComVoG: voxel_count_views finish (eps time:', eps_time, 'sec)')
-        return count
+        raise RuntimeError("This function is deprecated!")
+        return
     
     @torch.no_grad()
-    def scale_volume_grid(self, num_voxels):
+    def scale_volume_grid(self, num_voxels_density, num_voxels_rgb):
         if self.verbose:
             print('ComVoG: scale_volume_grid start')
-        ori_world_size = self.world_size
-        self._set_grid_resolution(num_voxels)
-        if self.verbose:
-            print('ComVoG: scale_volume_grid scale world_size from', ori_world_size.tolist(), 'to', self.world_size.tolist())
+        self._set_grid_resolution(num_voxels_density, num_voxels_rgb)
+        self.density.scale_volume_grid(self.world_size_density)
+        self.k0.scale_volume_grid(self.world_size_rgb)
 
-        self.density.scale_volume_grid(self.world_size)
-        self.k0.scale_volume_grid(self.world_size)
-
-        if np.prod(self.world_size.tolist()) <= 256**3:
+        if np.prod(self.world_size_density.tolist()) <= 256**3:
             self_grid_xyz = torch.stack(torch.meshgrid(
-                torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size[0]),
-                torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size[1]),
-                torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
+                torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size_density[0]),
+                torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size_density[1]),
+                torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size_density[2]),
             ), -1)
             self_alpha = F.max_pool3d(self.activate_density(self.density.get_dense_grid()), kernel_size=3, padding=1, stride=1)[0,0]
             self.mask_cache = comvog_grid.MaskGrid(
                 path=None, mask=self.mask_cache(self_grid_xyz) & (self_alpha>self.fast_color_thres),
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max)
-
         print('ComVoG: scale_volume_grid finish')
 
     @torch.no_grad()
@@ -383,7 +400,7 @@ class ComVoGModel(nn.Module):
         count = torch.zeros_like(self.density.get_dense_grid()).long()
         device = count.device
         for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
-            ones = comvog_grid.DenseGrid(1, self.world_size, self.xyz_min, self.xyz_max)
+            ones = comvog_grid.DenseGrid(1, self.world_size_density, self.xyz_min, self.xyz_max)
             for rays_o, rays_d in zip(rays_o_.split(8192), rays_d_.split(8192)):
                 ray_pts, indexs, inner_mask, t, rays_d_e = self.sample_ray(
                         ori_rays_o=rays_o.to(device), ori_rays_d=rays_d.to(device),
@@ -400,15 +417,15 @@ class ComVoGModel(nn.Module):
             print(f'ComVoG: update mask_cache lt_nviews finish (eps time:', eps_time, 'sec)')
 
     def density_total_variation_add_grad(self, weight, dense_mode):
-        w = weight * self.world_size.max() / 128
+        w = weight * self.world_size_density.max() / 128
         self.density.total_variation_add_grad(w, w, w, dense_mode)
 
     def k0_total_variation_add_grad(self, weight, dense_mode):
-        w = weight * self.world_size.max() / 128
+        w = weight * self.world_size_rgb.max() / 128
         self.k0.total_variation_add_grad(w, w, w, dense_mode)
 
     def activate_density(self, density, interval=None):
-        interval = interval if interval is not None else self.voxel_size_ratio
+        interval = interval if interval is not None else self.voxel_size_ratio_density
         shape = density.shape
         return Raw2Alpha.apply(density.flatten(), self.act_shift, interval).reshape(shape)
 
@@ -426,7 +443,7 @@ class ComVoGModel(nn.Module):
         # NDC coordinates
         rays_o = (ori_rays_o - self.scene_center) / self.scene_radius  
         rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
-        N_inner = int(2 / (2+2*self.bg_len) * self.world_len / stepsize) + 1
+        N_inner = int(2 / (2+2*self.bg_len) * self.world_len_density / stepsize) + 1
         N_outer = N_inner
         t_boundary = 1.5  # default t_boundary=2
         b_inner = torch.linspace(0, t_boundary, N_inner+1)
@@ -479,7 +496,7 @@ class ComVoGModel(nn.Module):
         ray_pts, ray_indexs, inner_mask, t, rays_d_e = self.sample_ray(
                 ori_rays_o=rays_o, ori_rays_d=rays_d, is_train=global_step is not None, **render_kwargs)
         n_max = len(t)
-        interval = render_kwargs['stepsize'] * self.voxel_size_ratio
+        interval = render_kwargs['stepsize'] * self.voxel_size_ratio_density
         ray_id, step_id = create_full_step_id(ray_pts.shape[:2])
 
         # skip oversampled points outside scene bbox
@@ -545,6 +562,10 @@ class ComVoGModel(nn.Module):
         elif self.rgbnet is None:
             # no view-depend effect
             rgb = torch.sigmoid(k0)
+        elif self.vd is not None:
+            viewdirs_color = self.vd(viewdirs)[ray_id]
+            rgb_logit = k0 + viewdirs_color
+            rgb = torch.sigmoid(rgb_logit)
         else:
             # view-dependent color emission
             viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
