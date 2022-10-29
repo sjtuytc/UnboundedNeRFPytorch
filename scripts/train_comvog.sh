@@ -1,11 +1,5 @@
-# debugging only five images
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_block.py --sample_num 5 --render_test --exp_id 86
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_block.py --sample_num 100 --render_train --exp_id 125
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_block.py --sample_num 5 --render_train --render_test --exp_id 88
+python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --sample_num 100 --render_train --render_test --render_video --exp_id 1
 # tanks and temples
-# using blocks
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block 200 --render_train --render_test --render_video --exp_id 4
-# not using blocks
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 53
 # original DVGOv2 training
 # python run_comvog.py --program train --config comvog/configs/waymo/block_0_tt.py

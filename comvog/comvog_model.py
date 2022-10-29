@@ -141,7 +141,8 @@ class FourierMSELoss(nn.Module):
         gt_real, gt_imag = gt_fft.real, gt_fft.imag
         real_loss = F.mse_loss(pred_real, gt_real)
         return real_loss
-    
+
+
 class FourierMSELoss(nn.Module):
     def __init__(self, num_freqs=7, logscale=True):
         super(FourierMSELoss, self).__init__()

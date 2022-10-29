@@ -11,11 +11,11 @@ def load_everything(args, cfg):
     '''Load images / poses / camera settings / data split.
     '''
     if cfg.data.dataset_type == "waymo":
-        data_dict = load_waymo_data(args, cfg.data)
-        return data_dict
+        data_dict = load_waymo_data(args, cfg)
+        return data_dict, args
     elif cfg.data.dataset_type == "mega":
         data_dict = load_mega_data(args, cfg.data)
-        return data_dict
+        return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)
     

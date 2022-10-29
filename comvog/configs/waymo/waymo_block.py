@@ -1,6 +1,6 @@
 _base_ = './waymo_base.py'
 cam_id = 73
-expname = f'aug2_waymo_{cam_id}_tt'
+expname = f'oct99_waymo_{cam_id}_tt'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )

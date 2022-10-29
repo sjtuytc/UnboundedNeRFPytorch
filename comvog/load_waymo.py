@@ -4,9 +4,11 @@ https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 '''
 import os
 import pdb
+import cv2
 import glob
 import scipy
 import imageio
+import shutil
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -32,21 +34,12 @@ def find_files(dir, exts):
 
 
 def waymo_load_img_list(split_dir, skip=1):
-    # # camera parameters files
-    # intrinsics_files = find_files('{}/intrinsics'.format(split_dir), exts=['*.txt'])
-    # pose_files = find_files('{}/pose'.format(split_dir), exts=['*.txt'])
-
-    # intrinsics_files = intrinsics_files[::skip]
-    # pose_files = pose_files[::skip]
-    # cam_cnt = len(pose_files)
-
     # img files
     img_files = find_files('{}'.format(split_dir), exts=['*.png', '*.jpg'])
     if len(img_files) > 0:
         img_files = img_files[::skip]
     else:
         raise RuntimeError(f"Cannot find image files at {split_dir}.")
-
     return img_files
 
 
@@ -97,10 +90,12 @@ def sample_metadata_by_cam(metadata, cam_idx):
     return metadata
     
 
-def sample_metadata_by_idxs(metadata, sample_idxs):
+def sample_metadata_by_idxs(metadata, sample_idxs, val_num=5):
     if sample_idxs is None:
         return metadata
     for split in metadata:
+        if split != 'train':   # validation is not that important
+            sample_idxs = sample_idxs[:val_num]
         for one_k in metadata[split]:
             metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
     return metadata
@@ -109,6 +104,7 @@ def sample_metadata_by_idxs(metadata, sample_idxs):
 def sort_metadata_by_pos(metadata):
     for split in metadata:
         list_idxs = list(range(len(metadata[split]['position'])))
+        # first sort y, then x
         sorted_idxs = sorted(zip(list_idxs, metadata[split]['position']), key=lambda row: (row[1][1], row[1][0]))
         sorted_idxs = [i for i, j in sorted_idxs]
         for one_k in metadata[split]:
@@ -162,8 +158,63 @@ def find_most_freq_ele(one_list):
     freq_count = one_list.count(most_freq_ele)
     return most_freq_ele, freq_count
 
-    
-def load_waymo(args, data_cfg, ):
+
+def save_training_imgs_to_disk(args, cfg, metadata):
+    exp_folder = os.path.join(cfg.basedir, cfg.expname)
+    data_folder = cfg.data.datadir
+    train_imgs = metadata['train']['file_path']
+    os.makedirs(exp_folder, exist_ok=True)
+    for idx, train_img in enumerate(tqdm(train_imgs)):
+        full_data_path = os.path.join(data_folder, train_img)
+        assert os.path.exists(full_data_path), f"{full_data_path} does not exist!"
+        shutil.copyfile(full_data_path, os.path.join(exp_folder, train_img.split("/")[-1]))
+        print(f"img file saved at {exp_folder}.")
+    return
+
+
+def resize_img(train_HW, val_HW, imgs, tr_K, val_K):
+    target_h, _ = find_most_freq_ele([hw[0] for hw in train_HW])
+    target_w, _ = find_most_freq_ele([hw[1] for hw in train_HW])
+    imgs = [cv2.resize(img, dsize=(target_w, target_h), interpolation=cv2.INTER_CUBIC) for img in imgs]
+    for idx, one_k in enumerate(tr_K):
+        h_before, w_before = train_HW[idx]
+        assert h_before == tr_K[idx][1][2] * 2
+        assert w_before == tr_K[idx][0][2] * 2
+        h_ratio = target_h / h_before
+        w_ratio = target_w / w_before
+        # alpha x
+        tr_K[idx][0][0] = tr_K[idx][0][0] * w_ratio
+        # x0
+        tr_K[idx][0][2] = tr_K[idx][0][2] * w_ratio
+        # alpha y
+        tr_K[idx][1][1] = tr_K[idx][1][1] * h_ratio
+        # y0
+        tr_K[idx][1][2] = tr_K[idx][1][2] * h_ratio
+        assert target_w == tr_K[idx][0][2] * 2
+        assert target_h == tr_K[idx][1][2] * 2
+    for idx, one_k in enumerate(val_K):
+        h_before, w_before = val_HW[idx]
+        assert h_before == val_K[idx][1][2] * 2
+        assert w_before == val_K[idx][0][2] * 2
+        h_ratio = target_h / h_before
+        w_ratio = target_w / w_before
+        # alpha x
+        val_K[idx][0][0] = val_K[idx][0][0] * w_ratio
+        # x0
+        val_K[idx][0][2] = val_K[idx][0][2] * w_ratio
+        # alpha y
+        val_K[idx][1][1] = val_K[idx][1][1] * h_ratio
+        # y0
+        val_K[idx][1][2] = val_K[idx][1][2] * h_ratio
+        assert target_w == val_K[idx][0][2] * 2
+        assert target_h == val_K[idx][1][2] * 2
+    train_HW = [[target_h, target_w] for hw in train_HW]
+    val_HW = [[target_h, target_w] for hw in val_HW]
+    return train_HW, val_HW, imgs, tr_K, val_K
+
+
+def load_waymo(args, cfg, ):
+    data_cfg = cfg.data
     load_img = False if args.program == "gen_trace" else True
     basedir = data_cfg.datadir
     with open(os.path.join(basedir, f'metadata.json'), 'r') as fp:
@@ -218,19 +269,25 @@ def load_waymo(args, data_cfg, ):
             imgs.append(imageio.imread(os.path.join(basedir, path)) / 255.)
         for path in tqdm(val_im_path):
             imgs.append(imageio.imread(os.path.join(basedir, path)) / 255.) 
-        
+    
     train_HW = np.array([[metadata['train']['height'][i], metadata['train']['width'][i]] 
                          for i in range(len(metadata['train']['height']))]).tolist()
     val_HW = np.array([[metadata['val']['height'][i], metadata['val']['width'][i]] 
                        for i in range(len(metadata['val']['height']))]).tolist()
 
+    if args.save_train_imgs:
+        save_training_imgs_to_disk(args, cfg, metadata)
+    train_HW, val_HW, imgs, tr_K, val_K = resize_img(train_HW, val_HW, imgs, tr_K, val_K)
+
     # Create the test split
     # te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
     #     gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
     #                    rotate_angle=data_cfg.test_rotate_angle)
-    te_c2w, test_HW, test_K, test_cam_idxs = \
-        gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
-                       rotate_angle=data_cfg.test_rotate_angle)
+    # te_c2w, test_HW, test_K, test_cam_idxs = \
+    #     gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+    #                    rotate_angle=data_cfg.test_rotate_angle)
+    # TODO: consider removing the so-called test split.
+    te_c2w, test_HW, test_K, test_cam_idxs = val_c2w, val_HW, val_K, val_cam_idx
     for _ in te_c2w:
         i_split[2].append(loop_id)
         loop_id += 1
@@ -244,9 +301,7 @@ def load_waymo(args, data_cfg, ):
     if load_img:
         imgs = np.stack(imgs)
     cam_idxs += test_cam_idxs
-    # positions += test_pos
     return imgs, poses, HW, all_K, cam_idxs, i_split
-    # return imgs, poses, HW, all_K, cam_idxs, i_split, positions
 
 
 def inward_nearfar_heuristic(cam_o, ratio=0.05):
@@ -258,10 +313,11 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
     return near, far
 
 
-def load_waymo_data(args, data_cfg):
+def load_waymo_data(args, cfg):
+    data_cfg = cfg.data
     K, depths = None, None
     near_clip = None
-    images, poses, HW, K, cam_idxs, i_split = load_waymo(args, data_cfg)
+    images, poses, HW, K, cam_idxs, i_split = load_waymo(args, cfg)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)  # not used too much in fact

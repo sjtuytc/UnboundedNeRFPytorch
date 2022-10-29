@@ -56,6 +56,7 @@ def config_parser():
     parser.add_argument("--eval_ssim", action='store_true')
     parser.add_argument("--eval_lpips_alex", action='store_true')
     parser.add_argument("--eval_lpips_vgg", action='store_true')
+    parser.add_argument("--save_train_imgs", action='store_true', help="save training images to the exp folder")
 
     # logging/saving options
     parser.add_argument("--i_print",   type=int, default=500,
