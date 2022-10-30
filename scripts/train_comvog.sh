@@ -1,4 +1,5 @@
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --sample_num 100 --render_train --render_test --render_video --exp_id 1
+# waymo dataset
+python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --sample_num 100 --render_video --exp_id 7
 # tanks and temples
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 53
 # original DVGOv2 training

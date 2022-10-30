@@ -286,6 +286,7 @@ def run_render(args, cfg, data_dict, device, debug=True):
         rgbs, depths, bgmaps = render_viewpoints(
                 cfg=cfg,
                 render_poses=data_dict['render_poses'],
+                # use the hw and ks from the test splits
                 HW=data_dict['HW'][data_dict['i_test']][[0]].repeat(len(data_dict['render_poses']), 0),
                 Ks=data_dict['Ks'][data_dict['i_test']][[0]].repeat(len(data_dict['render_poses']), 0),
                 render_factor=args.render_video_factor,

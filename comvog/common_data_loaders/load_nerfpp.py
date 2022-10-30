@@ -174,8 +174,5 @@ def load_nerfpp_data(basedir, rerotate=True, training_ids=None):
     render_poses[:,:,1] *= K[1,1] / render_K[1,1]
     if rerotate:
         poses, render_poses = rerotate_poses(poses, render_poses)
-
     render_poses = torch.Tensor(render_poses)
-
     return imgs, poses, render_poses, [H, W, focal], K, i_split
-

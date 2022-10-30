@@ -101,6 +101,24 @@ def sample_metadata_by_idxs(metadata, sample_idxs, val_num=5):
     return metadata
 
 
+def sample_metadata_by_training_ids(metadata, training_ids):
+    if training_ids is None:
+        return metadata
+    for split in metadata:
+        if split != 'train':
+            continue
+        else:
+            sample_idxs = []
+            for ele in training_ids:
+                full_path = f'images_train/{ele}.png'
+                if full_path in metadata['train']['file_path']:
+                    sample_idxs.append(metadata['train']['file_path'].index(full_path))
+            assert len(sample_idxs) > 0, "No image is selected by training id!"
+            for one_k in metadata[split]:
+                metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
+    return metadata
+
+
 def sort_metadata_by_pos(metadata):
     for split in metadata:
         list_idxs = list(range(len(metadata[split]['position'])))
@@ -231,7 +249,9 @@ def load_waymo(args, cfg, ):
         sample_idxs = None
     metadata = sort_metadata_by_pos(metadata)
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
-
+    if "training_ids" in cfg.data:
+        training_ids = cfg.data.training_ids
+        metadata = sample_metadata_by_training_ids(metadata, training_ids)
     # The validation datasets are from the official val split, 
     # but the testing splits are hard-coded sequences (completely novel views)
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['val']['cam_idx']
@@ -280,14 +300,15 @@ def load_waymo(args, cfg, ):
     train_HW, val_HW, imgs, tr_K, val_K = resize_img(train_HW, val_HW, imgs, tr_K, val_K)
 
     # Create the test split
-    # te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
-    #     gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
-    #                    rotate_angle=data_cfg.test_rotate_angle)
+    te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
+        gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+                       rotate_angle=data_cfg.test_rotate_angle)
     # te_c2w, test_HW, test_K, test_cam_idxs = \
     #     gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
     #                    rotate_angle=data_cfg.test_rotate_angle)
+    # dummy test paths
+    # te_c2w, test_K, test_HW, test_cam_idxs = val_c2w, val_K, val_HW, val_cam_idx
     # TODO: consider removing the so-called test split.
-    te_c2w, test_HW, test_K, test_cam_idxs = val_c2w, val_HW, val_K, val_cam_idx
     for _ in te_c2w:
         i_split[2].append(loop_id)
         loop_id += 1
@@ -300,8 +321,11 @@ def load_waymo(args, cfg, ):
     poses = np.stack(poses, 0)
     if load_img:
         imgs = np.stack(imgs)
+        
+    # note test_cam_idxs can be inaccurate because it may be varied!
     cam_idxs += test_cam_idxs
-    return imgs, poses, HW, all_K, cam_idxs, i_split
+    render_poses = te_c2w
+    return imgs, poses, render_poses, HW, all_K, cam_idxs, i_split
 
 
 def inward_nearfar_heuristic(cam_o, ratio=0.05):
@@ -317,7 +341,7 @@ def load_waymo_data(args, cfg):
     data_cfg = cfg.data
     K, depths = None, None
     near_clip = None
-    images, poses, HW, K, cam_idxs, i_split = load_waymo(args, cfg)
+    images, poses, render_poses, HW, K, cam_idxs, i_split = load_waymo(args, cfg)
     print(f"Loaded waymo dataset.")
     i_train, i_val, i_test = i_split
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)  # not used too much in fact
@@ -334,7 +358,7 @@ def load_waymo_data(args, cfg):
     data_dict = dict(
         HW=HW, Ks=Ks, near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,
-        poses=poses, images=images, depths=depths, cam_idxs=cam_idxs, irregular_shape=irregular_shape
+        poses=poses, render_poses=render_poses, images=images, depths=depths, cam_idxs=cam_idxs, irregular_shape=irregular_shape
     )
     data_dict['poses'] = torch.tensor(data_dict['poses']).float()
     data_dict['images'] = torch.tensor(data_dict['images']).float()

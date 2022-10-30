@@ -41,21 +41,23 @@ def gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
     return all_c2ws, test_HW, test_K, test_cam_idxs
 
 
-def gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, test_num=100, rotate_angle=9):
+def gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, test_num=90, rotate_angle=9):
     # We assume the metadata has been sorted here.
     start_c2w, end_c2w = np.array(tr_c2w[0]), np.array(tr_c2w[-1])
     start_rot, end_rot = start_c2w[:3, :3], end_c2w[:3, :3]
-    
+
     # get base information, this is where we started
+    # base_pos = np.array(train_pos).mean(0)
     base_pos = train_pos[0]
     base_quat = R.from_matrix(start_rot).as_quat()
     
     # generate rotating matries
-    rotate_interval = rotate_angle / test_num
+    # rotate_interval = rotate_angle / test_num
+    rotate_interval = -1
     cur_R = R.from_quat(base_quat).as_matrix()
     all_rot = [cur_R]
     for i in range(test_num - 1):
-        rotate_r = R.from_euler('y', -rotate_interval, degrees=True)
+        rotate_r = R.from_euler('y', rotate_interval, degrees=True)
         cur_R = np.matmul(cur_R, rotate_r.as_matrix())
         all_rot.append(cur_R)
     all_c2ws = [start_c2w.copy() for i in range(test_num)]  # initialize
@@ -65,9 +67,8 @@ def gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos
         
     assert train_HW[0] == train_HW[-1], "image shapes are not the same for the first and the last frame."
     test_HW = [train_HW[0] for i in range(test_num)]
-    assert tr_K[0] == tr_K[-1], "Ks are not the same for the first and the last frame."
+    # assert tr_K[0] == tr_K[-1], "Ks are not the same for the first and the last frame."
     test_K = [tr_K[0] for i in range(test_num)]
-    assert tr_cam_idx[0] == tr_cam_idx[-1], "cameras are not the same for the first and the last frame"
     test_cam_idxs = [tr_cam_idx[0] for i in range(test_num)]
     test_pos = [base_pos for i in range(test_num)]
     return all_c2ws, test_HW, test_K, test_cam_idxs, test_pos

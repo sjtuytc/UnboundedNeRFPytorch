@@ -55,8 +55,11 @@ def comvog_compute_bbox_by_cam_frustrm_waymo(cfg, HW, Ks, poses, i_train, near_c
     zmin, zmax = min(zs), max(zs)
     xmin, xmax = min(xs), max(xs)
     ymin, ymax = min(ys), max(ys)
-    xyz_min = [xmin - 0.05, ymin - 0.01, zmin - 0.01]
-    xyz_max = [xmax + 0.05, ymax + 0.01, zmax + 0.01]
+    x_extend = 0.05 # 0.05
+    y_extend = 0.01
+    z_extend = 0.01  # 0.01
+    xyz_min = [xmin - x_extend, ymin - y_extend, zmin - z_extend]
+    xyz_max = [xmax + x_extend, ymax + y_extend, zmax + z_extend]
     xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)
     center = (xyz_min + xyz_max) * 0.5
     radius = (center - xyz_min).max() * cfg.data.unbounded_inner_r

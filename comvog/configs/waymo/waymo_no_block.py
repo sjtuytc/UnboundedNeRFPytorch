@@ -1,7 +1,7 @@
 _base_ = '../default.py'
-basedir = './logs/waymo'
+basedir = 'logs/waymo'
 visualize_poses = False
-alpha_init = 1e-2
+alpha_init = 1e-4
 stepsize = 0.5
 _mpi_depth = 256
 maskout_near_cam_vox = False  # changed
@@ -24,13 +24,13 @@ else:
             5500: min(alpha_init, 1e-4),
             6500: 1e-4,
         }
-    weight_distortion = 0.01
+    weight_distortion = -1
 
 data = dict(
     dataset_type='waymo',
     inverse_y=True,
     white_bkgd=True,     # almost no effect when rand_bkgd=True
-    rand_bkgd=False,      # random background
+    rand_bkgd=True,      # random background
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
     datadir='data/sep19_ordered_dataset',
@@ -39,9 +39,12 @@ data = dict(
     near = 0.1,
     far = 0.01,
     # sample_cam=cam_id,
-    test_rotate_angle=50, # rotate angle in testing phase
+    test_rotate_angle=360, # rotate angle in testing phase
     sample_interval=1,
     num_per_block=-1,  # run this num in block
+    unbounded_inner_r=0.8,
+    training_ids=['69_0', '69_1', '69_2', '69_3', '69_4', '71_0', '71_2', 
+                  '71_3', '71_4', '73_0', '73_1', '73_2', '73_3', '73_4']
 )
 
 coarse_train = dict(
@@ -51,15 +54,28 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters=40000, # 40k for whole training procedure
-    N_rand=4096,
+    N_iters=10*(10**3),
+    # N_iters=100*(10**3),
+    N_rand=2048,
     ray_sampler='flatten',
     weight_distortion=weight_distortion,
-    pg_scale=[1000,2000,3000,4000,5000,],
+    pg_scale=[3000, 4000, 5000, 6000, 7000],
+    # pg_scale=[],
     tv_before=1e9,
     tv_dense_before=10000,
     weight_tv_density=1e-6,
     weight_tv_k0=1e-7,
+    # added
+    pervoxel_lr=False,
+    lrate_decay=20,               # default
+    lrate_density=1e-1,           # default lr of density voxel grid
+    lrate_k0=1e-1,                # lr of color/feature voxel grid
+    lrate_rgbnet=1e-3,            # default lr of the mlp to preduct view-dependent color
+    weight_entropy_last=1e-3,     # default
+    weight_rgbper=1e-2,           # default
+    weight_nearclip=0,
+    weight_main=3.0,              # default = 1
+    weight_freq=1.0,       
 )
 
 coarse_model_and_render = dict(
@@ -67,27 +83,28 @@ coarse_model_and_render = dict(
     bbox_thres=1e-10,  # display all the bboxes
 )
 
+voxel_size_density = 300  # default 400
+voxel_size_rgb = 300  # default 320
+voxel_size_viewdir = -1
+
 fine_model_and_render = dict(
-    num_voxels=320**3,
-    num_voxels_base=320**3,
+    num_voxels_density=voxel_size_density**3,
+    num_voxels_base_density=voxel_size_density**3,
+    num_voxels_rgb=voxel_size_rgb**3,
+    num_voxels_base_rgb=voxel_size_rgb**3,
+    num_voxels_viewdir=voxel_size_viewdir**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
     contracted_norm='l2',
-    # rgbnet_dim=-1,  # would affect performance but as an intial attempt
-    rgbnet_dim=12, # default
+    rgbnet_dim=3, # default
     rgbnet_direct=True,
     density_type='DenseGrid',
     k0_type='DenseGrid',
     bg_len=0.2,  # very important
-    viewbase_pe=8,
-    maskout_near_cam_vox=True,
-    # # TensorRF settings
-    # density_type='TensoRFGrid', 
-    # k0_type='TensoRFGrid', 
-    # density_config=dict(n_comp=8),
-    # k0_config=dict(n_comp=24),
+    viewbase_pe=2,
+    maskout_near_cam_vox=False,
 )
 
 vis = dict(
