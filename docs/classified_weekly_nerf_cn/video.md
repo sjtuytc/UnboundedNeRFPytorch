@@ -3,19 +3,16 @@
 ==================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
-## Oct2- Oct8, 2022
+## Oct16 - Oct22, 2022
+## Oct9 - Oct15, 2022
+## Oct2 - Oct8, 2022
 ## Sep25 - Oct1, 2022
   - [MonoNeuralFusion：具有几何先验的在线单目神经 3D 重建](https://arxiv.org/abs/2209.15153) | [code]
     > 从单目视频重建高保真 3D 场景仍然具有挑战性，特别是对于完整和细粒度的几何重建。先前具有神经隐式表示的 3D 重建方法已显示出完整场景重建的有希望的能力，但它们的结果通常过于平滑且缺乏足够的几何细节。本文介绍了一种新颖的神经隐式场景表示法，用于从单目视频中进行高保真在线 3D 场景重建的体积渲染。对于细粒度重建，我们的关键见解是将几何先验纳入神经隐式场景表示和神经体绘制，从而产生基于体绘制优化的有效几何学习机制。受益于此，我们提出了 MonoNeuralFusion 来从单目视频执行在线神经 3D 重建，从而在动态 3D 单目扫描期间有效地生成和优化 3D 场景几何图形。与最先进方法的广泛比较表明，我们的 MonoNeuralFusion 在数量和质量上始终生成更好的完整和细粒度的重建结果。
 ## Sep18 - Sep24, 2022
 ## Sep11 - Sep17, 2022
-## Previous weeks
 ## Sep4 - Sep10, 2022
 ## Aug28 - Sep3, 2022
-## Aug21 - Aug27, 2022
-## Previous weeks
-  - [﻿Plenoxels：没有神经网络的辐射场, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
-    > 我们介绍了 Plenoxels（全光体素），一种用于照片级真实视图合成的系统。 Plenoxels 将场景表示为具有球谐函数的稀疏 3D 网格。这种表示可以通过梯度方法和正则化从校准图像中优化，而无需任何神经组件。在标准的基准任务中，Plenoxels 的优化速度比神经辐射场快两个数量级，而视觉质量没有损失。
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [通过多平面图像的 3D 对象运动估计动态场景的时间视图合成, ISMAR2022](https://arxiv.org/abs/2208.09463) | [***``[code]``***](https://github.com/NagabhushanSN95/DeCOMPnet)
@@ -30,6 +27,8 @@
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
 ## Previous weeks
+  - [﻿Plenoxels：没有神经网络的辐射场, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
+    > 我们介绍了 Plenoxels（全光体素），一种用于照片级真实视图合成的系统。 Plenoxels 将场景表示为具有球谐函数的稀疏 3D 网格。这种表示可以通过梯度方法和正则化从校准图像中优化，而无需任何神经组件。在标准的基准任务中，Plenoxels 的优化速度比神经辐射场快两个数量级，而视觉质量没有损失。
   - [用于动态场景时空视图合成的神经场景流场, CVPR2021](http://www.cs.cornell.edu/~zl548/NSFF/) | [***``[code]``***](https://github.com/zhengqili/Neural-Scene-Flow-Fields)
     > 我们提出了一种方法来执行动态场景的新颖视图和时间合成，只需要具有已知相机姿势的单目视频作为输入。为此，我们引入了神经场景流场，这是一种将动态场景建模为外观、几何和 3D 场景运动的时变连续函数的新表示。我们的表示通过神经网络进行优化，以适应观察到的输入视图。我们表明，我们的表示可用于复杂的动态场景，包括薄结构、视图相关效果和自然运动度。我们进行了许多实验，证明我们的方法明显优于最近的单目视图合成方法，并展示了各种真实世界视频的时空视图合成的定性结果。
   - [来自多视图视频的神经 3D 视频合成, CVPR2022(oral)](https://neural-3d-video.github.io/) | [code]

@@ -3,19 +3,16 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
-## Oct2- Oct8, 2022
+## Oct16 - Oct22, 2022
+## Oct9 - Oct15, 2022
+## Oct2 - Oct8, 2022
 ## Sep25 - Oct1, 2022
   - [MonoNeuralFusion: Online Monocular Neural 3D Reconstruction with Geometric Priors](https://arxiv.org/abs/2209.15153) | [code]
     > High-fidelity 3D scene reconstruction from monocular videos continues to be challenging, especially for complete and fine-grained geometry reconstruction. The previous 3D reconstruction approaches with neural implicit representations have shown a promising ability for complete scene reconstruction, while their results are often over-smooth and lack enough geometric details. This paper introduces a novel neural implicit scene representation with volume rendering for high-fidelity online 3D scene reconstruction from monocular videos. For fine-grained reconstruction, our key insight is to incorporate geometric priors into both the neural implicit scene representation and neural volume rendering, thus leading to an effective geometry learning mechanism based on volume rendering optimization. Benefiting from this, we present MonoNeuralFusion to perform the online neural 3D reconstruction from monocular videos, by which the 3D scene geometry is efficiently generated and optimized during the on-the-fly 3D monocular scanning. The extensive comparisons with state-of-the-art approaches show that our MonoNeuralFusion consistently generates much better complete and fine-grained reconstruction results, both quantitatively and qualitatively.
 ## Sep18 - Sep24, 2022
 ## Sep11 - Sep17, 2022
-## Previous weeks
 ## Sep4 - Sep10, 2022
 ## Aug28 - Sep3, 2022
-## Aug21 - Aug27, 2022
-## Previous weeks
-  - [﻿Plenoxels: Radiance Fields without Neural Networks, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
-    > We introduce Plenoxels (plenoptic voxels), a system for photorealistic view synthesis. Plenoxels represent a scene as a sparse 3D grid with spherical harmonics. This representation can be optimized from calibrated images via gradient methods and regularization without any neural components. On standard, benchmark tasks, Plenoxels are optimized two orders of magnitude faster than Neural Radiance Fields with no loss in visual quality.
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [Temporal View Synthesis of Dynamic Scenes through 3D Object Motion Estimation with Multi-Plane Images, ISMAR2022](https://arxiv.org/abs/2208.09463) | [***``[code]``***](https://github.com/NagabhushanSN95/DeCOMPnet)
@@ -30,6 +27,8 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
 ## Previous weeks
+  - [﻿Plenoxels: Radiance Fields without Neural Networks, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
+    > We introduce Plenoxels (plenoptic voxels), a system for photorealistic view synthesis. Plenoxels represent a scene as a sparse 3D grid with spherical harmonics. This representation can be optimized from calibrated images via gradient methods and regularization without any neural components. On standard, benchmark tasks, Plenoxels are optimized two orders of magnitude faster than Neural Radiance Fields with no loss in visual quality.
   - [Neural Scene Flow Fields for Space-Time View Synthesis of Dynamic Scenes, CVPR2021](http://www.cs.cornell.edu/~zl548/NSFF/) | [***``[code]``***](https://github.com/zhengqili/Neural-Scene-Flow-Fields)
     > We present a method to perform novel view and time synthesis of dynamic scenes, requiring only a monocular video with known camera poses as input. To do this, we introduce Neural Scene Flow Fields, a new representation that models the dynamic scene as a time-variant continuous function of appearance, geometry, and 3D scene motion. Our representation is optimized through a neural network to fit the observed input views. We show that our representation can be used for complex dynamic scenes, including thin structures, view-dependent effects, and natural degrees of motion. We conduct a number of experiments that demonstrate our approach significantly outperforms recent monocular view synthesis methods, and show qualitative results of space-time view synthesis on a variety of real-world videos.
   - [Neural 3D Video Synthesis from Multi-view Video, CVPR2022(oral)](https://neural-3d-video.github.io/) | [code]
