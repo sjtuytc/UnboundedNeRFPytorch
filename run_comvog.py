@@ -131,8 +131,8 @@ if __name__=='__main__':
         for i in range(cfg.data.search_num):
             print(f"Training id {i} ...")
             data_dict, args = load_everything(args=args, cfg=cfg)
-            run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
-            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
+            psnr = run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
+            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device, add_info=str(psnr))
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     

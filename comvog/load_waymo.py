@@ -269,6 +269,7 @@ def load_waymo(args, cfg, ):
             assign_pos, assign_rot = cfg.data.assign_pos, cfg.data.assign_rot
         else:
             assign_pos, assign_rot = None, None
+
         if args.program == 'tune_pose':
             rand_vec = np.random.rand(3)
             lw, up = np.array(cfg.data.search_rot_lower), np.array(cfg.data.search_rot_upper)
@@ -278,7 +279,7 @@ def load_waymo(args, cfg, ):
             cur_pos = lw + (up - lw) * rand_vec
             assign_pos[cfg.data.tunning_id] = cur_pos.tolist()
             assign_rot[cfg.data.tunning_id] = cur_rot.tolist()
-            args.running_rot = cur_pos.tolist() + cur_rot.tolist()
+            args.running_rot = np.round(cur_pos, 4).tolist() + np.round(cur_rot, 2).tolist()
         metadata = sample_metadata_by_training_ids(metadata, training_ids, assign_pos, assign_rot)
         
     # The validation datasets are from the official val split, 

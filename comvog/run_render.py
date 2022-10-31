@@ -8,6 +8,7 @@ from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.comvog_model import ComVoGModel
 from comvog.utils import resize_and_to_8b
 from comvog.arf import ARF
+import matplotlib.pyplot as plt
 
 
 @torch.no_grad()
@@ -110,7 +111,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     return rgbs, depths, bgmaps
 
 
-def run_render(args, cfg, data_dict, device, debug=True):
+def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
     # initilize stylizer when needed
     if 'arf' in cfg:
         stylizer = ARF(cfg, data_dict, device)
@@ -295,12 +296,11 @@ def run_render(args, cfg, data_dict, device, debug=True):
                 savedir=testsavedir, dump_images=args.dump_images,
                 **render_viewpoints_kwargs)
         if 'running_rot' in args:
-            vid_name = str(args.running_rot) + '.rgb.mp4'
+            vid_name = add_info[:5] + "_" + str(args.running_rot) + '.rgb.mp4'
         else:
             vid_name = 'video.rgb.mp4'
         print(f"Rendering video saved at: {os.path.join(testsavedir, vid_name)}.")
         imageio.mimwrite(os.path.join(testsavedir, vid_name), utils.to8b(rgbs), fps=30, quality=8)
-        import matplotlib.pyplot as plt
         depths_vis = depths * (1-bgmaps) + bgmaps
         dmin, dmax = np.percentile(depths_vis[bgmaps < 0.1], q=[5, 95])
         depth_vis = plt.get_cmap('rainbow')(1 - np.clip((depths_vis - dmin) / (dmax - dmin), 0, 1)).squeeze()[..., :3]

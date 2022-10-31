@@ -303,6 +303,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 'optimizer_state_dict': optimizer.state_dict(),
             }, last_ckpt_path)
             print(f'scene_rep_reconstruction ({stage}): saved checkpoints at', last_ckpt_path)
+    return psnr.item()
 
 
 def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
@@ -351,7 +352,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
         xyz_min_fine, xyz_max_fine = compute_bbox_by_coarse_geo(
                 model_class=dvgo.DirectVoxGO, model_path=coarse_ckpt_path,
                 thres=cfg.fine_model_and_render.bbox_thres, device=device, args=args, cfg=cfg)
-    scene_rep_reconstruction(
+    psnr = scene_rep_reconstruction(
             args=args, cfg=cfg,
             cfg_model=cfg.fine_model_and_render, cfg_train=cfg.fine_train,
             xyz_min=xyz_min_fine, xyz_max=xyz_max_fine,
@@ -366,3 +367,5 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
     eps_time_str = f'{eps_time//3600:02.0f}:{eps_time//60%60:02.0f}:{eps_time%60:02.0f}'
     if running_block_id >= 0:
         print('train: finish (eps time', eps_time_str, ')')
+
+    return psnr
