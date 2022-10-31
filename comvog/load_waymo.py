@@ -4,6 +4,7 @@ https://github.com/Kai-46/nerfplusplus/blob/master/data_loader_split.py
 '''
 import os
 import pdb
+from tkinter import image_names
 import cv2
 import glob
 import scipy
@@ -92,6 +93,11 @@ def sample_metadata_by_cam(metadata, cam_idx):
 
 def sample_metadata_by_idxs(metadata, sample_idxs, val_num=5):
     if sample_idxs is None:
+        for split in metadata:
+            if split != 'train':   # validation is not that important
+                sample_idxs = list(range(val_num))
+                for one_k in metadata[split]:
+                    metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
         return metadata
     for split in metadata:
         if split != 'train':   # validation is not that important
@@ -245,6 +251,15 @@ def resize_img(train_HW, val_HW, imgs, tr_K, val_K):
     return train_HW, val_HW, imgs, tr_K, val_K
 
 
+def find_rotations_from_meta(metadata):
+    rotations = []
+    for idx, c2w in enumerate(metadata['train']['cam2world']):
+        rot = np.array(c2w)[:3, :3]
+        trans_rot = R.from_matrix(rot).as_euler('yzx', degrees=True)
+        rotations.append(trans_rot)
+    return rotations
+    
+
 def load_waymo(args, cfg, ):
     data_cfg = cfg.data
     load_img = False if args.program == "gen_trace" else True
@@ -261,8 +276,10 @@ def load_waymo(args, cfg, ):
         sample_idxs = data_cfg['sample_idxs']
     else:
         sample_idxs = None
+    
     metadata = sort_metadata_by_pos(metadata)
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
+
     if "training_ids" in cfg.data:
         training_ids = cfg.data.training_ids
         if 'assign_pos' in cfg.data:
@@ -281,7 +298,15 @@ def load_waymo(args, cfg, ):
             assign_rot[cfg.data.tunning_id] = cur_rot.tolist()
             args.running_rot = np.round(cur_pos, 4).tolist() + np.round(cur_rot, 2).tolist()
         metadata = sample_metadata_by_training_ids(metadata, training_ids, assign_pos, assign_rot)
-        
+    rotations = find_rotations_from_meta(metadata)
+    if args.diffuse:
+        for idx, fp in enumerate(metadata['train']['file_path']):
+            img_name = fp.split("/")[-1].replace(".png", "")
+            diffuse_replace = cfg.diffusion.diff_replace
+            if img_name in diffuse_replace:
+                img_path = os.path.join(cfg.diffusion.diff_root, diffuse_replace[img_name] + ".png")
+                metadata['train']['file_path'][idx] = img_path
+    
     # The validation datasets are from the official val split, 
     # but the testing splits are hard-coded sequences (completely novel views)
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['val']['cam_idx']
@@ -291,7 +316,7 @@ def load_waymo(args, cfg, ):
     tr_im_path, val_im_path = metadata['train']['file_path'], metadata['val']['file_path']
     tr_c2w, val_c2w = metadata['train']['cam2world'], metadata['val']['cam2world']
     tr_K, val_K = metadata['train']['K'], metadata['val']['K']
-    
+
     # Determine split id list
     i_split = [[], [], []]
     loop_id = 0

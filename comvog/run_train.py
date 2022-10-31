@@ -155,6 +155,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     psnr_lst = []
     time0 = time.time()
     global_step = -1
+    psnr = torch.tensor(0)
     if args.program == 'tune_pose':
         training_steps = cfg_train.N_iters_sfm
     else:

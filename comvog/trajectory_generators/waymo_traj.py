@@ -49,6 +49,9 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx
     # get base information, this is where we started
     # base_pos = np.array(train_pos).mean(0)
     base_pos = train_pos[0]
+    forward_dis = 0.04
+    # forward to see the turning effect
+    base_pos[0] -= forward_dis
     base_rot = R.from_matrix(start_rot)
     
     # generate rotating matries
@@ -57,8 +60,10 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx
         test_num = 4
         rotate_interval = -10
     else:
-        test_num = 10
-        rotate_interval = -9
+        test_num = 90
+        rotate_interval = -1
+        # test_num = 4
+        # rotate_interval = -10
     # add base in final rendering !!
     # all_rot_yzx = [base_rot.as_euler('yzx', degrees=True)] 
     # for i in range(test_num - 1):
