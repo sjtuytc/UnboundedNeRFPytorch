@@ -19,7 +19,8 @@ def config_parser():
     '''
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--program', required=True, type=str, 
-                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 'render', 'train', 'gen_trace', 'sfm']
+                        help='choose one program to run', choices=['export_bbox', 'export_coarse', 
+                                                                   'render', 'train', 'gen_trace', 'sfm', 'tune_pose']
                         )
     parser.add_argument('--exp_id', required=True, type=str, 
                         help='append exp_id to exp names', default=""
@@ -93,6 +94,7 @@ if __name__=='__main__':
     # load images / poses / camera settings / data split
     data_dict, args = load_everything(args=args, cfg=cfg)
     args.block_num = -1
+    args.running_block_id = -1
     program = args.program
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == 'nerfpp':
         args.ckpt_manager = ComVoGCheckpointManager(args, cfg)
@@ -124,6 +126,13 @@ if __name__=='__main__':
         run_gen_cam_paths(args=args, cfg=cfg, data_dict=data_dict)
     elif program == "sfm":
         run_sfm(args=args, cfg=cfg, data_dict=data_dict)
+    elif program == 'tune_pose':
+        args.no_reload = True
+        for i in range(cfg.data.search_num):
+            print(f"Training id {i} ...")
+            data_dict, args = load_everything(args=args, cfg=cfg)
+            run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
+            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     

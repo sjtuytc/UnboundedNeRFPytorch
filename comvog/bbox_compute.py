@@ -46,25 +46,29 @@ def comvog_compute_bbox_by_cam_frustrm_nerfpp(cfg, HW, Ks, poses, i_train, near_
 
 
 def comvog_compute_bbox_by_cam_frustrm_waymo(cfg, HW, Ks, poses, i_train, near_clip):
-    xs, ys, zs = [], [], []
-    for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
-        xs.append(c2w[:, 3][0].item())
-        ys.append(c2w[:, 3][1].item())
-        zs.append(c2w[:, 3][2].item())
+    # xs, ys, zs = [], [], []
+    # for (H, W), K, c2w in tqdm(zip(HW[i_train], Ks[i_train], poses[i_train]), total=len(HW[i_train])):
+    #     xs.append(c2w[:, 3][0].item())
+    #     ys.append(c2w[:, 3][1].item())
+    #     zs.append(c2w[:, 3][2].item())
     
-    zmin, zmax = min(zs), max(zs)
-    xmin, xmax = min(xs), max(xs)
-    ymin, ymax = min(ys), max(ys)
-    x_extend = 0.05 # 0.05
-    y_extend = 0.01
-    z_extend = 0.01  # 0.01
-    xyz_min = [xmin - x_extend, ymin - y_extend, zmin - z_extend]
-    xyz_max = [xmax + x_extend, ymax + y_extend, zmax + z_extend]
-    xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)
-    center = (xyz_min + xyz_max) * 0.5
-    radius = (center - xyz_min).max() * cfg.data.unbounded_inner_r
-    xyz_min = center - radius
-    xyz_max = center + radius
+    # zmin, zmax = min(zs), max(zs)
+    # xmin, xmax = min(xs), max(xs)
+    # ymin, ymax = min(ys), max(ys)
+    # x_extend = 0.05 # 0.05
+    # y_extend = 0.01
+    # z_extend = 0.01  # 0.01
+    # xyz_min = [xmin - x_extend, ymin - y_extend, zmin - z_extend]
+    # xyz_max = [xmax + x_extend, ymax + y_extend, zmax + z_extend]
+    # xyz_min, xyz_max = torch.tensor(xyz_min), torch.tensor(xyz_max)
+    # center = (xyz_min + xyz_max) * 0.5
+    # radius = (center - xyz_min).max() * cfg.data.unbounded_inner_r
+    # xyz_min = center - radius
+    # xyz_max = center + radius
+    
+    # manually set xyz_min and xyz_max
+    xyz_min = torch.tensor([-1.0, -1.0, -1.0])
+    xyz_max = torch.tensor([1.0, 1.0, 1.0])
     return xyz_min, xyz_max
 
 

@@ -41,7 +41,7 @@ def gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
     return all_c2ws, test_HW, test_K, test_cam_idxs
 
 
-def gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, test_num=90, rotate_angle=9):
+def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, rotate_angle=9):
     # We assume the metadata has been sorted here.
     start_c2w, end_c2w = np.array(tr_c2w[0]), np.array(tr_c2w[-1])
     start_rot, end_rot = start_c2w[:3, :3], end_c2w[:3, :3]
@@ -49,17 +49,36 @@ def gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos
     # get base information, this is where we started
     # base_pos = np.array(train_pos).mean(0)
     base_pos = train_pos[0]
-    base_quat = R.from_matrix(start_rot).as_quat()
+    base_rot = R.from_matrix(start_rot)
     
     # generate rotating matries
     # rotate_interval = rotate_angle / test_num
-    rotate_interval = -1
-    cur_R = R.from_quat(base_quat).as_matrix()
-    all_rot = [cur_R]
-    for i in range(test_num - 1):
-        rotate_r = R.from_euler('y', rotate_interval, degrees=True)
-        cur_R = np.matmul(cur_R, rotate_r.as_matrix())
-        all_rot.append(cur_R)
+    if args.program == 'tune_pose':
+        test_num = 4
+        rotate_interval = -10
+    else:
+        test_num = 10
+        rotate_interval = -9
+    # add base in final rendering !!
+    # all_rot_yzx = [base_rot.as_euler('yzx', degrees=True)] 
+    # for i in range(test_num - 1):
+    all_rot_yzx = []
+    for i in range(test_num):
+        if all_rot_yzx:
+            prev_rot = all_rot_yzx[-1]
+        else:
+            prev_rot = base_rot.as_euler('yzx', degrees=True)
+        new_rot = [prev_rot[0] + rotate_interval, prev_rot[1], prev_rot[2]]
+        all_rot_yzx.append(new_rot)
+    all_rot = [R.from_euler('yzx', rot, degrees=True).as_matrix() for rot in all_rot_yzx]
+    # cur_R = R.from_quat(base_quat).as_matrix()
+    # all_rot = [cur_R]
+    # for i in range(test_num - 1):
+    #     rotate_r = R.from_euler('y', rotate_interval, degrees=True)
+    #     cur_R = np.matmul(cur_R, rotate_r.as_matrix())
+    #     all_rot.append(cur_R)
+    # last_r = all_rot[-1]
+    # last_r = R.from_matrix(last_r).as_euler('yzx', degrees=True)
     all_c2ws = [start_c2w.copy() for i in range(test_num)]  # initialize
     for i, c2w in enumerate(all_c2ws):
         all_c2ws[i][:3, :3] = all_rot[i]

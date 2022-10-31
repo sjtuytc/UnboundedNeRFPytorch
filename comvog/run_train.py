@@ -155,7 +155,11 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     psnr_lst = []
     time0 = time.time()
     global_step = -1
-    for global_step in trange(1+start, 1+cfg_train.N_iters):
+    if args.program == 'tune_pose':
+        training_steps = cfg_train.N_iters_sfm
+    else:
+        training_steps = cfg_train.N_iters
+    for global_step in trange(1 + start, 1 + training_steps):
         # progress scaling checkpoint
         if global_step in cfg_train.pg_scale:
             n_rest_scales = len(cfg_train.pg_scale)-cfg_train.pg_scale.index(global_step)-1

@@ -43,9 +43,22 @@ data = dict(
     sample_interval=1,
     num_per_block=-1,  # run this num in block
     unbounded_inner_r=0.8,
-    training_ids=['69_0', '69_1', '69_2', '69_3', '69_4', '71_0', '71_2', 
-                  '71_3', '71_4', '73_0', '73_1', '73_2', '73_3', '73_4']
-)
+    # training_ids=['69_0', '69_1', '69_2', '69_3', '69_4', '71_0', '71_2', 
+                #   '71_3', '71_4', '73_0', '73_1', '73_2', '73_3', '73_4']
+    training_ids=['69_0', '71_0', '73_0'],
+    tunning_id = '71_0',
+    search_rot_lower = [129, -2, -2],
+    search_rot_upper = [133, 2, 2],
+    search_pos_lower = [0.0, -0.01, -0.01],
+    search_pos_upper = [0.04, 0.01, 0.01],
+    search_num = 10**4,
+    assign_pos = {'69_0': [0.0, 0.0, 0.0], 
+                  '71_0': [0.03251668821656803, 0.001401165785078217, 0.00560227169424881], 
+                  '73_0': [0.0, 0.0, 0.0]},
+    assign_rot = {'69_0': [175, 0.0, 0.0],
+                '71_0': [132.27749560775322, -1.1274407139317342, -0.42476203263358325],
+                '73_0': [85.2267753, 0.0, 0.0]},
+    )
 
 coarse_train = dict(
     N_iters=coarse_iter,
@@ -54,8 +67,8 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters=10*(10**3),
-    # N_iters=100*(10**3),
+    N_iters_sfm=1500,            # search via sfm
+    N_iters=4*(10**4),
     N_rand=2048,
     ray_sampler='flatten',
     weight_distortion=weight_distortion,

@@ -101,7 +101,7 @@ def sample_metadata_by_idxs(metadata, sample_idxs, val_num=5):
     return metadata
 
 
-def sample_metadata_by_training_ids(metadata, training_ids):
+def sample_metadata_by_training_ids(metadata, training_ids, assign_pos, assign_rot):
     if training_ids is None:
         return metadata
     for split in metadata:
@@ -116,6 +116,20 @@ def sample_metadata_by_training_ids(metadata, training_ids):
             assert len(sample_idxs) > 0, "No image is selected by training id!"
             for one_k in metadata[split]:
                 metadata[split][one_k] = sample_list_by_idx(metadata[split][one_k], sample_idxs)
+            if assign_pos is not None:
+                for ele in assign_pos:
+                    full_path = f'images_train/{ele}.png'
+                    index = metadata[split]['file_path'].index(full_path)
+                    metadata[split]['position'][index] = assign_pos[ele]
+                    temp_c2w = np.array(metadata[split]['cam2world'][index])
+                    # update position
+                    temp_c2w[:3, -1] = np.array(metadata[split]['position'][index])
+                    trans_rot = R.from_matrix(temp_c2w[:3, :3]).as_euler('yzx', degrees=True)
+                    print(full_path, trans_rot)
+                    new_rot = assign_rot[ele]
+                    r = R.from_euler('yzx', new_rot, degrees=True)
+                    temp_c2w[:3, :3] = r.as_matrix()
+                    metadata[split]['cam2world'][index] = temp_c2w.tolist()
     return metadata
 
 
@@ -251,7 +265,22 @@ def load_waymo(args, cfg, ):
     metadata = sample_metadata_by_idxs(metadata, sample_idxs)
     if "training_ids" in cfg.data:
         training_ids = cfg.data.training_ids
-        metadata = sample_metadata_by_training_ids(metadata, training_ids)
+        if 'assign_pos' in cfg.data:
+            assign_pos, assign_rot = cfg.data.assign_pos, cfg.data.assign_rot
+        else:
+            assign_pos, assign_rot = None, None
+        if args.program == 'tune_pose':
+            rand_vec = np.random.rand(3)
+            lw, up = np.array(cfg.data.search_rot_lower), np.array(cfg.data.search_rot_upper)
+            cur_rot = lw + (up - lw) * rand_vec
+            rand_vec = np.random.rand(3)
+            lw, up = np.array(cfg.data.search_pos_lower), np.array(cfg.data.search_pos_upper)
+            cur_pos = lw + (up - lw) * rand_vec
+            assign_pos[cfg.data.tunning_id] = cur_pos.tolist()
+            assign_rot[cfg.data.tunning_id] = cur_rot.tolist()
+            args.running_rot = cur_pos.tolist() + cur_rot.tolist()
+        metadata = sample_metadata_by_training_ids(metadata, training_ids, assign_pos, assign_rot)
+        
     # The validation datasets are from the official val split, 
     # but the testing splits are hard-coded sequences (completely novel views)
     tr_cam_idx, val_cam_idx = metadata['train']['cam_idx'], metadata['val']['cam_idx']
@@ -301,7 +330,7 @@ def load_waymo(args, cfg, ):
 
     # Create the test split
     te_c2w, test_HW, test_K, test_cam_idxs, test_pos = \
-        gen_rotational_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
+        gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 
                        rotate_angle=data_cfg.test_rotate_angle)
     # te_c2w, test_HW, test_K, test_cam_idxs = \
     #     gen_straight_trajs(metadata, tr_c2w, train_HW, tr_K, tr_cam_idx, train_pos, 

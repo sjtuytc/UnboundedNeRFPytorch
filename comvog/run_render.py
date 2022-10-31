@@ -294,7 +294,12 @@ def run_render(args, cfg, data_dict, device, debug=True):
                 render_video_rot90=args.render_video_rot90,
                 savedir=testsavedir, dump_images=args.dump_images,
                 **render_viewpoints_kwargs)
-        imageio.mimwrite(os.path.join(testsavedir, 'video.rgb.mp4'), utils.to8b(rgbs), fps=30, quality=8)
+        if 'running_rot' in args:
+            vid_name = str(args.running_rot) + '.rgb.mp4'
+        else:
+            vid_name = 'video.rgb.mp4'
+        print(f"Rendering video saved at: {os.path.join(testsavedir, vid_name)}.")
+        imageio.mimwrite(os.path.join(testsavedir, vid_name), utils.to8b(rgbs), fps=30, quality=8)
         import matplotlib.pyplot as plt
         depths_vis = depths * (1-bgmaps) + bgmaps
         dmin, dmax = np.percentile(depths_vis[bgmaps < 0.1], q=[5, 95])
