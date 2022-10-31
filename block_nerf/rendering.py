@@ -5,46 +5,6 @@ from block_nerf.block_nerf_model import *
 from block_nerf.block_nerf_lightning import *
 
 
-def get_cone_mean_conv(t_samples, rays_o, rays_d, radii):
-    # t_samples:1024x65  rays_o:1024,3   radii:1024,1
-    t0 = t_samples[..., :-1]  # left side
-    t1 = t_samples[..., 1:]  # right side
-
-    # gaussian approximation
-    # eq-7
-    t_μ = (t0 + t1) / 2
-    t_σ = (t1 - t0) / 2
-    μ_t = t_μ + (2 * t_μ * t_σ ** 2) / (3 * t_μ ** 2 + t_σ ** 2)  # the real interval
-    # 1024 x 64
-    σ_t = (t_σ ** 2) / 3 - \
-          (4 / 15) * \
-          ((t_σ ** 4 * (12 * t_μ ** 2 - t_σ ** 2)) /
-           (3 * t_μ ** 2 + t_σ ** 2) ** 2)  # σt
-    σ_r = radii ** 2 * \
-          (
-                  (t_μ ** 2) / 4 + (5 / 12) * t_σ ** 2 - 4 /
-                  15 * (t_σ ** 4) / (3 * t_μ ** 2 + t_σ ** 2)
-          )
-    # calculate following the eq. 8
-    # mean = torch.unsqueeze(rays_d, dim=-2) * torch.unsqueeze(μ_t, dim=-1)  # [B, 1, 3]*[B, N, 1] = [B, N, 3]
-    rays_d = rearrange(rays_d, 'n1 c -> n1 1 c')
-    rays_o = rearrange(rays_o, 'n1 c -> n1 1 c')
-    mean = rays_o + rays_d * rearrange(μ_t, 'n1 n2 -> n1 n2 1')  # eq8
-    # [1024,64,3]+[1024,1,3]*[1024,64,1]->[1024,64,3]
-    # [B, 1, 3]*[B, N, 1] = [B, N, 3]
-
-    rays_d = rays_d.squeeze()  # [1024,3]
-    rays_o = rays_o.squeeze()  # [1024,3]
-    # eq 16 mip-nerf
-    dod = rays_d ** 2
-    d2 = torch.sum(dod, dim=-1, keepdim=True) + 1e-10
-    diagE = rearrange(σ_t, 'n1 c -> n1 c 1') * rearrange(dod, 'n1 c -> n1 1 c') + \
-            rearrange(σ_r, 'n1 c -> n1 c 1') * \
-            rearrange(1 - dod / d2, 'n1 c -> n1 1 c')
-
-    return μ_t, mean, diagE  # [1024,64,3] [1024,64,3]
-
-
 def sample_pdf(bins, weights, N_importance, alpha=1e-2):
     N_rays, N_samples_ = weights.shape
     weights_pad = torch.cat(
