@@ -45,30 +45,24 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx
     # We assume the metadata has been sorted here.
     start_c2w, end_c2w = np.array(tr_c2w[0]), np.array(tr_c2w[-1])
     start_rot, end_rot = start_c2w[:3, :3], end_c2w[:3, :3]
-
     # get base information, this is where we started
     # base_pos = np.array(train_pos).mean(0)
     base_pos = train_pos[0]
-    forward_dis = 0.04
     # forward to see the turning effect
-    base_pos[0] -= forward_dis
     base_rot = R.from_matrix(start_rot)
-    
     # generate rotating matries
     # rotate_interval = rotate_angle / test_num
     if args.program == 'tune_pose':
         test_num = 4
         rotate_interval = -10
     else:
-        test_num = 90
-        rotate_interval = -1
-        # test_num = 4
-        # rotate_interval = -10
-    # add base in final rendering !!
-    # all_rot_yzx = [base_rot.as_euler('yzx', degrees=True)] 
-    # for i in range(test_num - 1):
-    all_rot_yzx = []
-    for i in range(test_num):
+        # test_num = 90
+        # rotate_interval = -1
+        test_num = 5
+        rotate_interval = -6
+    forward_dis_max = 0.03
+    all_rot_yzx = [base_rot.as_euler('yzx', degrees=True)] 
+    for i in range(test_num - 1):
         if all_rot_yzx:
             prev_rot = all_rot_yzx[-1]
         else:
@@ -85,14 +79,15 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx
     # last_r = all_rot[-1]
     # last_r = R.from_matrix(last_r).as_euler('yzx', degrees=True)
     all_c2ws = [start_c2w.copy() for i in range(test_num)]  # initialize
+    test_pos = []
     for i, c2w in enumerate(all_c2ws):
         all_c2ws[i][:3, :3] = all_rot[i]
-        all_c2ws[i][:3, 3] = base_pos
-        
+        forward_dis = (1 - np.cos(i / len(all_c2ws) * np.pi / 2)) * forward_dis_max
+        cur_pos = [base_pos[0] - forward_dis, base_pos[1], base_pos[2]]
+        all_c2ws[i][:3, 3] = cur_pos
+        test_pos.append(cur_pos)
     assert train_HW[0] == train_HW[-1], "image shapes are not the same for the first and the last frame."
     test_HW = [train_HW[0] for i in range(test_num)]
-    # assert tr_K[0] == tr_K[-1], "Ks are not the same for the first and the last frame."
     test_K = [tr_K[0] for i in range(test_num)]
     test_cam_idxs = [tr_cam_idx[0] for i in range(test_num)]
-    test_pos = [base_pos for i in range(test_num)]
     return all_c2ws, test_HW, test_K, test_cam_idxs, test_pos
