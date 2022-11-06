@@ -31,5 +31,6 @@ def run_sfm(args, cfg, data_dict):
     retrieval_conf = extract_features.confs['netvlad']
     feature_conf = extract_features.confs['superpoint_aachen']
     matcher_conf = match_features.confs['superglue']
+    # TODO: finish this.
     pdb.set_trace()
     pass

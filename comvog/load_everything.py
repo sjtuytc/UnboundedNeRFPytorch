@@ -14,7 +14,7 @@ def load_everything(args, cfg):
         data_dict = load_waymo_data(args, cfg)
         return data_dict, args
     elif cfg.data.dataset_type == "mega":
-        data_dict = load_mega_data(args, cfg.data)
+        data_dict = load_mega_data(args, cfg)
         return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)

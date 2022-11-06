@@ -43,8 +43,6 @@ data = dict(
     sample_interval=1,
     num_per_block=-1,  # run this num in block
     unbounded_inner_r=0.8,
-    # training_ids=['69_0', '69_1', '69_2', '69_3', '69_4', '71_0', '71_2', 
-                #   '71_3', '71_4', '73_0', '73_1', '73_2', '73_3', '73_4']
     # three views
     # training_ids=['69_0', '71_0', '73_0'], 
     training_ids=['73_0', '73_1', '73_2', '73_3', '73_4', '73_5', '73_6', '73_7', '73_8', '73_9', \
@@ -93,14 +91,13 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters_sfm=1500,            # search via sfm
+    N_iters_m_step=1500,            # search via sfm
     N_iters=3000,
     # N_iters=10*(10**4),
     N_rand=2048,
     ray_sampler='flatten',
     weight_distortion=weight_distortion,
     pg_scale=[3000, 4000, 5000, 6000, 7000],
-    # pg_scale=[],
     tv_before=1e9,
     tv_dense_before=10000,
     weight_tv_density=1e-6,

@@ -8,15 +8,16 @@ from tqdm import tqdm, trange
 from comvog.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
 from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.comvog_model import ComVoGModel
+from comvog.mega_image_model import MegaImageModel
 from comvog.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 from comvog.run_export_bbox import run_export_bbox_cams
 from comvog.run_export_coarse import run_export_coarse
-from comvog.comvog_model import comvog_get_training_rays, FourierMSELoss
+from comvog.comvog_model import FourierMSELoss
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
+def create_new_model(data_dict, args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
     model_kwargs = copy.deepcopy(cfg_model)
     num_voxels_density = model_kwargs.pop('num_voxels_density')
     num_voxels_rgb = model_kwargs.pop('num_voxels_rgb')
@@ -24,15 +25,20 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
         num_voxels_density = int(num_voxels_density / (2**len(cfg_train.pg_scale)))
         num_voxels_rgb = int(num_voxels_rgb / (2**len(cfg_train.pg_scale)))
     verbose = False
-
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
+    model_kwargs['sample_num'] = args.sample_num
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "nerfpp":
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use ComVoG model. \033[0m')
-        model_kwargs['sample_num'] = args.sample_num
         model = ComVoGModel(
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels_density=num_voxels_density, num_voxels_rgb=num_voxels_rgb, verbose=verbose,
             **model_kwargs)
+    elif cfg.data.dataset_type == "mega":
+        model = MegaImageModel(
+            xyz_min=xyz_min, xyz_max=xyz_max, data_dict=data_dict,
+            num_voxels_density=num_voxels_density, num_voxels_rgb=num_voxels_rgb, verbose=verbose,
+            **model_kwargs
+        )
     elif cfg.data.ndc or cfg.data.unbounded_inward:
         raise RuntimeError("These settings are no longer supported in ComVoG.")
     model = model.to(device)
@@ -50,10 +56,10 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
 
     indexs_train = None
     if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
-        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = comvog_get_training_rays(
+        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = model.comvog_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
         ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
-        flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+        flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y, )
     elif cfg_train.ray_sampler == 'in_maskcache':
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
                 rgb_tr_ori=rgb_tr_ori,
@@ -107,7 +113,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     # init model and optimizer
     if reload_ckpt_path is None:
         print(f'scene_rep_reconstruction ({stage}): train from scratch')
-        model, optimizer = create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
+        model, optimizer = create_new_model(data_dict, args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)
@@ -132,34 +138,23 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         'flip_x': cfg.data.flip_x,
         'flip_y': cfg.data.flip_y,
     }
-    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
-        gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs)
-    
+   
     # view-count-based learning rate
-    if cfg_train.pervoxel_lr and reload_ckpt_path is None:
-        def per_voxel_init():
-            cnt = model.voxel_count_views(
-                    rays_o_tr=rays_o_tr, rays_d_tr=rays_d_tr, imsz=imsz, near=near, far=far,
-                    stepsize=cfg_model.stepsize, downrate=cfg_train.pervoxel_lr_downrate,
-                    irregular_shape=data_dict['irregular_shape'])
-            optimizer.set_pervoxel_lr(cnt)
-            model.mask_cache.mask[cnt.squeeze() <= 2] = False
-        per_voxel_init()
-
-    if cfg_train.maskout_lt_nviews > 0:
-        model.update_occupancy_cache_lt_nviews(
-                rays_o_tr, rays_d_tr, imsz, render_kwargs, cfg_train.maskout_lt_nviews)
-
-    # GOGO
-    torch.cuda.empty_cache()
+    if cfg_train.pervoxel_lr or cfg_train.maskout_lt_nviews > 0:
+        raise RuntimeError("per voxel lr and mask out lt nviews are not supported anymore!")
+    # torch.cuda.empty_cache()
     psnr_lst = []
     time0 = time.time()
     global_step = -1
     psnr = torch.tensor(0)
     if args.program == 'tune_pose':
-        training_steps = cfg_train.N_iters_sfm
+        training_steps = cfg_train.N_iters_m_step
     else:
         training_steps = cfg_train.N_iters
+    
+    rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
+        model.gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, render_kwargs)
+
     for global_step in trange(1 + start, 1 + training_steps):
         # progress scaling checkpoint
         if global_step in cfg_train.pg_scale:

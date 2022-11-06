@@ -13,6 +13,8 @@ from comvog.grid import DenseGrid
 from . import comvog_grid
 from .dvgo import Raw2Alpha, Alphas2Weights
 from .dmpigo import create_full_step_id
+from comvog import utils, dvgo, dcvgo, dmpigo
+
 import ub360_utils_cuda
 
 
@@ -73,39 +75,6 @@ def get_rays_of_a_view(H, W, K, c2w, ndc, inverse_y, flip_x, flip_y, mode='cente
     if ndc:
         rays_o, rays_d = ndc_rays(H, W, K[0][0], 1., rays_o, rays_d)
     return rays_o, rays_d, viewdirs
-
-
-@torch.no_grad()
-def comvog_get_training_rays(rgb_tr_ori, train_poses, HW, Ks, ndc, inverse_y, flip_x, flip_y):
-    assert len(rgb_tr_ori) == len(train_poses) and len(rgb_tr_ori) == len(Ks) and len(rgb_tr_ori) == len(HW)
-    eps_time = time.time()
-    DEVICE = rgb_tr_ori[0].device
-    N = sum(im.shape[0] * im.shape[1] for im in rgb_tr_ori)
-    rgb_tr = torch.zeros([N,3], device=DEVICE)
-    rays_o_tr = torch.zeros_like(rgb_tr)
-    rays_d_tr = torch.zeros_like(rgb_tr)
-    viewdirs_tr = torch.zeros_like(rgb_tr)
-    indexs_tr = torch.zeros_like(rgb_tr)  # image indexs
-    imsz = []
-    top = 0
-    cur_idx = 0
-    for c2w, img, (H, W), K in zip(train_poses, rgb_tr_ori, HW, Ks):
-        assert img.shape[:2] == (H, W)
-        rays_o, rays_d, viewdirs = get_rays_of_a_view(
-                H=H, W=W, K=K, c2w=c2w, ndc=ndc,
-                inverse_y=inverse_y, flip_x=flip_x, flip_y=flip_y)
-        n = H * W
-        rgb_tr[top:top+n].copy_(img.flatten(0,1))
-        rays_o_tr[top:top+n].copy_(rays_o.flatten(0,1).to(DEVICE))
-        rays_d_tr[top:top+n].copy_(rays_d.flatten(0,1).to(DEVICE))
-        viewdirs_tr[top:top+n].copy_(viewdirs.flatten(0,1).to(DEVICE))
-        indexs_tr[top:top+n].copy_(torch.tensor(cur_idx).long().to(DEVICE))
-        cur_idx += 1
-        imsz.append(n)
-        top += n
-    assert top == N
-    eps_time = time.time() - eps_time
-    return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz
 
 
 class NeRFPosEmbedding(nn.Module):
@@ -232,6 +201,12 @@ class ComVoGModel(nn.Module):
             self.img_embeddings = None
             self.img_embed_dim = 0
 
+        pos_emb = False
+        if pos_emb and self.sample_num > 0:    # use apperance embeddings
+            self.pos_emb = torch.zeros((self.sample_num, 3), requires_grad=True)
+        else:
+            self.pos_emb = None
+
         # rgbnet configurations
         self.vector_grid = False
         if self.vector_grid:
@@ -301,6 +276,77 @@ class ComVoGModel(nn.Module):
         self.mask_cache = comvog_grid.MaskGrid(
             path=None, mask=mask,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max)
+
+    @torch.no_grad()
+    def comvog_get_training_rays(self, rgb_tr_ori, train_poses, HW, Ks, ndc, inverse_y, flip_x, flip_y):
+        if self.pos_emb is not None:
+            train_poses[:, :3, 3] = train_poses[:, :3, 3] + self.pos_emb
+        assert len(rgb_tr_ori) == len(train_poses) and len(rgb_tr_ori) == len(Ks) and len(rgb_tr_ori) == len(HW)
+        eps_time = time.time()
+        DEVICE = rgb_tr_ori[0].device
+        N = sum(im.shape[0] * im.shape[1] for im in rgb_tr_ori)
+        rgb_tr = torch.zeros([N,3], device=DEVICE)
+        rays_o_tr = torch.zeros_like(rgb_tr)
+        rays_d_tr = torch.zeros_like(rgb_tr)
+        viewdirs_tr = torch.zeros_like(rgb_tr)
+        indexs_tr = torch.zeros_like(rgb_tr)  # image indexs
+        imsz = []
+        top = 0
+        cur_idx = 0
+        for c2w, img, (H, W), K in zip(train_poses, rgb_tr_ori, HW, Ks):
+            assert img.shape[:2] == (H, W)
+            rays_o, rays_d, viewdirs = get_rays_of_a_view(
+                    H=H, W=W, K=K, c2w=c2w, ndc=ndc,
+                    inverse_y=inverse_y, flip_x=flip_x, flip_y=flip_y)
+            n = H * W
+            rgb_tr[top:top+n].copy_(img.flatten(0,1))
+            rays_o_tr[top:top+n].copy_(rays_o.flatten(0,1).to(DEVICE))
+            rays_d_tr[top:top+n].copy_(rays_d.flatten(0,1).to(DEVICE))
+            viewdirs_tr[top:top+n].copy_(viewdirs.flatten(0,1).to(DEVICE))
+            indexs_tr[top:top+n].copy_(torch.tensor(cur_idx).long().to(DEVICE))
+            cur_idx += 1
+            imsz.append(n)
+            top += n
+        assert top == N
+        eps_time = time.time() - eps_time
+        return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz
+
+    def gather_training_rays(self, data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, render_kwargs):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if data_dict['irregular_shape']:
+            rgb_tr_ori = [images[i].to('cpu' if cfg.data.load2gpu_on_the_fly else device) for i in i_train]
+        else:
+            rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
+
+        indexs_train = None
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
+            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = self.comvog_get_training_rays(
+            rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
+            ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+            flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y, )
+        elif cfg_train.ray_sampler == 'in_maskcache':
+            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
+                    rgb_tr_ori=rgb_tr_ori,
+                    train_poses=poses[i_train],
+                    HW=HW[i_train], Ks=Ks[i_train],
+                    ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+                    flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y,
+                    model=self, render_kwargs=render_kwargs)
+        elif cfg_train.ray_sampler == 'flatten':
+            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_flatten(
+                rgb_tr_ori=rgb_tr_ori,
+                train_poses=poses[i_train],
+                HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+        else:
+            rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays(
+                rgb_tr=rgb_tr_ori,
+                train_poses=poses[i_train],
+                HW=HW[i_train], Ks=Ks[i_train], ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+                flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y)
+        index_generator = dvgo.batch_indices_generator(len(rgb_tr), cfg_train.N_rand)
+        batch_index_sampler = lambda: next(index_generator)
+        return rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz, batch_index_sampler
 
     def _set_grid_resolution(self, num_voxels_density, num_voxels_rgb):
         # Determine grid resolution
@@ -445,7 +491,7 @@ class ComVoGModel(nn.Module):
         rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
         N_inner = int(2 / (2+2*self.bg_len) * self.world_len_density / stepsize) + 1
         N_outer = N_inner
-        t_boundary = 1.5  # default t_boundary=2
+        t_boundary = 1.5 # default t_boundary=2, waymo=1.5
         b_inner = torch.linspace(0, t_boundary, N_inner+1)
         b_outer = t_boundary / torch.linspace(1, 1/128, N_outer+1)
         t = torch.cat([
@@ -492,6 +538,7 @@ class ComVoGModel(nn.Module):
 
         ret_dict = {}
         num_rays = len(rays_o)
+        
         # sample points on rays
         ray_pts, ray_indexs, inner_mask, t, rays_d_e = self.sample_ray(
                 ori_rays_o=rays_o, ori_rays_d=rays_d, is_train=global_step is not None, **render_kwargs)
@@ -511,6 +558,7 @@ class ComVoGModel(nn.Module):
         
         # apply fast color thresh
         if self.fast_color_thres > 0:
+            # masked inner points, change this for other scenes!!!
             mask = (alpha > self.fast_color_thres)
             ray_pts = ray_pts[mask]
             if rays_d_e is not None:

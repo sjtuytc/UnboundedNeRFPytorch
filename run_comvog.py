@@ -7,10 +7,11 @@ from comvog.load_everything import load_everything
 from comvog.run_export_bbox import *
 from comvog.run_export_coarse import run_export_coarse
 from comvog.run_train import run_train
-from comvog.run_block_train import run_block_train_and_merge
+# from comvog.run_block_train import run_block_train_and_merge
 from comvog.run_render import run_render
 from comvog.run_gen_cam_paths import run_gen_cam_paths
 from comvog.run_sfm import run_sfm
+from comvog.em_runner import NeRFEM
 from comvog.comvog_ckpt_manager import ComVoGCheckpointManager
 
 
@@ -112,15 +113,10 @@ if __name__=='__main__':
     elif program == "export_coarse":
         run_export_coarse(args=args, cfg=cfg, device=device)
     elif program == "train":
-        if args.block_num > 1:   # more than one blocks
-            run_block_train_and_merge(args, cfg, data_dict, export_cam=True, export_geometry=True)
-            # render supports the block mode already
-            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
-        else:
-            args.running_block_id = -1
-            run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
-            print("Training finished. Run rendering.")
-            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
+        args.running_block_id = -1
+        run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
+        print("Training finished. Run rendering.")
+        run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'render':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'gen_trace':
@@ -129,11 +125,8 @@ if __name__=='__main__':
         run_sfm(args=args, cfg=cfg, data_dict=data_dict)
     elif program == 'tune_pose':
         args.no_reload = True
-        for i in range(cfg.data.search_num):
-            print(f"Training id {i} ...")
-            data_dict, args = load_everything(args=args, cfg=cfg)
-            psnr = run_train(args, cfg, data_dict, export_cam=True, export_geometry=True)
-            run_render(args=args, cfg=cfg, data_dict=data_dict, device=device, add_info=str(psnr))
+        em_runner = NeRFEM(args=args, cfg=cfg, data_dict=data_dict)
+        em_runner.run_em()
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     
