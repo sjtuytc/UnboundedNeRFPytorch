@@ -11,19 +11,23 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 ## 1. Introduction
 
+**Since I changed my research direction, the updates on the following codes might be slow. Many improvements in this repo are not going to be published at this moment, so feel free to use it. The weekly NeRF would be updated as usual.**
+
 This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms, not restricted to the original Block-NeRF algorithm.
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
-
-Our reproduced results of Block-NeRF (current PSNR: 24.3):
-
-![test](https://user-images.githubusercontent.com/31123348/188263832-f2eaaaaf-a998-4428-adf9-57f176ca3a8d.gif)
 
 This project is the **non-official** implementation of Block-NeRF. You are expected to get the following results in this repository:
 
 1. **Large-scale NeRF training.** The current results are as follows:
 
-https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
+Training splits:
+
+https://user-images.githubusercontent.com/31123348/200509378-4b9fe63f-4fa4-40b1-83a9-b8950d981a3b.mp4
+
+Rotation: 
+
+https://user-images.githubusercontent.com/31123348/200509910-a5d8f820-143a-4e03-8221-b04d0db2d050.mov
 
 2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
 
