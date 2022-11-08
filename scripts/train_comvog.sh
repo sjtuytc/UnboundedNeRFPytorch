@@ -14,3 +14,5 @@ python run_comvog.py --program train --config comvog/configs/mega/rubble.py --sa
 python run_comvog.py --program render --config comvog/configs/mega/rubble.py --sample_num 100 --render_train --num_per_block 5 --exp_id 4  # for render
 # quad
 python run_comvog.py --program train --config comvog/configs/mega/quad.py --sample_num 100 --render_train --num_per_block 5 --exp_id 1
+# lego, works poorly
+python run_comvog.py --program train --config comvog/configs/nerf/lego.py --render_test --eval_ssim --eval_lpips_vgg --exp_id 1

@@ -192,7 +192,10 @@ class ComVoGModel(nn.Module):
         self.k0_config = k0_config
         
         self.img_embed_dim = img_emb_dim
-        self.sample_num = kwargs['sample_num']
+        if 'sample_num' not in kwargs:
+            self.sample_num = -1
+        else:
+            self.sample_num = kwargs['sample_num']
 
         if img_emb_dim > 0 and self.sample_num > 0:    # use apperance embeddings
             self.img_embeddings = nn.Embedding(num_embeddings=self.sample_num, 
@@ -514,9 +517,7 @@ class ComVoGModel(nn.Module):
             ray_pts,
             ray_pts / norm * (B - A/ (norm ** order))
         )
-        assert 'indexs' in render_kwargs, "The image indexes should be provided in render kwargs in the ComVoG model."
-        if 'indexs' in render_kwargs:
-            indexs = render_kwargs['indexs'].unsqueeze(1).repeat(1, ray_pts.shape[1], 1)
+        indexs = None
         if self.vector_grid:
             rays_d_extend = rays_d[:,None,:] * torch.ones_like(t[None,:,None])
         else: 
@@ -563,7 +564,6 @@ class ComVoGModel(nn.Module):
             ray_pts = ray_pts[mask]
             if rays_d_e is not None:
                 rays_d_e = rays_d_e[mask]
-            ray_indexs = ray_indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
             # changed because the above masking functions are removed
@@ -580,7 +580,6 @@ class ComVoGModel(nn.Module):
             ray_pts = ray_pts[mask]        
             if rays_d_e is not None:
                 rays_d_e = rays_d_e[mask]    
-            ray_indexs = ray_indexs[mask]
             inner_mask = inner_mask[mask]
             t = t[mask]
             ray_id = ray_id[mask]

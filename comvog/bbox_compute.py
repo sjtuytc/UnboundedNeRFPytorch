@@ -139,8 +139,8 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
 def compute_bbox_by_coarse_geo(model_class, model_path, thres, device, args, cfg):
     print('compute_bbox_by_coarse_geo: start')
     eps_time = time.time()
-    # model = utils.load_model(model_class, model_path)
-    model, _, _ = load_existing_model(args, cfg, cfg.fine_train, model_path, device=device)
+    model = utils.load_model(model_class, model_path)
+    # model, _, _ = load_existing_model(args, cfg, cfg.fine_train, model_path, device=device)
     model.to(device)
     interp = torch.stack(torch.meshgrid(
         torch.linspace(0, 1, model.world_size[0]),
@@ -151,7 +151,7 @@ def compute_bbox_by_coarse_geo(model_class, model_path, thres, device, args, cfg
     density = model.density(dense_xyz)
     alpha = model.activate_density(density)
     mask = (alpha > thres)
-    assert mask.min() > 0, "No activated voxels found."
+    # assert mask.max() > 0, "No activated voxels found."
     active_xyz = dense_xyz[mask]
     xyz_min = active_xyz.amin(0)
     xyz_max = active_xyz.amax(0)

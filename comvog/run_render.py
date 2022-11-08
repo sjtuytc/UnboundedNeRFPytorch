@@ -217,7 +217,6 @@ def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
             model_class = dcvgo.DirectContractedVoxGO
         else:
             model_class = dvgo.DirectVoxGO
-
         if use_merged:
             model = merged_model
         else:

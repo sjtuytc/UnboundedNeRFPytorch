@@ -82,8 +82,11 @@ fine_train.update(dict(
 ''' Template of model and rendering options
 '''
 coarse_model_and_render = dict(
-    num_voxels=1024000,           # expected number of voxel
-    num_voxels_base=1024000,      # to rescale delta distance
+    num_voxels_rgb=1024000,           # expected number of voxel
+    num_voxels_density=1024000,           # expected number of voxel
+    num_voxels_viewdir=-1,           # expected number of voxel
+    num_voxels_base_density=1024000,      # to rescale delta distance
+    num_voxels_base_rgb=1024000,      # to rescale delta distance
     density_type='DenseGrid',     # DenseGrid, TensoRFGrid
     k0_type='DenseGrid',          # DenseGrid, TensoRFGrid
     density_config=dict(),
@@ -108,13 +111,19 @@ coarse_model_and_render = dict(
 
 fine_model_and_render = deepcopy(coarse_model_and_render)
 fine_model_and_render.update(dict(
-    num_voxels=160**3,
-    num_voxels_base=160**3,
+    num_voxels_density=160**3,
+    num_voxels_rgb=160**3,
+    num_voxels_base_density=160**3,
+    num_voxels_base_rgb=160**3,
     rgbnet_dim=12,
     alpha_init=1e-2,
     fast_color_thres=1e-4,
     maskout_near_cam_vox=False,
     world_bound_scale=1.05,
 ))
+
+vis = dict(
+    height_rate = 0.6 # camera direction frustrum height
+)
 
 del deepcopy
