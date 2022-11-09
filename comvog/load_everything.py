@@ -3,6 +3,7 @@ import pdb
 from comvog.common_data_loaders.load_common_data import load_common_data
 from comvog.load_waymo import load_waymo_data
 from comvog.load_mega import load_mega_data
+from comvog.load_linemod import load_linemod_data
 from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.comvog_model import ComVoGModel
 
@@ -15,6 +16,9 @@ def load_everything(args, cfg):
         return data_dict, args
     elif cfg.data.dataset_type == "mega":
         data_dict = load_mega_data(args, cfg)
+        return data_dict, args
+    elif cfg.data.dataset_type == 'linemod':
+        data_dict = load_linemod_data(args, cfg)
         return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)

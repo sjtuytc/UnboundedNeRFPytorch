@@ -169,7 +169,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = gather_training_rays(
             data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs
         )
-
     # view-count-based learning rate
     if cfg_train.pervoxel_lr:
         def per_voxel_init():
@@ -248,7 +247,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             viewdirs = viewdirs.to(device)
             if indexs is not None:
                 indexs = indexs.to(device)
-
         render_kwargs['indexs'] = indexs  # to avoid change the model interface
         # forward model here and get rendered results
         render_result = model(rays_o, rays_d, viewdirs, global_step=global_step, is_train=True,

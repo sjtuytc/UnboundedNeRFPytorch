@@ -301,7 +301,11 @@ def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
         print(f"Rendering video saved at: {os.path.join(testsavedir, vid_name)}.")
         imageio.mimwrite(os.path.join(testsavedir, vid_name), utils.to8b(rgbs), fps=30, quality=8)
         depths_vis = depths * (1-bgmaps) + bgmaps
-        dmin, dmax = np.percentile(depths_vis[bgmaps < 0.1], q=[5, 95])
-        depth_vis = plt.get_cmap('rainbow')(1 - np.clip((depths_vis - dmin) / (dmax - dmin), 0, 1)).squeeze()[..., :3]
-        imageio.mimwrite(os.path.join(testsavedir, 'video.depth.mp4'), utils.to8b(depth_vis), fps=30, quality=8)
+        mask = bgmaps < 0.1
+        if not mask.max():
+            print("depth img cannot be rendered because of the threshold!")
+        else:
+            dmin, dmax = np.percentile(depths_vis[bgmaps < 0.1], q=[5, 95])
+            depth_vis = plt.get_cmap('rainbow')(1 - np.clip((depths_vis - dmin) / (dmax - dmin), 0, 1)).squeeze()[..., :3]
+            imageio.mimwrite(os.path.join(testsavedir, 'video.depth.mp4'), utils.to8b(depth_vis), fps=30, quality=8)
     return
