@@ -1,3 +1,8 @@
+# linemod train
+python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_video --exp_id 1
+# linemod test
+python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 1
+
 # waymo dataset
 python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --render_video --exp_id 30
 # tanks and temples
@@ -16,5 +21,3 @@ python run_comvog.py --program render --config comvog/configs/mega/rubble.py --s
 python run_comvog.py --program train --config comvog/configs/mega/quad.py --sample_num 100 --render_train --num_per_block 5 --exp_id 1
 # lego
 python run_comvog.py --program train --config comvog/configs/nerf/lego.py --render_test --eval_ssim --eval_lpips_vgg --exp_id 1
-# linemod
-python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_video --exp_id 1

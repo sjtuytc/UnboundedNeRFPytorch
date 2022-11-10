@@ -6,8 +6,10 @@ import numpy as np
 import torch
 import cv2
 import math
+import random
 from comvog import utils
 import open3d as o3d
+from scipy.spatial.transform import Rotation as R
 
 
 trans_t = lambda t : torch.Tensor([
@@ -107,6 +109,19 @@ def get_most_bbox_size(seq_info, data_root):
     return width_max, height_max
 
 
+def gen_rotational_trajs(args, poses, test_num=100):
+    init_c2w = poses[0]
+    rotate_interval = 1
+    all_poses = [init_c2w]
+    for i in range(test_num - 1):
+        cur_c2w = all_poses[-1].copy()
+        rotate_r = R.from_euler('z', rotate_interval, degrees=True)
+        cur_c2w[:3] = np.matmul(rotate_r.as_matrix(), cur_c2w[:3])
+        all_poses.append(cur_c2w)
+    all_poses = np.stack(all_poses, axis=0)
+    return all_poses
+
+
 def load_linemod_data(args, cfg, cal_size=False):
     # load images
     data_root = cfg.data.datadir
@@ -118,24 +133,35 @@ def load_linemod_data(args, cfg, cal_size=False):
     obj_m = o3d.io.read_point_cloud(ply_path, format='xyz')
     obj_m = np.asarray(obj_m.points)
     seq_info = info[seq_name]
-    skips = {'train': 5, 'val': 50, 'test': 60}
+    random.seed(0)
+    random.shuffle(seq_info)
     all_imgs, all_poses, all_k = [], [], []
     counts = [0]    
     if cal_size:
+        print("Calculating box size ...")
         width_max, height_max = get_most_bbox_size(seq_info, data_root)
+        print(f"Width max: {width_max}, height max: {height_max} ...")
     else:  # not tested when width_max != height_max
-        width_max, height_max = 100, 100
+        width_max, height_max = cfg.data.width_max, cfg.data.height_max
     print("Preparing the training / val / test poses and images ...")
     for split in ['train', 'val', 'test']:
-        skip = skips[split]
+        # following LineMod convention
+        train_num, val_num = int(len(seq_info) * 0.8), 20
+        if split == 'train':
+            split_seq = seq_info[:train_num]
+        elif split == 'val':
+            split_seq = seq_info[:val_num]
+        else:
+            split_seq = seq_info[train_num:]
         imgs, poses, ks = [], [], []
-        for idx, one_info in enumerate(seq_info[::skip]):
+        for idx, one_info in enumerate(split_seq):
             one_k = one_info['K']
             fname = os.path.join(data_root, 'LM6d_converted/LM6d_refine', one_info['rgb_observed_path'])
             one_img = imageio.imread(fname)
             label_fname = fname.replace('color', 'label')
             label_img = imageio.imread(label_fname)    
-            one_img = apply_mask_on_img(one_img, label_img)
+            mask_img = label_img / label_img.max()
+            one_img = apply_mask_on_img(one_img, mask_img)
             xmin, xmax, ymin, ymax = get_bbox_from_mask(label_img)
             # transfer the obj to the center of image and crop.
             obj_width, obj_height = xmax - xmin, ymax - ymin
@@ -148,9 +174,7 @@ def load_linemod_data(args, cfg, cal_size=False):
             x_ratio = width_max // 2 / one_k[0][-1]
             y_ratio = height_max // 2 / one_k[1][-1]
             recenter_k = one_k.copy()
-            # recenter_k[0][0] = one_k[0][0] * x_ratio
             recenter_k[0][-1] = one_k[0][-1] * x_ratio
-            # recenter_k[1][1] = one_k[1][1] * y_ratio
             recenter_k[1][-1] = one_k[1][-1] * y_ratio
             ks.append(recenter_k)
             # making the pose work for the recenter
@@ -160,14 +184,13 @@ def load_linemod_data(args, cfg, cal_size=False):
             _, rvec, tvec, inlier = cv2.solvePnPRansac(obj_m, points_2d, recenter_k, None)
             r_matrix, _ = cv2.Rodrigues(rvec)
             recenter_pose = np.concatenate([r_matrix, tvec], axis=-1)
-            points_2d = get_projected_points(recenter_pose, recenter_k, obj_m, one_img=None)
             last_row = [0., 0., 0., 1.0]
             recenter_pose = np.vstack([recenter_pose, last_row])
             cam_pose = np.linalg.inv(recenter_pose)
             # transfer from outward to inward
             cam_pose[:3, -1] = - cam_pose[:3, -1]
             poses.append(cam_pose)
-
+            
         imgs = (np.array(imgs) / 255.).astype(np.float32) # keep all 4 channels (RGBA)
         poses = np.array(poses).astype(np.float32)
         ks = np.array(ks).astype(np.float32)
@@ -180,7 +203,7 @@ def load_linemod_data(args, cfg, cal_size=False):
     images = np.concatenate(all_imgs, 0)
     poses = np.concatenate(all_poses, 0)
     ks = np.concatenate(all_k, 0)
-    render_poses = torch.stack([pose_spherical(angle, -30.0, 4.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
+    render_poses = gen_rotational_trajs(args, poses)
     
     i_train, i_val, i_test = i_split
     near, far = 0., 6.

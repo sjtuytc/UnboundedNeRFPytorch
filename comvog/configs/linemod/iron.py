@@ -1,6 +1,6 @@
 _base_ = '../default.py'
-seq_name = 'ape'
-expname = f'{seq_name}_nov8_'
+seq_name = 'iron'
+expname = f'{seq_name}_nov8'
 basedir = './logs/linemod'
 
 data = dict(
@@ -8,8 +8,9 @@ data = dict(
     dataset_type='linemod',
     white_bkgd=True,
     seq_name=seq_name,
-    width_max=90,
-    height_max=90
+    width_max=240,
+    height_max=240
+    # 233, 224
 )
 
 # fine_train = dict(
