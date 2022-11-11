@@ -1,5 +1,5 @@
 # linemod train
-python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_test --render_video --exp_id 9
+python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_test --render_video --exp_id 12
 # linemod test
 python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 1
 # waymo dataset

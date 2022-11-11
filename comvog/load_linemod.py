@@ -4,6 +4,7 @@ import pickle
 import imageio
 import numpy as np
 import torch
+import json
 import cv2
 import math
 import random
@@ -144,11 +145,11 @@ def uniform_three(kps):
     return return_kps
     
 
-def split_seq_info(seq_info, posecnn_results, val_num=20):
+def split_seq_info(seq_info, posecnn_results, train_ratio=0.9, val_num=20):
     posecnn_test_inds = [pose_r['image_idx'] for pose_r in posecnn_results]
     test_num = len(posecnn_test_inds)
     total_num = seq_info[-1]['index']
-    train_num = int(total_num * 0.9)
+    train_num = int(total_num * 0.5)
     all_indexs = [i for i in range(total_num)]
     random.seed(0)
     train_indexs = random.sample(all_indexs, train_num)
@@ -164,6 +165,26 @@ def split_seq_info(seq_info, posecnn_results, val_num=20):
     val_info = train_info[:val_num]
     return train_info, val_info, test_info
 
+
+def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
+    list_syn_gt = [syn_gt[str(key)] for key in range(len(syn_gt))]
+    total_num = len(list_syn_gt)
+    train_num = int(total_num * train_ratio)
+    random.seed(0)
+    all_indexs = [i for i in range(total_num)]
+    train_indexs = random.sample(all_indexs, train_num)
+    test_indexs = [ind for ind in all_indexs if ind not in train_indexs]
+    train_info, val_info, test_info = [], [], []
+    for idx, one_info in enumerate(list_syn_gt):
+        one_info = one_info[0]
+        one_info['image_id'] = idx
+        if idx in test_indexs:
+            test_info.append(one_info)
+        else:
+            train_info.append(one_info)
+    val_info = train_info[:val_num]
+    return train_info, val_info, test_info
+    
 
 def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
     # load images and gts
@@ -184,7 +205,15 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
         posecnn_results=pickle.load(f)[seq_name]
     test_pose_path = os.path.join(data_root, 'init_poses/pvnet/pvnet_linemod_test.npy')
     pvnet_results=np.load(test_pose_path, allow_pickle=True).flat[0][seq_name]
-    train_info, val_info, test_info = split_seq_info(seq_info, posecnn_results)
+    
+    # load synthetic infos
+    syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')
+    syn_gt = json.load(open(syn_gt_p))
+    syn_cam_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_camera.json')
+    syn_cam = json.load(open(syn_cam_p))
+    
+    # train_info, val_info, test_info = split_seq_info(seq_info, posecnn_results)
+    train_info, val_info, test_info = split_seq_info_syn(syn_gt)
     all_imgs, all_poses, all_k = [], [], []
     counts = [0]
     if cal_size:
@@ -203,53 +232,28 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
             split_seq = test_info
         imgs, poses, ks = [], [], []
         for idx, one_info in enumerate(tqdm(split_seq)):
-            one_k = one_info['K']
-            fname = os.path.join(data_root, 'LM6d_converted/LM6d_refine', one_info['rgb_observed_path'])
+            image_id = one_info['image_id']
+            one_k = np.array(syn_cam[str(image_id)]['cam_K']).reshape(3, 3)
+            fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'rgb', str(image_id).zfill(6) + ".png")
             one_img = imageio.imread(fname)
-            label_fname = fname.replace('color', 'label')
-            label_img = imageio.imread(label_fname)
-            mask_img = label_img / label_img.max()
+            mask_fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'mask', str(image_id).zfill(6) + "_000000.png")
+            mask_img = imageio.imread(mask_fname)
+            mask_img = mask_img / mask_img.max()
             one_img = apply_mask_on_img(one_img, mask_img)
-            xmin, xmax, ymin, ymax = get_bbox_from_mask(label_img)
-            # transfer the obj to the center of image and crop.
-            obj_width, obj_height = xmax - xmin, ymax - ymin
-            cropped_img = one_img[ymin:ymax, xmin:xmax, :]
-            centered_img = np.ones((height_max, width_max, 3), dtype='uint8') * 255  # white bg by convention
-            x_start, y_start = width_max // 2 - obj_width // 2, height_max // 2 - obj_height // 2
-            centered_img[y_start: y_start+obj_height, x_start:x_start+obj_width, :] = cropped_img
-            # making the K work for the recenter
-            x_ratio = width_max // 2 / one_k[0][-1]
-            y_ratio = height_max // 2 / one_k[1][-1]
-            recenter_k = one_k.copy()
-            recenter_k[0][-1] = one_k[0][-1] * x_ratio
-            recenter_k[1][-1] = one_k[1][-1] * y_ratio
-            ks.append(recenter_k)
-            # making the pose work for the recenter
-            points_2d = get_projected_points(one_info['gt_pose'], one_info['K'], obj_m, one_img=None)
-            points_2d[:, 0] = points_2d[:, 0] - xmin + x_start
-            points_2d[:, 1] = points_2d[:, 1] - ymin + y_start
-            _, rvec, tvec, inlier = cv2.solvePnPRansac(obj_m, points_2d, recenter_k, None)
-            r_matrix, _ = cv2.Rodrigues(rvec)
-            recenter_pose = np.concatenate([r_matrix, tvec], axis=-1)
-            # transform t_norm to 1.0, transform image and pose together
-            points_2d_before_norm = get_projected_points(recenter_pose, recenter_k, obj_m, one_img=None, post_str="")
-            recenter_pose[:3, -1] = recenter_pose[:3, -1] / np.linalg.norm(recenter_pose[:3, -1])
-            points_2d_norm = get_projected_points(recenter_pose, recenter_k, obj_m, one_img=None, post_str="")
-            affine_m = cv2.getAffineTransform(uniform_three(points_2d_before_norm), uniform_three(points_2d_norm))
-            center_normed = cv2.warpAffine(centered_img, affine_m, (centered_img.shape[1], centered_img.shape[0]), borderMode=cv2.BORDER_CONSTANT,
-                                           borderValue=(255, 255, 255))
-            if vis_final:
-                get_projected_points(recenter_pose, recenter_k, obj_m, one_img=center_normed, post_str="final")
-            imgs.append(center_normed)
-            # form final poses
-            last_row = [0., 0., 0., 1.0]
-            recenter_pose = np.vstack([recenter_pose, last_row])
-            # from object pose to camera pose
-            cam_pose = np.linalg.inv(recenter_pose)
-            # transfer from outward to inward
+            # imageio.imwrite(f'final_img.png', np.array(one_img))
+            # form obj pose
+            one_obj_pose_R = np.array(syn_gt[str(image_id)][0]['cam_R_m2c']).reshape(3, 3)
+            one_obj_pose_t = np.array(syn_gt[str(image_id)][0]['cam_t_m2c']).reshape(3)
+            one_obj_pose = np.eye(4)
+            one_obj_pose[:3, :3] = one_obj_pose_R
+            one_obj_pose[:3, 3] = one_obj_pose_t
+            # from object pose to camera pose, [R, t] -> [R^-1, -R^-1t]
+            cam_pose = np.linalg.inv(one_obj_pose)
+            # transfer from outward to inward, [R^-1, -R^-1t] -> [R^-1, R^-1t]
             cam_pose[:3, -1] = - cam_pose[:3, -1]
+            ks.append(one_k)
             poses.append(cam_pose)
-            
+            imgs.append(one_img)
         imgs = (np.array(imgs) / 255.).astype(np.float32) # keep all 4 channels (RGBA)
         poses = np.array(poses).astype(np.float32)
         ks = np.array(ks).astype(np.float32)
@@ -262,8 +266,9 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
     images = np.concatenate(all_imgs, 0)
     poses = np.concatenate(all_poses, 0)
     ks = np.concatenate(all_k, 0)
-    # render_poses = torch.stack([pose_spherical(angle, -30.0, 1.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
-    render_poses = gen_rotational_trajs(args, poses)
+    render_poses = torch.stack([pose_spherical(angle, 90.0, 400.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
+    # render_poses = torch.stack([pose_spherical(angle, -30.0, 400.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
+    # render_poses = gen_rotational_trajs(args, poses)
     
     i_train, i_val, i_test = i_split
     near, far = 0., 6.
@@ -278,6 +283,7 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
     irregular_shape = (images.dtype is np.dtype('object'))
     render_poses = render_poses[...,:4]
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
+    far *= 3
     data_dict = dict(HW=HW, Ks=ks,
         near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,

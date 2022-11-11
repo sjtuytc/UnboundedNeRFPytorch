@@ -1,5 +1,6 @@
 _base_ = '../default.py'
 seq_name = 'ape'
+seq_id = 1
 expname = f'{seq_name}_nov11_'
 basedir = './logs/linemod'
 
@@ -8,25 +9,28 @@ data = dict(
     dataset_type='linemod',
     white_bkgd=True,
     seq_name=seq_name,
+    seq_id=1,
     width_max=90,
-    height_max=90
+    height_max=90,
+    load2gpu_on_the_fly=True,
 )
 
 fine_train = dict(
-    ray_sampler='flatten',
+    # ray_sampler='flatten',
+    N_iters=10*(10**4),
 )
 
-voxel_num=32**3
-coarse_model_and_render = dict(
-    num_voxels_rgb=voxel_num,
-    num_voxels_base_rgb=voxel_num,
-    num_voxels_density=voxel_num,
-    num_voxels_base_density=voxel_num,
-)
-fine_model_and_render = dict(
-    num_voxels_rgb=voxel_num,
-    num_voxels_base_rgb=voxel_num,
-    num_voxels_density=voxel_num,
-    num_voxels_base_density=voxel_num,
-    # rgbnet_dim=0,
-)
+# voxel_num=32**3
+# coarse_model_and_render = dict(
+#     num_voxels_rgb=voxel_num,
+#     num_voxels_base_rgb=voxel_num,
+#     num_voxels_density=voxel_num,
+#     num_voxels_base_density=voxel_num,
+# )
+# fine_model_and_render = dict(
+#     num_voxels_rgb=voxel_num,
+#     num_voxels_base_rgb=voxel_num,
+#     num_voxels_density=voxel_num,
+#     num_voxels_base_density=voxel_num,
+#     # rgbnet_dim=0,
+# )
