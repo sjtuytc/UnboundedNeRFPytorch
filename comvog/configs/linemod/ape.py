@@ -17,7 +17,7 @@ data = dict(
 
 fine_train = dict(
     # ray_sampler='flatten',
-    N_iters=10*(10**4),
+    N_iters=1000*(10**4),
 )
 
 # voxel_num=32**3
