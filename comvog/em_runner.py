@@ -12,6 +12,8 @@ from comvog.run_train import scene_rep_reconstruction
 from comvog.run_render import run_render
 from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
 from comvog.load_linemod import get_projected_points
+from comvog.pose_utils.visualization import *
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -84,14 +86,17 @@ class NeRFEM(nn.Module):
         self.sample_poses = sample_poses
     
     def run_em(self):
-        gts, images = self.data_dict['gts'], self.data_dict['images']
+        gts, images, obj_bb8 = self.data_dict['gts'], self.data_dict['images'], self.data_dict['obj_bb8']
         for idx, gt in enumerate(tqdm(gts)):
             index = gt['index']
             cur_pose_gt = gt['gt_pose']
             posecnn_results = gt['pose_noisy_rendered']
+            cur_image = images[index].cpu().numpy()
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
-            # gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="gt")
-            # posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="posecnn")
+            res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
+            visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, post_str=str(index) + 'posecnn_' + res_post)
+            gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str=str(index) + "_gt_" + res_post)
+            posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str=str(index) + "_posecnn_" + res_post)
         self.lm_evaluator.summarize()    
 
         # # iteratively run e step and m step

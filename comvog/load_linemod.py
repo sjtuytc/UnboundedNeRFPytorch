@@ -13,6 +13,9 @@ import open3d as o3d
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation as R
 from transforms3d.quaternions import mat2quat, quat2mat, qmult
+from comvog.pose_utils.visualization import *
+from comvog.pose_utils.projection import *
+from comvog.pose_utils.model_operations import *
 
 
 trans_t = lambda t : torch.Tensor([
@@ -50,31 +53,6 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
     near = far * ratio
     return near, far
 
-
-def visualize_2d_points(points_2d, bg_image, post_str=""):
-    vis_img = np.zeros(bg_image.shape).astype(np.uint8)
-    points_2d = points_2d.astype(np.int)
-    vis_img[points_2d[:, -1], points_2d[:, 0], :] = 255
-    imageio.imwrite(f'ori{post_str}.png', bg_image)
-    imageio.imwrite(f'projected{post_str}.png', vis_img)
-    imageio.imwrite(f'composed{post_str}.png', np.maximum(bg_image, vis_img).astype(np.uint8))
-    return
-
-
-def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, post_str=""):
-    point_num = obj_m.shape[0]
-    homo_points_3d = np.concatenate([obj_m, np.ones((point_num, 1))], axis=-1)
-    batch_cam_pose = torch.tensor(cam_pose).unsqueeze(0).repeat(point_num, 1, 1)
-    batch_cam_k = torch.tensor(cam_k).unsqueeze(0).repeat(point_num, 1, 1)
-    homo_points_2d = torch.bmm(batch_cam_pose, torch.tensor(homo_points_3d).unsqueeze(-1))
-    homo_points_2d = torch.bmm(batch_cam_k, homo_points_2d)
-    points_2d = homo_points_2d.squeeze()
-    points_2d = points_2d[:, :2] / points_2d[:, -1].unsqueeze(-1).repeat(1, 2)
-    points_2d = points_2d.cpu().numpy()
-    if one_img is not None:  # for visualization:
-        visualize_2d_points(points_2d=points_2d, bg_image=one_img, post_str=post_str)
-    return points_2d
-    
 
 def get_bbox_from_mask(label_img):
     contours = cv2.findNonZero(label_img)
@@ -207,6 +185,7 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
         ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".xyz")
         obj_m = o3d.io.read_point_cloud(ply_path, format='xyz')
         obj_m = np.asarray(obj_m.points)
+        obj_bb8 = get_bb8_of_model(obj_m)
         
         # load pose initializations, not useful actually
         posecnn_results_p = os.path.join(data_root, 'init_poses/linemod_posecnn_results.pkl')
@@ -227,7 +206,7 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
         sum_results = {}
         images = {}
         if args.sample_num > 0:
-            posecnn_results = posecnn_results[:args.sample_num]
+            seq_info = seq_info[:args.sample_num]
         print("Loading LineMod gts ...")
         for res in tqdm(seq_info):
             img_id = res['index']
@@ -241,30 +220,7 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
                 gt_2d = get_projected_points(posecnn_pose, cam_k, obj_m, one_img=one_img, post_str="init_posecnn")
                 print("Visualization is generated!")
             images[int(img_id)] = torch.tensor(one_img.astype(np.float32))
-        # for res in tqdm(posecnn_results):
-        #     test_id_not_img_id = res['image_idx']
-        #     sum_results[int(test_id_not_img_id)] = {'posecnn_results': se3_q2m(res['pose']), 'pvnet_results': pvnet_results[test_id_not_img_id]}
-        #     img_id = test_indexs[int(test_id_not_img_id)]
-        #     sum_results[int(test_id_not_img_id)] = {**sum_results[int(test_id_not_img_id)], **test_gt[str(img_id)][0]}
-        #     cam_pose = np.ones((3, 4))
-        #     cam_pose[:3, :3] = np.array(sum_results[int(test_id_not_img_id)]['cam_R_m2c']).reshape(3, 3)
-        #     cam_pose[:3, 3] = np.array(sum_results[int(test_id_not_img_id)]['cam_t_m2c']) / 1000
-        #     sum_results[int(test_id_not_img_id)]['pose_gts'] = cam_pose
-        #     # add test camera
-        #     sum_results[int(test_id_not_img_id)] = {**sum_results[int(test_id_not_img_id)], **test_cam[str(test_id_not_img_id)]}
-        #     cam_k = np.array(sum_results[int(test_id_not_img_id)]['cam_K']).reshape(3, 3)
-        #     sum_results[int(test_id_not_img_id)]['cam_K'] = cam_k
-        #     fname = os.path.join(data_root, 'test', str(cfg.data.seq_id).zfill(6), 'rgb', str(img_id).zfill(6) + ".png")
-        #     one_img = imageio.imread(fname)
-        #     if vis_final or True:
-        #         gt_2d = get_projected_points(cam_pose, cam_k, obj_m, one_img=one_img, post_str="init_gt")
-        #         gt_2d = get_projected_points(sum_results[int(test_id_not_img_id)]['posecnn_results'], cam_k, obj_m, one_img=one_img, post_str="init_posecnn")
-        #         pdb.set_trace()
-        #         print("Visualization is generated!")
-        #     images[int(test_id_not_img_id)] = torch.tensor(one_img.astype(np.float32))
-        data_dict = dict(gts=seq_info,
-            images=images, obj_m=obj_m,
-        )
+        data_dict = dict(gts=seq_info, images=images, obj_m=obj_m, obj_bb8=obj_bb8)
         return data_dict
     else:  # during NeRF training, load synthetic infos
         syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')

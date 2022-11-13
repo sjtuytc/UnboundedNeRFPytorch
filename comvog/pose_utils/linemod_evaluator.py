@@ -134,6 +134,7 @@ class LineMODEvaluator:
             self.icp_add.append(mean_dist < diameter)
         else:
             self.add.append(mean_dist < diameter)
+        return mean_dist, mean_dist < diameter
 
     def cm_degree_5_metric(self, pose_pred, pose_targets, icp=False):
         translation_distance = np.linalg.norm(
@@ -270,11 +271,11 @@ class LineMODEvaluator:
         ang_err = rotation_angle(pose_gt[:3, :3], pose_pred[:3, :3])
         trans_err = np.linalg.norm(pose_pred[:3, -1:] - pose_gt[:3, -1:])  # 3x1
         if self.class_name in ['eggbox', 'glue']:
-            self.add_metric(pose_pred, pose_gt, syn=True)
+            add_value, add_final = self.add_metric(pose_pred, pose_gt, syn=True)
             self.add2_metric(pose_pred, pose_gt, syn=True)
             self.add5_metric(pose_pred, pose_gt, syn=True)
         else:
-            self.add_metric(pose_pred, pose_gt)
+            add_value, add_final = self.add_metric(pose_pred, pose_gt)
             self.add2_metric(pose_pred, pose_gt)
             self.add5_metric(pose_pred, pose_gt)
 
@@ -291,6 +292,8 @@ class LineMODEvaluator:
             "ang_err": ang_err,
             "trans_err": trans_err,
             "pnp_inliers": -1,#len(inliers),
+            "add_value": add_value,
+            "add_final": add_final
             # "pc_proj_vis": pc_proj_vis,
             # "pc_proj_vis_pred": pc_proj_vis_pred,
             # "keypoints_2d_vis": np.zeros_like(pc_proj_vis_pred) #keypoints_2d_vis
