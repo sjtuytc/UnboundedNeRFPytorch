@@ -90,8 +90,8 @@ class NeRFEM(nn.Module):
             cur_pose_gt = gt['gt_pose']
             posecnn_results = gt['pose_noisy_rendered']
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
-            gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="gt")
-            posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="posecnn")
+            # gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="gt")
+            # posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str="posecnn")
         self.lm_evaluator.summarize()    
 
         # # iteratively run e step and m step

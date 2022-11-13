@@ -134,3 +134,4 @@ logs/*
 ckpts/
 ckpts/*
 data
+./*.png
