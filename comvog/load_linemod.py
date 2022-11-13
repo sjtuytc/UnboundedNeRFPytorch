@@ -231,7 +231,9 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
         print("Loading LineMod gts ...")
         for res in tqdm(seq_info):
             img_id = res['index']
-            fname = os.path.join(data_root, 'test', str(cfg.data.seq_id).zfill(6), 'rgb', str(img_id).zfill(6) + ".png")
+            # fname = os.path.join(data_root, 'test', str(cfg.data.seq_id).zfill(6), 'rgb', str(img_id).zfill(6) + ".png")
+            observed_p = res['rgb_observed_path']
+            fname = os.path.join(data_root, 'LM6d_converted/LM6d_refine', observed_p)
             one_img = imageio.imread(fname)
             gt_pose, cam_k, posecnn_pose = res['gt_pose'], res['K'], res['pose_noisy_rendered']
             if vis_final:
