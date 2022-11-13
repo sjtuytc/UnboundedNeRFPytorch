@@ -4,11 +4,27 @@ import pdb
 import time
 import torch
 import torch.nn as nn
+import numpy as np
+from tqdm import tqdm
+from plyfile import PlyData
 from comvog.bbox_compute import compute_bbox_by_cam_frustrm
 from comvog.run_train import scene_rep_reconstruction
 from comvog.run_render import run_render
+from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
+from comvog.load_linemod import get_projected_points
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
+def get_ply_model(model_path, scale=1):
+    ply = PlyData.read(model_path)
+    data = ply.elements[0].data
+    x = data['x']*scale
+    y = data['y']*scale
+    z = data['z']*scale
+    model = np.stack([x, y, z], axis=-1)
+    return model
+
 
 class NeRFEM(nn.Module):
     def __init__(self, args, cfg, data_dict):
@@ -17,6 +33,12 @@ class NeRFEM(nn.Module):
         self.cfg = cfg
         self.data_dict = data_dict
         self.sample_poses = []
+        data_root = cfg.data.datadir
+        seq_name = cfg.data.seq_name
+        ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".ply")
+        model = get_ply_model(ply_path)
+        self.lm_evaluator = LineMODEvaluator(class_name=cfg.data.seq_name, obj_m=model)
+        # self.lm_evaluator = LineMODEvaluator(class_name=cfg.data.seq_name, obj_m=data_dict['obj_m'])
         
     def set_poses(self, ):
         pdb.set_trace()
@@ -62,9 +84,19 @@ class NeRFEM(nn.Module):
         self.sample_poses = sample_poses
     
     def run_em(self):
-        # iteratively run e step and m step
-        self.e_step()
-        self.m_step()
+        gts, images = self.data_dict['gts'], self.data_dict['images']
+        for gt in tqdm(gts):
+            cur_pose_gt = gt['gt_pose']
+            # pvnet_results = gt['pvnet_results']
+            posecnn_results = gt['pose_noisy_rendered']
+            ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
+            # gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[image_id].cpu().numpy(), post_str="gt")
+            # posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[image_id].cpu().numpy(), post_str="posecnn")
+        self.lm_evaluator.summarize()    
+
+        # # iteratively run e step and m step
+        # self.e_step()
+        # self.m_step()
         # print(f"Training id {i} ...")
         # poses = sample_poses()
         # data_dict, args = set_poses(args=args, cfg=cfg)
