@@ -1,3 +1,4 @@
+import os
 import cv2
 import pdb
 import torch
@@ -5,7 +6,7 @@ import imageio
 import numpy as np
 
 
-def visualize_2d_points(points_2d, bg_image, post_str=""):
+def visualize_2d_points(points_2d, bg_image, save_root=None, pre_str="", post_str=""):
     """
     points_2d: [N, 2] denotes the points in the 2D space
     bg_image: background image for visualization
@@ -14,26 +15,20 @@ def visualize_2d_points(points_2d, bg_image, post_str=""):
     vis_img = np.zeros(bg_image.shape).astype(np.uint8)
     points_2d = points_2d.astype(np.int)
     vis_img[points_2d[:, -1], points_2d[:, 0], :] = 255
-    imageio.imwrite(f'ori{post_str}.png', bg_image)
-    imageio.imwrite(f'projected{post_str}.png', vis_img)
-    imageio.imwrite(f'composed{post_str}.png', np.maximum(bg_image, vis_img).astype(np.uint8))
+    if save_root is None:
+        imageio.imwrite(f'{pre_str}ori{post_str}.png', bg_image.astype(np.uint8))
+        imageio.imwrite(f'{pre_str}projected{post_str}.png', vis_img.astype(np.uint8))
+        imageio.imwrite(f'{pre_str}composed{post_str}.png', np.maximum(bg_image, vis_img).astype(np.uint8))
+    else:
+        imageio.imwrite(os.path.join(save_root, f'{pre_str}ori{post_str}.png'), bg_image.astype(np.uint8))
+        imageio.imwrite(os.path.join(save_root, f'{pre_str}projected{post_str}.png'), vis_img.astype(np.uint8))
+        imageio.imwrite(os.path.join(save_root, f'{pre_str}composed{post_str}.png'), np.maximum(bg_image, vis_img).astype(np.uint8))
     return
 
 
-def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, post_str=""):
-    # borrowed from projection.py, get projected 2D points in [N, 2]
-    point_num = obj_m.shape[0]
-    homo_points_3d = np.concatenate([obj_m, np.ones((point_num, 1))], axis=-1)
-    batch_cam_pose = torch.tensor(cam_pose).unsqueeze(0).repeat(point_num, 1, 1)
-    batch_cam_k = torch.tensor(cam_k).unsqueeze(0).repeat(point_num, 1, 1)
-    homo_points_2d = torch.bmm(batch_cam_pose, torch.tensor(homo_points_3d).unsqueeze(-1))
-    homo_points_2d = torch.bmm(batch_cam_k, homo_points_2d)
-    points_2d = homo_points_2d.squeeze()
-    points_2d = points_2d[:, :2] / points_2d[:, -1].unsqueeze(-1).repeat(1, 2)
-    points_2d = points_2d.cpu().numpy()
-    if one_img is not None:  # for visualization:
-        visualize_2d_points(points_2d=points_2d, bg_image=one_img, post_str=post_str)
-    return points_2d
+def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, save_root=None, pre_str="", post_str=""):
+    from comvog.pose_utils.projection import get_projected_points
+    return get_projected_points(cam_pose, cam_k, obj_m, one_img, save_root, pre_str, post_str)
 
 
 def draw_bbox_8_2D(draw_img, bbox_8_2D, color = (0, 255, 0), thickness = 2):
@@ -69,9 +64,13 @@ def draw_bbox_8_2D(draw_img, bbox_8_2D, color = (0, 255, 0), thickness = 2):
         cv2.circle(draw_img, bbox[8], 3, color, -1)
     
 
-def visualize_pose_prediction(pose_a, pose_b, cam_k, obj_bb8, bg_img, a_color=(170, 214, 85), b_color=(66, 51, 122), post_str=''):
-    bb8_2d_a = get_projected_points(pose_a, cam_k, obj_bb8, one_img=None, post_str="")
-    bb8_2d_b = get_projected_points(pose_b, cam_k, obj_bb8, one_img=None, post_str="")
+def visualize_pose_prediction(pose_a, pose_b, cam_k, obj_bb8, bg_img, save_root=None, a_color=(170, 214, 85), b_color=(66, 51, 122), pre_str='', post_str=''):
+    # get projected points only so save_root=None, post_str=""
+    bb8_2d_a = get_projected_points(pose_a, cam_k, obj_bb8, one_img=None, save_root=None, pre_str="", post_str="")
+    bb8_2d_b = get_projected_points(pose_b, cam_k, obj_bb8, one_img=None, save_root=None, pre_str="", post_str="")
     draw_bbox_8_2D(bg_img, bb8_2d_a, color=a_color, thickness=2)
     draw_bbox_8_2D(bg_img, bb8_2d_b, color=b_color, thickness=2)
-    imageio.imwrite(f'compare_pose_{post_str}.png', bg_img)
+    save_path = f'{pre_str}compare_pose{post_str}.png'
+    if save_root is not None:
+        save_path = os.path.join(save_root, save_path)
+    imageio.imwrite(save_path, bg_img.astype(np.uint8))

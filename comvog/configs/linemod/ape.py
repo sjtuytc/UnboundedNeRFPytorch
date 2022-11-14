@@ -2,7 +2,8 @@ _base_ = '../default.py'
 seq_name = 'ape'
 seq_id = 1
 expname = f'{seq_name}_nov11_'
-basedir = './logs/linemod'
+pose_expname = 'bayes_nerf_v1'
+basedir = 'logs/linemod'
 
 data = dict(
     datadir='./data/linemod',

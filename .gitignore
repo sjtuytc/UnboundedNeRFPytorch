@@ -134,4 +134,4 @@ logs/*
 ckpts/
 ckpts/*
 data
-./*.png
+*.png

@@ -3,8 +3,7 @@ import numpy as np
 from comvog.pose_utils.visualization import *
 
 
-def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, post_str=""):
-    # get projected 2D points in [N, 2]
+def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, save_root=None, pre_str="", post_str=""):
     point_num = obj_m.shape[0]
     homo_points_3d = np.concatenate([obj_m, np.ones((point_num, 1))], axis=-1)
     batch_cam_pose = torch.tensor(cam_pose).unsqueeze(0).repeat(point_num, 1, 1)
@@ -15,5 +14,5 @@ def get_projected_points(cam_pose, cam_k, obj_m, one_img=None, post_str=""):
     points_2d = points_2d[:, :2] / points_2d[:, -1].unsqueeze(-1).repeat(1, 2)
     points_2d = points_2d.cpu().numpy()
     if one_img is not None:  # for visualization:
-        visualize_2d_points(points_2d=points_2d, bg_image=one_img, post_str=post_str)
+        visualize_2d_points(points_2d=points_2d, bg_image=one_img, save_root=save_root, pre_str=pre_str, post_str=post_str)
     return points_2d

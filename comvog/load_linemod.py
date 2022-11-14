@@ -164,7 +164,84 @@ def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
     return train_info, val_info, test_info
     
 
-def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
+def load_synthetic_data(args, cfg, sample_num=None):
+    data_root = cfg.data.datadir
+    seq_name = cfg.data.seq_name
+    syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')
+    syn_gt = json.load(open(syn_gt_p))
+    syn_cam_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_camera.json')
+    syn_cam = json.load(open(syn_cam_p))
+    train_info, val_info, test_info = split_seq_info_syn(syn_gt)
+    all_imgs, all_poses, all_k = [], [], []
+    counts = [0]
+    print("Preparing the synthetic training / val / test poses and images ...")
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            split_seq = train_info
+        elif split == 'val':
+            split_seq = val_info
+        else:
+            split_seq = test_info
+        if sample_num is not None:
+            split_seq = split_seq[-sample_num:]
+        imgs, poses, ks = [], [], []
+        for idx, one_info in enumerate(tqdm(split_seq)):
+            image_id = one_info['image_id']
+            one_k = np.array(syn_cam[str(image_id)]['cam_K']).reshape(3, 3)
+            fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'rgb', str(image_id).zfill(6) + ".png")
+            one_img = imageio.imread(fname)
+            mask_fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'mask', str(image_id).zfill(6) + "_000000.png")
+            mask_img = imageio.imread(mask_fname)
+            mask_img = mask_img / mask_img.max()
+            one_img = apply_mask_on_img(one_img, mask_img)
+            # form obj pose
+            one_obj_pose_R = np.array(syn_gt[str(image_id)][0]['cam_R_m2c']).reshape(3, 3)
+            one_obj_pose_t = np.array(syn_gt[str(image_id)][0]['cam_t_m2c']).reshape(3)
+            one_obj_pose = np.eye(4)
+            one_obj_pose[:3, :3] = one_obj_pose_R
+            one_obj_pose[:3, 3] = one_obj_pose_t
+            # from object pose to camera pose, [R, t] -> [R^-1, -R^-1t]
+            cam_pose = np.linalg.inv(one_obj_pose)
+            # transfer from outward to inward, [R^-1, -R^-1t] -> [R^-1, R^-1t]
+            cam_pose[:3, -1] = - cam_pose[:3, -1]
+            ks.append(one_k)
+            poses.append(cam_pose)
+            imgs.append(one_img)
+        imgs = (np.array(imgs) / 255.).astype(np.float32) # keep all 4 channels (RGBA)
+        poses = np.array(poses).astype(np.float32)
+        ks = np.array(ks).astype(np.float32)
+        counts.append(counts[-1] + poses.shape[0])
+        all_imgs.append(imgs)
+        all_poses.append(poses)
+        all_k.append(ks)
+    print("Finished preparing the training / val / test poses and images !")
+    i_split = [np.arange(counts[i], counts[i+1]) for i in range(3)]
+    images = np.concatenate(all_imgs, 0)
+    poses = np.concatenate(all_poses, 0)
+    ks = np.concatenate(all_k, 0)
+    render_poses = torch.stack([pose_spherical(angle, 90.0, 400.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
+    # render_poses = gen_rotational_trajs(args, poses)
+    
+    i_train, i_val, i_test = i_split
+    near, far = 0., 6.
+
+    # Cast intrinsics to right types
+    HW = np.array([im.shape[:2] for im in images])
+    irregular_shape = (images.dtype is np.dtype('object'))
+    render_poses = render_poses[...,:4]
+    near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
+    far *= 3
+    data_dict = dict(HW=HW, Ks=ks,
+        near=near, far=far, near_clip=near_clip,
+        i_train=i_train, i_val=i_val, i_test=i_test,
+        poses=torch.tensor(poses), render_poses=torch.tensor(render_poses),
+        images=torch.tensor(images), depths=None,
+        irregular_shape=irregular_shape,
+    )
+    return data_dict
+
+
+def load_linemod_data(args, cfg, vis_final=False):
     data_root = cfg.data.datadir
     seq_name = cfg.data.seq_name
     if args.program == 'tune_pose':
@@ -221,82 +298,12 @@ def load_linemod_data(args, cfg, cal_size=False, vis_final=False):
                 print("Visualization is generated!")
             images[int(img_id)] = torch.tensor(one_img.astype(np.float32))
         data_dict = dict(gts=seq_info, images=images, obj_m=obj_m, obj_bb8=obj_bb8)
+        syn_data_dict = load_synthetic_data(args, cfg, sample_num=100)
+        for key in syn_data_dict:
+            if key not in data_dict:
+                data_dict[key] = syn_data_dict[key]
+        data_dict['syn_images'] = syn_data_dict['images']
         return data_dict
     else:  # during NeRF training, load synthetic infos
-        syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')
-        syn_gt = json.load(open(syn_gt_p))
-        syn_cam_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_camera.json')
-        syn_cam = json.load(open(syn_cam_p))
-        train_info, val_info, test_info = split_seq_info_syn(syn_gt)
-        all_imgs, all_poses, all_k = [], [], []
-        counts = [0]
-        if cal_size:
-            print("Calculating box size ...")
-            width_max, height_max = get_most_bbox_size(seq_info, data_root)
-            print(f"Width max: {width_max}, height max: {height_max} ...")
-        else:  # not tested when width_max != height_max
-            width_max, height_max = cfg.data.width_max, cfg.data.height_max
-        print("Preparing the training / val / test poses and images ...")
-        for split in ['train', 'val', 'test']:
-            if split == 'train':
-                split_seq = train_info
-            elif split == 'val':
-                split_seq = val_info
-            else:
-                split_seq = test_info
-            imgs, poses, ks = [], [], []
-            for idx, one_info in enumerate(tqdm(split_seq)):
-                image_id = one_info['image_id']
-                one_k = np.array(syn_cam[str(image_id)]['cam_K']).reshape(3, 3)
-                fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'rgb', str(image_id).zfill(6) + ".png")
-                one_img = imageio.imread(fname)
-                mask_fname = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'mask', str(image_id).zfill(6) + "_000000.png")
-                mask_img = imageio.imread(mask_fname)
-                mask_img = mask_img / mask_img.max()
-                one_img = apply_mask_on_img(one_img, mask_img)
-                # imageio.imwrite(f'final_img.png', np.array(one_img))
-                # form obj pose
-                one_obj_pose_R = np.array(syn_gt[str(image_id)][0]['cam_R_m2c']).reshape(3, 3)
-                one_obj_pose_t = np.array(syn_gt[str(image_id)][0]['cam_t_m2c']).reshape(3)
-                one_obj_pose = np.eye(4)
-                one_obj_pose[:3, :3] = one_obj_pose_R
-                one_obj_pose[:3, 3] = one_obj_pose_t
-                # from object pose to camera pose, [R, t] -> [R^-1, -R^-1t]
-                cam_pose = np.linalg.inv(one_obj_pose)
-                # transfer from outward to inward, [R^-1, -R^-1t] -> [R^-1, R^-1t]
-                cam_pose[:3, -1] = - cam_pose[:3, -1]
-                ks.append(one_k)
-                poses.append(cam_pose)
-                imgs.append(one_img)
-            imgs = (np.array(imgs) / 255.).astype(np.float32) # keep all 4 channels (RGBA)
-            poses = np.array(poses).astype(np.float32)
-            ks = np.array(ks).astype(np.float32)
-            counts.append(counts[-1] + imgs.shape[0])
-            all_imgs.append(imgs)
-            all_poses.append(poses)
-            all_k.append(ks)
-        print("Finished preparing the training / val / test poses and images !")
-        i_split = [np.arange(counts[i], counts[i+1]) for i in range(3)]
-        images = np.concatenate(all_imgs, 0)
-        poses = np.concatenate(all_poses, 0)
-        ks = np.concatenate(all_k, 0)
-        render_poses = torch.stack([pose_spherical(angle, 90.0, 400.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
-        # render_poses = gen_rotational_trajs(args, poses)
-        
-        i_train, i_val, i_test = i_split
-        near, far = 0., 6.
-
-        # Cast intrinsics to right types
-        HW = np.array([im.shape[:2] for im in images])
-        irregular_shape = (images.dtype is np.dtype('object'))
-        render_poses = render_poses[...,:4]
-        near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
-        far *= 3
-        data_dict = dict(HW=HW, Ks=ks,
-            near=near, far=far, near_clip=near_clip,
-            i_train=i_train, i_val=i_val, i_test=i_test,
-            poses=torch.tensor(poses), render_poses=torch.tensor(render_poses),
-            images=torch.tensor(images), depths=None,
-            irregular_shape=irregular_shape,
-        )
+        data_dict = load_synthetic_data(args, cfg,)
         return data_dict

@@ -3,6 +3,7 @@ import os
 import pdb
 import time
 import torch
+import imageio
 import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
@@ -13,6 +14,8 @@ from comvog.run_render import run_render
 from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
 from comvog.load_linemod import get_projected_points
 from comvog.pose_utils.visualization import *
+from comvog import utils, dvgo, dcvgo, dmpigo
+from comvog.run_render import render_viewpoints
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -30,6 +33,7 @@ def get_ply_model(model_path, scale=1):
 
 class NeRFEM(nn.Module):
     def __init__(self, args, cfg, data_dict):
+        super(NeRFEM, self).__init__()
         self.args = args
         self.args.no_reload = True
         self.cfg = cfg
@@ -39,9 +43,50 @@ class NeRFEM(nn.Module):
         seq_name = cfg.data.seq_name
         ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".ply")
         model = get_ply_model(ply_path)
+        # setup exp dir
+        self.exp_dir = os.path.join(self.cfg.basedir, self.cfg.expname, self.cfg.pose_expname)
+        os.makedirs(self.exp_dir, exist_ok=True)
         self.lm_evaluator = LineMODEvaluator(class_name=cfg.data.seq_name, obj_m=model)
-        # self.lm_evaluator = LineMODEvaluator(class_name=cfg.data.seq_name, obj_m=data_dict['obj_m'])
+        # load pretrained NeRF model
+        ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
+            model_class = ComVoGModel
+        elif cfg.data.ndc:
+            model_class = dmpigo.DirectMPIGO
+        elif cfg.data.unbounded_inward:
+            model_class = dcvgo.DirectContractedVoxGO
+        else:
+            model_class = dvgo.DirectVoxGO
+        self.nerf_model = utils.load_model(model_class, ckpt_path).to(device)
+        poses, syn_images = data_dict['poses'], data_dict['syn_images']
+        imageio.imwrite("pose0.png", (syn_images[0]*255).cpu().numpy().astype(np.uint8))
+        imageio.imwrite("pose15.png", (syn_images[15]*255).cpu().numpy().astype(np.uint8))
+        rgb = self.render_a_view(poses[0])
+        imageio.imwrite("render0.png", (rgb*255).astype(np.uint8))
+        pdb.set_trace()
         
+    def render_a_view(self, pose):
+        HW = self.data_dict['HW']
+        Ks = self.data_dict['Ks']
+        render_viewpoints_kwargs = {
+            'model': self.nerf_model,
+            'ndc': self.cfg.data.ndc,
+            'render_kwargs': {
+                'near': self.data_dict['near'],
+                'far': self.data_dict['far'],
+                'bg': 1 if self.cfg.data.white_bkgd else 0,
+                'stepsize': self.cfg.fine_model_and_render.stepsize,
+                'inverse_y': self.cfg.data.inverse_y,
+                'flip_x': self.cfg.data.flip_x,
+                'flip_y': self.cfg.data.flip_y,
+                'render_depth': True,
+            },
+        }
+        rgbs, _, _ = render_viewpoints(cfg=self.cfg, render_poses=[pose], 
+                                       HW=[HW[0]], Ks=[Ks[0]], gt_imgs=None, savedir=None, 
+                                       dump_images=self.args.dump_images, **render_viewpoints_kwargs)
+        return rgbs[0]
+
     def set_poses(self, ):
         pdb.set_trace()
         
@@ -87,6 +132,8 @@ class NeRFEM(nn.Module):
     
     def run_em(self):
         gts, images, obj_bb8 = self.data_dict['gts'], self.data_dict['images'], self.data_dict['obj_bb8']
+        print("Saving results to ", self.exp_dir)
+        
         for idx, gt in enumerate(tqdm(gts)):
             index = gt['index']
             cur_pose_gt = gt['gt_pose']
@@ -94,10 +141,10 @@ class NeRFEM(nn.Module):
             cur_image = images[index].cpu().numpy()
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
             res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
-            visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, post_str=str(index) + 'posecnn_' + res_post)
-            gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str=str(index) + "_gt_" + res_post)
-            posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), post_str=str(index) + "_posecnn_" + res_post)
-        self.lm_evaluator.summarize()    
+            visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, save_root=self.exp_dir, pre_str=str(index) + "_", post_str='posecnn_' + res_post)
+            gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="gt_" + res_post)
+            posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="posecnn_" + res_post)
+        self.lm_evaluator.summarize()
 
         # # iteratively run e step and m step
         # self.e_step()
