@@ -107,7 +107,6 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     rgbs = np.array(rgbs)
     depths = np.array(depths)
     bgmaps = np.array(bgmaps)
-
     return rgbs, depths, bgmaps
 
 

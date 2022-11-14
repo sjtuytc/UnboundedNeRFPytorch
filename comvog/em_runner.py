@@ -12,6 +12,7 @@ from comvog.bbox_compute import compute_bbox_by_cam_frustrm
 from comvog.run_train import scene_rep_reconstruction
 from comvog.run_render import run_render
 from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
+from comvog.pose_utils.pose_operators import pose_rot_interpolation
 from comvog.load_linemod import get_projected_points
 from comvog.pose_utils.visualization import *
 from comvog import utils, dvgo, dcvgo, dmpigo
@@ -59,10 +60,13 @@ class NeRFEM(nn.Module):
             model_class = dvgo.DirectVoxGO
         self.nerf_model = utils.load_model(model_class, ckpt_path).to(device)
         poses, syn_images = data_dict['poses'], data_dict['syn_images']
-        imageio.imwrite("pose0.png", (syn_images[0]*255).cpu().numpy().astype(np.uint8))
-        imageio.imwrite("pose15.png", (syn_images[15]*255).cpu().numpy().astype(np.uint8))
-        rgb = self.render_a_view(poses[0])
-        imageio.imwrite("render0.png", (rgb*255).astype(np.uint8))
+        poses = pose_rot_interpolation(poses[0], poses[15])
+        rgbs = self.render_many_views(poses)
+        # # Below are some testing functions
+        # imageio.imwrite("pose0.png", (syn_images[0]*255).cpu().numpy().astype(np.uint8))
+        # imageio.imwrite("pose15.png", (syn_images[15]*255).cpu().numpy().astype(np.uint8))
+        # rgb = self.render_a_view(poses[0])
+        # imageio.imwrite("render0.png", (rgb*255).astype(np.uint8))
         pdb.set_trace()
         
     def render_a_view(self, pose):
@@ -86,6 +90,35 @@ class NeRFEM(nn.Module):
                                        HW=[HW[0]], Ks=[Ks[0]], gt_imgs=None, savedir=None, 
                                        dump_images=self.args.dump_images, **render_viewpoints_kwargs)
         return rgbs[0]
+    
+    def render_many_views(self, poses, video_name='test_render'):
+        HW = self.data_dict['HW']
+        Ks = self.data_dict['Ks']
+        render_viewpoints_kwargs = {
+            'model': self.nerf_model,
+            'ndc': self.cfg.data.ndc,
+            'render_kwargs': {
+                'near': self.data_dict['near'],
+                'far': self.data_dict['far'],
+                'bg': 1 if self.cfg.data.white_bkgd else 0,
+                'stepsize': self.cfg.fine_model_and_render.stepsize,
+                'inverse_y': self.cfg.data.inverse_y,
+                'flip_x': self.cfg.data.flip_x,
+                'flip_y': self.cfg.data.flip_y,
+                'render_depth': True,
+            },
+        }
+        HWs = [HW[0] for pose in poses]
+        Ks = [Ks[0] for pose in poses]
+        rgbs, _, _ = render_viewpoints(cfg=self.cfg, render_poses=poses, 
+                                       HW=HWs, Ks=Ks, gt_imgs=None, savedir=self.exp_dir, 
+                                       dump_images=self.args.dump_images, **render_viewpoints_kwargs)
+        save_folder = os.path.join(self.exp_dir, 'rendered_video')
+        os.makedirs(save_folder, exist_ok=True)
+        save_p = os.path.join(save_folder, video_name + ".mp4")
+        imageio.mimwrite(save_p, utils.to8b(rgbs), fps=15, quality=8)
+        print(f"Rendered views at {save_folder}.")
+        return rgbs
 
     def set_poses(self, ):
         pdb.set_trace()

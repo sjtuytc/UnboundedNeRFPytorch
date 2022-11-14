@@ -145,6 +145,7 @@ def split_seq_info(seq_info, posecnn_results, train_ratio=0.9, val_num=20):
 
 
 def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
+    # train_ratio can be set to near 1.0 because we can use all synthetic data
     list_syn_gt = [syn_gt[str(key)] for key in range(len(syn_gt))]
     total_num = len(list_syn_gt)
     train_num = int(total_num * train_ratio)
@@ -161,6 +162,8 @@ def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
         else:
             train_info.append(one_info)
     val_info = train_info[:val_num]
+    if len(test_indexs) < 1:
+        test_info = val_info
     return train_info, val_info, test_info
     
 
