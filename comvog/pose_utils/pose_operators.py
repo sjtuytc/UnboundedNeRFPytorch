@@ -3,6 +3,37 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 
+def chordal_distance(R1,R2):
+    return np.sqrt(np.sum((R1-R2)*(R1-R2))) 
+
+
+def rotation_angle_chordal(R1, R2):
+    return 2*np.arcsin(chordal_distance(R1,R2)/np.sqrt(8))
+
+
+def rot_diff_to_norm_angle(rotation_difference):
+    theta = np.arccos((np.trace(rotation_difference) - 1) / 2)
+    theta = np.rad2deg(theta)
+    euler = R.from_matrix(rotation_difference).as_euler('zyx', degrees=True)
+    norm_angle = np.linalg.norm(euler)
+    return norm_angle
+
+
+def cal_one_add(model_points, pose_pred, pose_targets, syn=False):
+    model_pred = np.dot(model_points, pose_pred[:, :3].T) + pose_pred[:, 3]
+    model_targets = np.dot(model_points, pose_targets[:, :3].T) + pose_targets[:, 3]
+    if syn:
+        from thirdparty.nn import nn_utils  # TODO: solve this reference
+        idxs = nn_utils.find_nearest_point_idx(model_pred, model_targets)
+        # idxs = find_nearest_point_idx(model_pred, model_targets)
+        mean_dist = np.mean(np.linalg.norm(
+            model_pred[idxs] - model_targets, 2, 1))
+    else:
+        mean_dist = np.mean(np.linalg.norm(
+            model_pred - model_targets, axis=-1))
+    return mean_dist
+
+
 def pose_rot_interpolation(pose_a, pose_b, inter_num=100):
     '''
     interpolate poses ASSUMING pose = [R, Rt] (in the canonical coordinate system). 
@@ -26,12 +57,3 @@ def pose_rot_interpolation(pose_a, pose_b, inter_num=100):
         poses[i][:3, :3] = all_rotations[i]
         poses[i][:3, -1] = poses[i][:3, :3] @ ori_t
     return poses
-
-
-def pose_sample(center_pose, sample_range=10, sample_num=100):
-    """
-    Sample poses around some point.
-    """
-    
-    pdb.set_trace()
-

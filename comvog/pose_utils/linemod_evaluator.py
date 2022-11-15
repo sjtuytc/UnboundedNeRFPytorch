@@ -2,23 +2,8 @@
 import pdb
 import numpy as np
 from comvog.pose_utils.linemod_constants import *
+from comvog.pose_utils.pose_operators import *
 from scipy.spatial.transform import Rotation as R
-
-
-def chordal_distance(R1,R2):
-    return np.sqrt(np.sum((R1-R2)*(R1-R2))) 
-
-
-def rotation_angle_chordal(R1, R2):
-    return 2*np.arcsin(chordal_distance(R1,R2)/np.sqrt(8))
-
-
-def rot_diff_to_norm_angle(rotation_difference):
-    theta = np.arccos((np.trace(rotation_difference) - 1) / 2)
-    theta = np.rad2deg(theta)
-    euler = R.from_matrix(rotation_difference).as_euler('zyx', degrees=True)
-    norm_angle = np.linalg.norm(euler)
-    return norm_angle
 
     
 def rotation_angle_euler(R1, R2):
@@ -108,6 +93,7 @@ class LineMODEvaluator:
             self.model, pose_targets[:, :3].T) + pose_targets[:, 3]
 
         if syn:
+            from thirdparty.nn import nn_utils  # TODO: solve this reference
             idxs = nn_utils.find_nearest_point_idx(model_pred, model_targets)
             # idxs = find_nearest_point_idx(model_pred, model_targets)
             mean_dist = np.mean(np.linalg.norm(

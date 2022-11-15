@@ -1,7 +1,7 @@
 # linemod train
 python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_test --render_video --exp_id 24
 # linemod test
-python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 23
+python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 22
 # waymo dataset
 python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --render_video --exp_id 30
 # tanks and temples
