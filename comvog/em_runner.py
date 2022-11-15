@@ -3,6 +3,7 @@ import os
 import pdb
 import time
 import torch
+from math import ceil
 import imageio
 import torch.nn as nn
 import numpy as np
@@ -15,6 +16,7 @@ from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
 from comvog.pose_utils.pose_operators import pose_rot_interpolation, pose_sample
 from comvog.load_linemod import get_projected_points
 from comvog.pose_utils.visualization import *
+from comvog.pose_utils.image_operators import *
 from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.run_render import render_viewpoints
 
@@ -30,6 +32,14 @@ def get_ply_model(model_path, scale=1):
     z = data['z']*scale
     model = np.stack([x, y, z], axis=-1)
     return model
+
+
+def get_canonical_t(pose):
+    pose = pose.cpu().numpy()
+    rot, trans = pose[:3, :3], pose[:3, -1]
+    inv_rot = np.linalg.inv(rot)
+    can_t = (inv_rot@trans).astype(np.int)
+    return can_t
 
 
 class NeRFEM(nn.Module):
@@ -59,8 +69,9 @@ class NeRFEM(nn.Module):
         else:
             model_class = dvgo.DirectVoxGO
         self.nerf_model = utils.load_model(model_class, ckpt_path).to(device)
-        # # Below are some testing functions
-        # poses, syn_images = data_dict['poses'], data_dict['syn_images']
+        # Below are some testing functions
+        poses, syn_images = data_dict['poses'], data_dict['syn_images']
+        self.canonical_t = get_canonical_t(poses[0])  # [0, 0, 400]
         # poses = pose_rot_interpolation(poses[0], poses[15])
         # rgbs = self.render_many_views(poses)
         # imageio.imwrite("pose0.png", (syn_images[0]*255).cpu().numpy().astype(np.uint8))
@@ -87,7 +98,7 @@ class NeRFEM(nn.Module):
         }
         rgbs, _, _ = render_viewpoints(cfg=self.cfg, render_poses=[pose], 
                                        HW=[HW[0]], Ks=[Ks[0]], gt_imgs=None, savedir=None, 
-                                       dump_images=self.args.dump_images, **render_viewpoints_kwargs)
+                                       dump_images=self.args.dump_images, **render_viewpoints_kwargs, verbose=False)
         return rgbs[0]
     
     def render_many_views(self, poses, video_name='test_render'):
@@ -114,9 +125,10 @@ class NeRFEM(nn.Module):
                                        dump_images=self.args.dump_images, **render_viewpoints_kwargs)
         save_folder = os.path.join(self.exp_dir, 'rendered_video')
         os.makedirs(save_folder, exist_ok=True)
-        save_p = os.path.join(save_folder, video_name + ".mp4")
-        imageio.mimwrite(save_p, utils.to8b(rgbs), fps=15, quality=8)
-        print(f"Rendered views at {save_folder}.")
+        if video_name is not None:
+            save_p = os.path.join(save_folder, video_name + ".mp4")
+            imageio.mimwrite(save_p, utils.to8b(rgbs), fps=15, quality=8)
+            print(f"Rendered views at {save_folder}.")
         return rgbs
 
     def set_poses(self, ):
@@ -186,29 +198,89 @@ class NeRFEM(nn.Module):
         final_poses[:, :3, -1] = applied_deltas
         return final_poses
     
-    def run_em(self, visualization=False):
+    def obj_pose_to_cannonical(self, obj_pose):
+        rot, trans = obj_pose[:3, :3], obj_pose[:3, -1]
+        rot_inv = np.linalg.inv(rot)
+        final_pose = obj_pose.copy()
+        final_pose[:3, :3] = rot_inv
+        final_pose[:3, -1] = rot_inv @ self.canonical_t
+        return final_pose
+    
+    def observed_to_canonical(self, full_image, obj_pose, cam_k, ):
+        observed_points = get_projected_points(obj_pose, cam_k, self.lm_evaluator.model, one_img=None)
+        xmin, xmax = observed_points[:, 0].min(), observed_points[:, 0].max()
+        ymin, ymax = observed_points[:, 1].min(), observed_points[:, 1].max()
+        observed_crop = full_image[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
+        # imageio.imwrite("debug_gt_cropped.png", (observed_crop).astype(np.uint8))
+        return observed_crop
+    
+    def preprocess_render_observed(self, render_rgb, observed_rgb, idx, open_vis=True):
+        # crop render rgb
+        mask_image, xmin, xmax, ymin, ymax = get_bbox_from_img(render_rgb, color_thre=0.1)
+        cropped_rendered = render_rgb[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
+        if open_vis:
+            imageio.imwrite(os.path.join(self.exp_dir, f"{str(idx)}_cropped_rendered.png"), (cropped_rendered*255).astype(np.uint8))
+        cropped_mask = mask_image[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
+        # resize observed and apply the mask
+        height, width, _ = cropped_rendered.shape
+        resized_observed = cv2.resize(observed_rgb, (width, height))
+        cropped_observed = apply_mask_on_img(resized_observed, cropped_mask)
+        if open_vis:
+            imageio.imwrite(os.path.join(self.exp_dir, f"{str(idx)}_cropped_observed.png"), (cropped_observed).astype(np.uint8))
+        return cropped_rendered, cropped_observed
+        
+    def render_and_observe_by_pose(self, obj_pose, full_observed, cam_k, idx):
+        # get rendered via NeRF
+        canno_pose = self.obj_pose_to_cannonical(obj_pose)
+        render_rgb = self.render_a_view(canno_pose)
+        # transfer the observed to canonical
+        observed_rgb = self.observed_to_canonical(full_observed, obj_pose, cam_k)
+        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, idx)
+        return render_rgb, observed_rgb
+    
+    def render_observe_dist(self, render_rgb, observed_rgb):
+        render_rgb = render_rgb / render_rgb.max()
+        observed_rgb = observed_rgb / observed_rgb.max()
+        mse_loss = torch.nn.functional.mse_loss(torch.tensor(render_rgb), torch.tensor(observed_rgb))
+        return mse_loss.item()
+    
+    def render_and_observe_dist_of_one_pose(self, pose, full_image, cam_k, idx):
+        render_rgb, observed_rgb = self.render_and_observe_by_pose(pose, full_image, cam_k, idx)
+        dist = self.render_observe_dist(render_rgb, observed_rgb)
+        return dist
+    
+    def render_and_observe_dist_of_poses(self, poses, full_image, cam_k, idx):
+        all_dists = []
+        for idx, pose in enumerate(tqdm(poses)):
+            dist = self.render_and_observe_dist_of_one_pose(pose, full_image, cam_k, idx)
+            all_dists.append(dist)
+        min_pos = np.argmin(all_dists)
+        return all_dists, poses[min_pos]
+    
+    def run_em(self, visualization=True):
         gts, images, obj_bb8 = self.data_dict['gts'], self.data_dict['images'], self.data_dict['obj_bb8']
         rot_deltas, trans_deltas = self.collect_res_poses(gts, images, )
         print("Saving results to ", self.exp_dir)
-        
         for idx, gt in enumerate(tqdm(gts)):
             index = gt['index']
             cur_pose_gt = gt['gt_pose']
             posecnn_results = gt['pose_noisy_rendered']
             cur_image = images[index].cpu().numpy()
-            # batch forward to evaluate multiple hypothesis
             posecnn_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
-            ret = self.lm_evaluator.evaluate_proposals(cur_pose_gt, posecnn_proposals, gt['K'])
+            all_dists, our_pose_result = self.render_and_observe_dist_of_poses(posecnn_proposals, cur_image, gt['K'], idx)
+            # normal procedure, evaluating one item
+            ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, our_pose_result, gt['K'])
             res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))
             res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
-            # # normal procedure, evaluating one item
-            # ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
+            # # batch forward to evaluate multiple hypothesis
+            # ret = self.lm_evaluator.evaluate_proposals(cur_pose_gt, posecnn_proposals, gt['K'])
             # res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))
             # res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
             if visualization:
                 visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, save_root=self.exp_dir, pre_str=str(index) + "_", post_str='posecnn_' + res_post)
-                gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="gt_" + res_post)
-                posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="posecnn_" + res_post)
+                visualize_pose_prediction(cur_pose_gt, our_pose_result, gt['K'], obj_bb8, cur_image, save_root=self.exp_dir, pre_str=str(index) + "_", post_str='ours_' + res_post)
+                # gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="gt_" + res_post)
+                # posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="posecnn_" + res_post)
         self.lm_evaluator.summarize()
         if self.args.sample_num > 0:
             print("Warning, this results hold only for a sample num of:", self.args.sample_num)

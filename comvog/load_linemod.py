@@ -16,6 +16,7 @@ from transforms3d.quaternions import mat2quat, quat2mat, qmult
 from comvog.pose_utils.visualization import *
 from comvog.pose_utils.projection import *
 from comvog.pose_utils.model_operations import *
+from comvog.pose_utils.image_operators import *
 
 
 trans_t = lambda t : torch.Tensor([
@@ -52,21 +53,6 @@ def inward_nearfar_heuristic(cam_o, ratio=0.05):
                       # lib/dvgo use 1e9 as far
     near = far * ratio
     return near, far
-
-
-def get_bbox_from_mask(label_img):
-    contours = cv2.findNonZero(label_img)
-    contours = contours.squeeze()
-    xmin, xmax = np.min(contours[:, 0]), np.max(contours[:, 0])
-    ymin, ymax = np.min(contours[:, 1]), np.max(contours[:, 1])
-    return xmin, xmax, ymin, ymax
-    
-
-def apply_mask_on_img(one_img, label_img):
-    one_img[..., 0] = one_img[..., 0] * label_img + 255 * (1 - label_img)
-    one_img[..., 1] = one_img[..., 1] * label_img + 255 * (1 - label_img)
-    one_img[..., 2] = one_img[..., 2] * label_img + 255 * (1 - label_img)
-    return one_img
 
 
 def get_most_bbox_size(seq_info, data_root):

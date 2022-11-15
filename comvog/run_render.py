@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
                       gt_imgs=None, savedir=None, dump_images=False,
                       render_factor=0, render_video_flipy=False, render_video_rot90=0,
-                      eval_ssim=False, eval_lpips_alex=False, eval_lpips_vgg=False):
+                      eval_ssim=False, eval_lpips_alex=False, eval_lpips_vgg=False, verbose=True):
     '''Render images for the given viewpoints; run evaluation if gt given.
     '''
     assert len(render_poses) == len(HW) and len(HW) == len(Ks)
@@ -32,9 +32,11 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     ssims = []
     lpips_alex = []
     lpips_vgg = []
-    tqdm_bar = tqdm(render_poses)
+    if verbose:
+        tqdm_bar = tqdm(render_poses)
+    else:
+        tqdm_bar = render_poses
     for i, c2w in enumerate(tqdm_bar):
-
         H, W = HW[i]
         K = Ks[i]
         c2w = torch.Tensor(c2w)
@@ -69,7 +71,8 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rgbs.append(rgb)
         depths.append(depth)
         bgmaps.append(bgmap)
-        tqdm_bar.set_description(f"Rendering video with frame shape: {rgb.shape}.")
+        if verbose:
+            tqdm_bar.set_description(f"Rendering video with frame shape: {rgb.shape}.")
         if gt_imgs is not None and render_factor==0:
             p = -10. * np.log10(np.mean(np.square(rgb - gt_imgs[i])))
             psnrs.append(p)

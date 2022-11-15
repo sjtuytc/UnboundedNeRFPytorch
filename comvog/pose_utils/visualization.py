@@ -66,11 +66,12 @@ def draw_bbox_8_2D(draw_img, bbox_8_2D, color = (0, 255, 0), thickness = 2):
 
 def visualize_pose_prediction(pose_a, pose_b, cam_k, obj_bb8, bg_img, save_root=None, a_color=(170, 214, 85), b_color=(66, 51, 122), pre_str='', post_str=''):
     # get projected points only so save_root=None, post_str=""
+    new_bg_img = bg_img.copy()
     bb8_2d_a = get_projected_points(pose_a, cam_k, obj_bb8, one_img=None, save_root=None, pre_str="", post_str="")
     bb8_2d_b = get_projected_points(pose_b, cam_k, obj_bb8, one_img=None, save_root=None, pre_str="", post_str="")
-    draw_bbox_8_2D(bg_img, bb8_2d_a, color=a_color, thickness=2)
-    draw_bbox_8_2D(bg_img, bb8_2d_b, color=b_color, thickness=2)
+    draw_bbox_8_2D(new_bg_img, bb8_2d_a, color=a_color, thickness=2)
+    draw_bbox_8_2D(new_bg_img, bb8_2d_b, color=b_color, thickness=2)
     save_path = f'{pre_str}compare_pose{post_str}.png'
     if save_root is not None:
         save_path = os.path.join(save_root, save_path)
-    imageio.imwrite(save_path, bg_img.astype(np.uint8))
+    imageio.imwrite(save_path, new_bg_img.astype(np.uint8))
