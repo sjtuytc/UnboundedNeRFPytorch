@@ -12,7 +12,7 @@ from comvog.bbox_compute import compute_bbox_by_cam_frustrm
 from comvog.run_train import scene_rep_reconstruction
 from comvog.run_render import run_render
 from comvog.pose_utils.linemod_evaluator import LineMODEvaluator
-from comvog.pose_utils.pose_operators import pose_rot_interpolation
+from comvog.pose_utils.pose_operators import pose_rot_interpolation, pose_sample
 from comvog.load_linemod import get_projected_points
 from comvog.pose_utils.visualization import *
 from comvog import utils, dvgo, dcvgo, dmpigo
@@ -59,15 +59,14 @@ class NeRFEM(nn.Module):
         else:
             model_class = dvgo.DirectVoxGO
         self.nerf_model = utils.load_model(model_class, ckpt_path).to(device)
-        poses, syn_images = data_dict['poses'], data_dict['syn_images']
-        poses = pose_rot_interpolation(poses[0], poses[15])
-        rgbs = self.render_many_views(poses)
         # # Below are some testing functions
+        # poses, syn_images = data_dict['poses'], data_dict['syn_images']
+        # poses = pose_rot_interpolation(poses[0], poses[15])
+        # rgbs = self.render_many_views(poses)
         # imageio.imwrite("pose0.png", (syn_images[0]*255).cpu().numpy().astype(np.uint8))
         # imageio.imwrite("pose15.png", (syn_images[15]*255).cpu().numpy().astype(np.uint8))
         # rgb = self.render_a_view(poses[0])
         # imageio.imwrite("render0.png", (rgb*255).astype(np.uint8))
-        pdb.set_trace()
         
     def render_a_view(self, pose):
         HW = self.data_dict['HW']
@@ -163,8 +162,33 @@ class NeRFEM(nn.Module):
             sample_poses.append(poses)
         self.sample_poses = sample_poses
     
-    def run_em(self):
+    def collect_res_poses(self, gts, images):
+        rot_deltas, trans_deltas = [], []
+        print("Collecting residual poses ...")
+        for idx, gt in enumerate(tqdm(gts)):
+            index = gt['index']
+            cur_pose_gt = gt['gt_pose']
+            posecnn_results = gt['pose_noisy_rendered']
+            rot_gt, trans_gt, rot_init, trans_init = cur_pose_gt[:3, :3], cur_pose_gt[:3, -1], posecnn_results[:3, :3], posecnn_results[:3, -1]
+            rot_delta = rot_gt @ np.linalg.inv(rot_init)
+            trans_delta = trans_gt - trans_init
+            rot_deltas.append(rot_delta)
+            trans_deltas.append(trans_delta)
+        rot_deltas = np.array(rot_deltas)
+        trans_deltas = np.array(trans_deltas)
+        return rot_deltas, trans_deltas
+    
+    def apply_res_poses(self, center_pred, rot_deltas, trans_deltas):
+        final_poses = np.array([center_pred for i in range(len(rot_deltas))])
+        applied_rot = rot_deltas @ final_poses[:, :3, :3]
+        applied_deltas = final_poses[:, :3, -1] + trans_deltas
+        final_poses[:, :3, :3] = applied_rot
+        final_poses[:, :3, -1] = applied_deltas
+        return final_poses
+    
+    def run_em(self, visualization=False):
         gts, images, obj_bb8 = self.data_dict['gts'], self.data_dict['images'], self.data_dict['obj_bb8']
+        rot_deltas, trans_deltas = self.collect_res_poses(gts, images, )
         print("Saving results to ", self.exp_dir)
         
         for idx, gt in enumerate(tqdm(gts)):
@@ -172,13 +196,23 @@ class NeRFEM(nn.Module):
             cur_pose_gt = gt['gt_pose']
             posecnn_results = gt['pose_noisy_rendered']
             cur_image = images[index].cpu().numpy()
-            ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
+            # batch forward to evaluate multiple hypothesis
+            posecnn_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
+            ret = self.lm_evaluator.evaluate_proposals(cur_pose_gt, posecnn_proposals, gt['K'])
+            res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))
             res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
-            visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, save_root=self.exp_dir, pre_str=str(index) + "_", post_str='posecnn_' + res_post)
-            gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="gt_" + res_post)
-            posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="posecnn_" + res_post)
+            # # normal procedure, evaluating one item
+            # ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, posecnn_results, gt['K'])
+            # res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))
+            # res_post = str('%.3f' % ret['add_value']) + str(ret['add_final'])
+            if visualization:
+                visualize_pose_prediction(cur_pose_gt, posecnn_results, gt['K'], obj_bb8, cur_image, save_root=self.exp_dir, pre_str=str(index) + "_", post_str='posecnn_' + res_post)
+                gt_vis = get_projected_points(cur_pose_gt, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="gt_" + res_post)
+                posecnn_vis = get_projected_points(posecnn_results, gt['K'], self.lm_evaluator.model, images[index].cpu().numpy(), save_root=self.exp_dir, pre_str=str(index) + "_", post_str="posecnn_" + res_post)
         self.lm_evaluator.summarize()
-
+        if self.args.sample_num > 0:
+            print("Warning, this results hold only for a sample num of:", self.args.sample_num)
+        
         # # iteratively run e step and m step
         # self.e_step()
         # self.m_step()

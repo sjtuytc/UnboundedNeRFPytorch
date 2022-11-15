@@ -26,3 +26,12 @@ def pose_rot_interpolation(pose_a, pose_b, inter_num=100):
         poses[i][:3, :3] = all_rotations[i]
         poses[i][:3, -1] = poses[i][:3, :3] @ ori_t
     return poses
+
+
+def pose_sample(center_pose, sample_range=10, sample_num=100):
+    """
+    Sample poses around some point.
+    """
+    
+    pdb.set_trace()
+

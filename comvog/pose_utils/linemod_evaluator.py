@@ -2,14 +2,40 @@
 import pdb
 import numpy as np
 from comvog.pose_utils.linemod_constants import *
+from scipy.spatial.transform import Rotation as R
 
 
 def chordal_distance(R1,R2):
     return np.sqrt(np.sum((R1-R2)*(R1-R2))) 
 
 
-def rotation_angle(R1, R2):
-    return 2*np.arcsin(chordal_distance(R1,R2)/np.sqrt(8) )
+def rotation_angle_chordal(R1, R2):
+    return 2*np.arcsin(chordal_distance(R1,R2)/np.sqrt(8))
+
+
+def rot_diff_to_norm_angle(rotation_difference):
+    theta = np.arccos((np.trace(rotation_difference) - 1) / 2)
+    theta = np.rad2deg(theta)
+    euler = R.from_matrix(rotation_difference).as_euler('zyx', degrees=True)
+    norm_angle = np.linalg.norm(euler)
+    return norm_angle
+
+    
+def rotation_angle_euler(R1, R2):
+    if len(R2.shape)==2:
+        # http://www.boris-belousov.net/2016/12/01/quat-dist/#:~:text=The%20difference%20rotation%20matrix%20that,matrix%20R%20%3D%20P%20Q%20%E2%88%97%20.
+        rotation_difference = R1 @ np.linalg.inv(R2)
+        theta = np.arccos((np.trace(rotation_difference) - 1) / 2)
+        theta = np.rad2deg(theta)
+        euler = R.from_matrix(rotation_difference).as_euler('zyx', degrees=True)
+        norm_angle = np.linalg.norm(euler)
+        return norm_angle
+    else:  # batch mode
+        rotation_difference = R1 @ np.linalg.inv(R2)
+        batch_norm_angles = [rot_diff_to_norm_angle(rot_d) for rot_d in rotation_difference]
+        batch_norm_angles = np.array(batch_norm_angles)
+        sorted_norm_angles = np.sort(batch_norm_angles)
+        return sorted_norm_angles[0]
 
 
 def project(xyz, K, RT):
@@ -115,21 +141,32 @@ class LineMODEvaluator:
         else:
             self.add5.append(mean_dist < diameter)
 
-    
     def add_metric(self, pose_pred, pose_targets, icp=False, syn=False, percentage=0.1):
         diameter = self.diameter * percentage
-        model_pred = np.dot(self.model, pose_pred[:, :3].T) + pose_pred[:, 3]
-        model_targets = np.dot(
-            self.model, pose_targets[:, :3].T) + pose_targets[:, 3]
+        def cal_one_add(pose_pred, pose_targets):
+            model_pred = np.dot(self.model, pose_pred[:, :3].T) + pose_pred[:, 3]
+            model_targets = np.dot(
+                self.model, pose_targets[:, :3].T) + pose_targets[:, 3]
 
-        if syn:
-            idxs = nn_utils.find_nearest_point_idx(model_pred, model_targets)
-            # idxs = find_nearest_point_idx(model_pred, model_targets)
-            mean_dist = np.mean(np.linalg.norm(
-                model_pred[idxs] - model_targets, 2, 1))
+            if syn:
+                idxs = nn_utils.find_nearest_point_idx(model_pred, model_targets)
+                # idxs = find_nearest_point_idx(model_pred, model_targets)
+                mean_dist = np.mean(np.linalg.norm(
+                    model_pred[idxs] - model_targets, 2, 1))
+            else:
+                mean_dist = np.mean(np.linalg.norm(
+                    model_pred - model_targets, axis=-1))
+            return mean_dist
+        
+        if len(pose_pred.shape) == 2:
+            mean_dist = cal_one_add(pose_pred, pose_targets)
         else:
-            mean_dist = np.mean(np.linalg.norm(
-                model_pred - model_targets, axis=-1))
+            all_dists = []
+            for idx in range(len(pose_pred)):
+                one_dist = cal_one_add(pose_pred[idx], pose_targets[idx])
+                all_dists.append(one_dist)
+            sorted_dists = np.sort(all_dists)
+            mean_dist = sorted_dists[0]
         if icp:
             self.icp_add.append(mean_dist < diameter)
         else:
@@ -230,7 +267,7 @@ class LineMODEvaluator:
         print('ADD5 metric: {}'.format(add5))
         # print('ADDS metric: {}'.format(adds))
         print('5 cm 5 degree metric: {}'.format(cmd5))
-        print('mask ap70: {}'.format(ap))
+        # print('mask ap70: {}'.format(ap))
         print('seq_len: {}'.format(seq_len))
         # if cfg.test.icp:
         if self.icp_refine:
@@ -257,18 +294,29 @@ class LineMODEvaluator:
 
         return {'proj2d': proj2d, 'add': add, 'add2': add2, 'add5': add5,'cmd5': cmd5, 'ap': ap, "seq_len": seq_len}
         
-    def evaluate_linemod(self, pose_gt, pose_pred, cam_k): # sample_correspondence_pairs=False, direct_align=False, use_cnnpose=True):
-        # len_src_f = example['stack_lengths'][0][0]
-        # assert len( example['lifted_points']) == 1, "TODO: support bs>1"
-        # lifted_points = example['lifted_points'][0].squeeze(0)
-        # model_points = example['original_model_points'][:len_src_f]
+    def evaluate_proposals(self, pose_gt, pose_proposals, cam_k):
+        # copy the gt to batch form
+        proposal_num = len(pose_proposals)
+        pose_gt = np.array([pose_gt for i in range(proposal_num)])
+        ang_err_euler = rotation_angle_euler(pose_gt[:, :3, :3], pose_proposals[:, :3, :3])
+        trans_diff = [np.linalg.norm(pose_proposals[idx][:3, -1:] - pose_gt[idx][:3, -1:]) for idx in range(proposal_num)]
+        trans_diff = np.sort(trans_diff)
+        trans_err = np.min(trans_diff)
+        if self.class_name in ['eggbox', 'glue']:
+            add_value, add_final = self.add_metric(pose_proposals, pose_gt, syn=True)
+        else:
+            add_value, add_final = self.add_metric(pose_proposals, pose_gt)
 
-        # K = example["K"].cpu().numpy().squeeze()
-        # R_pred = preds_dict['Ti_pred'].G[:,0, :3,:3].squeeze().detach().cpu().numpy()
-        # t_pred = preds_dict['Ti_pred'].G[:,0, :3,3:].squeeze(0).detach().cpu().numpy()
-        # pose_pred= preds_dict['Ti_pred'].G[:,0, :3].squeeze().detach().cpu().numpy()
-        # pose_gt = example['original_RT'].squeeze()[:3].cpu().numpy()
-        ang_err = rotation_angle(pose_gt[:3, :3], pose_pred[:3, :3])
+        return {
+            "ang_err_euler": ang_err_euler,
+            "trans_err": trans_err,
+            "add_value": add_value,
+            "add_final": add_final
+        }
+    
+    def evaluate_linemod(self, pose_gt, pose_pred, cam_k): # sample_correspondence_pairs=False, direct_align=False, use_cnnpose=True):
+        ang_err_chordal = rotation_angle_chordal(pose_gt[:3, :3], pose_pred[:3, :3])
+        ang_err_euler = rotation_angle_euler(pose_gt[:3, :3], pose_pred[:3, :3])
         trans_err = np.linalg.norm(pose_pred[:3, -1:] - pose_gt[:3, -1:])  # 3x1
         if self.class_name in ['eggbox', 'glue']:
             add_value, add_final = self.add_metric(pose_pred, pose_gt, syn=True)
@@ -289,7 +337,8 @@ class LineMODEvaluator:
         # ).T+pose_pred[:3, -1:]).T, example["K"].cpu().numpy().squeeze(), [ 480, 640])
 
         return {
-            "ang_err": ang_err,
+            "ang_err_chordal": ang_err_chordal,
+            "ang_err_euler": ang_err_euler,
             "trans_err": trans_err,
             "pnp_inliers": -1,#len(inliers),
             "add_value": add_value,
