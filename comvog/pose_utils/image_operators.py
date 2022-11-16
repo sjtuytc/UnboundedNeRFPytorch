@@ -1,6 +1,7 @@
 import cv2
 import pdb
 import numpy as np
+from scipy import stats
 
 
 def get_bbox_from_img(image, color_thre=1e-2):
@@ -24,7 +25,17 @@ def get_bbox_from_mask(label_img):
     
 
 def apply_mask_on_img(one_img, label_img):
+    assert one_img.max() > 2, "the input image must be in (0-255) scale."
     one_img[..., 0] = one_img[..., 0] * label_img + 255 * (1 - label_img)
     one_img[..., 1] = one_img[..., 1] * label_img + 255 * (1 - label_img)
     one_img[..., 2] = one_img[..., 2] * label_img + 255 * (1 - label_img)
     return one_img
+
+
+def image_normalization_for_pose(image):
+    assert image.max() > 2, "the input image must be in (0-255) scale."
+    # image[:, : , 0] = (image[:, : , 0] - image[:, : , 0].mean()) / 255.0
+    # image[:, : , 1] = (image[:, : , 1] - image[:, : , 1].mean()) / 255.0
+    # image[:, : , 2] = (image[:, : , 2] - image[:, : , 2].mean()) / 255.0
+    image = image / image.max()
+    return image

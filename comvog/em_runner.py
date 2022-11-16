@@ -1,6 +1,7 @@
 # running the em procedure, jointly optimizing nerf and poses
 import os
 import pdb
+import cv2
 import time
 import torch
 from math import ceil
@@ -205,41 +206,58 @@ class NeRFEM(nn.Module):
     
     def observed_to_canonical(self, full_image, obj_pose, cam_k, ):
         observed_points = get_projected_points(obj_pose, cam_k, self.lm_evaluator.model, one_img=None)
+        observed_mask = np.zeros(full_image.shape[:2])
+        observed_points = observed_points.astype(np.int)
+        observed_mask[observed_points[:, -1], observed_points[:, 0]] = 1
         xmin, xmax = observed_points[:, 0].min(), observed_points[:, 0].max()
         ymin, ymax = observed_points[:, 1].min(), observed_points[:, 1].max()
         observed_crop = full_image[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
-        # imageio.imwrite("debug_gt_cropped.png", (observed_crop).astype(np.uint8))
-        return observed_crop
+        observed_mask = observed_mask[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
+        return observed_crop, observed_mask
     
-    def preprocess_render_observed(self, render_rgb, observed_rgb, index, open_vis):
+    def preprocess_render_observed(self, render_rgb, observed_rgb, observed_mask, index, use_observed_mask, open_vis):
         # crop render rgb
-        mask_image, xmin, xmax, ymin, ymax = get_bbox_from_img(render_rgb, color_thre=0.1)
+        mask_from_render, xmin, xmax, ymin, ymax = get_bbox_from_img(render_rgb, color_thre=0.1)
         cropped_rendered = render_rgb[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
-        if open_vis:
-            imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_rendered.png"), (cropped_rendered*255).astype(np.uint8))
-        cropped_mask = mask_image[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
+        cropped_mask_from_render = mask_from_render[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
         # resize observed and apply the mask
         height, width, _ = cropped_rendered.shape
-        resized_observed = cv2.resize(observed_rgb, (width, height))
-        cropped_observed = apply_mask_on_img(resized_observed, cropped_mask)
+        resized_observed_rgb = cv2.resize(observed_rgb, (width, height))
+        resized_observed_mask = cv2.resize(observed_mask, (width, height), cv2.INTER_NEAREST)
+        if use_observed_mask:
+            cropped_observed = apply_mask_on_img(resized_observed_rgb, resized_observed_mask)
+            cropped_rendered = apply_mask_on_img(cropped_rendered, resized_observed_mask)
+        else:
+            cropped_observed = apply_mask_on_img(resized_observed_rgb, cropped_mask_from_render)
+            cropped_rendered = apply_mask_on_img(cropped_rendered, cropped_mask_from_render)
         if open_vis:
+            imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_rendered.png"), (cropped_rendered).astype(np.uint8))
             imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_observed.png"), (cropped_observed).astype(np.uint8))
         return cropped_rendered, cropped_observed
         
     def render_and_observe_by_pose(self, obj_pose, full_observed, cam_k, index, open_vis):
+        debug=False
+        use_observed_mask=True
         # get rendered via NeRF
         canno_pose = self.obj_pose_to_cannonical(obj_pose)
         render_rgb = self.render_a_view(canno_pose)
+        render_rgb = (render_rgb * 255).astype(np.uint8)
         # transfer the observed to canonical
-        observed_rgb = self.observed_to_canonical(full_observed, obj_pose, cam_k)
-        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, index, open_vis)
+        observed_rgb, observed_mask = self.observed_to_canonical(full_observed, obj_pose, cam_k)
+        vis_rendered = debug or open_vis
+        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
         return render_rgb, observed_rgb
     
-    def render_observe_dist(self, render_rgb, observed_rgb):
-        render_rgb = render_rgb / render_rgb.max()
-        observed_rgb = observed_rgb / observed_rgb.max()
-        mse_loss = torch.nn.functional.mse_loss(torch.tensor(render_rgb), torch.tensor(observed_rgb))
-        return mse_loss.item()
+    def render_observe_dist(self, render_rgb, observed_rgb, mse=False):
+        # normalization
+        render_rgb = image_normalization_for_pose(render_rgb)
+        observed_rgb = image_normalization_for_pose(observed_rgb)
+        if mse:
+            mse_loss = torch.nn.functional.mse_loss(torch.tensor(render_rgb), torch.tensor(observed_rgb))
+            return mse_loss.item()
+        else:
+            lpips = utils.rgb_lpips(np.float32(render_rgb), np.float32(observed_rgb), net_name='vgg', device=device)
+            return lpips
     
     def render_and_observe_dist_of_one_pose(self, pose, full_image, cam_k, index, open_vis):
         render_rgb, observed_rgb = self.render_and_observe_by_pose(pose, full_image, cam_k, index, open_vis)
@@ -276,7 +294,8 @@ class NeRFEM(nn.Module):
             posecnn_results = gt['pose_noisy_rendered']
             cur_image = images[index].cpu().numpy()
             pose_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
-            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
+            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=1)
+            # pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
             all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_image, gt['K'], index)
             # normal procedure, evaluating one item
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, our_pose_result, gt['K'])
