@@ -277,7 +277,7 @@ class NeRFEM(nn.Module):
             cur_image = images[index].cpu().numpy()
             pose_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
             pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
-            all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_image, gt['K'], idx)
+            all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_image, gt['K'], index)
             # normal procedure, evaluating one item
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, our_pose_result, gt['K'])
             res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))
