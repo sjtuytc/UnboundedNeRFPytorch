@@ -199,10 +199,12 @@ class NeRFEM(nn.Module):
     def obj_pose_to_cannonical(self, obj_pose):
         rot, trans = obj_pose[:3, :3], obj_pose[:3, -1]
         rot_inv = np.linalg.inv(rot)
-        final_pose = obj_pose.copy()
-        final_pose[:3, :3] = rot_inv
-        final_pose[:3, -1] = rot_inv @ self.canonical_t
-        return final_pose
+        cannonical_obj_pose, cannonical_cam_pose = obj_pose.copy(), obj_pose.copy()
+        cannonical_cam_pose[:3, :3] = rot_inv
+        cannonical_cam_pose[:3, -1] = rot_inv @ self.canonical_t
+        cannonical_obj_pose[:3, :3] = rot
+        cannonical_obj_pose[:3, -1] = rot @ self.canonical_t
+        return cannonical_cam_pose, cannonical_obj_pose
     
     def observed_to_canonical(self, full_image, obj_pose, cam_k, ):
         observed_points = get_projected_points(obj_pose, cam_k, self.lm_evaluator.model, one_img=None)
@@ -234,19 +236,6 @@ class NeRFEM(nn.Module):
             imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_rendered.png"), (cropped_rendered).astype(np.uint8))
             imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_observed.png"), (cropped_observed).astype(np.uint8))
         return cropped_rendered, cropped_observed
-        
-    def render_and_observe_by_pose(self, obj_pose, full_observed, cam_k, index, open_vis):
-        debug=False
-        use_observed_mask=True
-        # get rendered via NeRF
-        canno_pose = self.obj_pose_to_cannonical(obj_pose)
-        render_rgb = self.render_a_view(canno_pose)
-        render_rgb = (render_rgb * 255).astype(np.uint8)
-        # transfer the observed to canonical
-        observed_rgb, observed_mask = self.observed_to_canonical(full_observed, obj_pose, cam_k)
-        vis_rendered = debug or open_vis
-        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
-        return render_rgb, observed_rgb
     
     def render_observe_dist(self, render_rgb, observed_rgb, mse=False):
         # normalization
@@ -260,7 +249,17 @@ class NeRFEM(nn.Module):
             return lpips
     
     def render_and_observe_dist_of_one_pose(self, pose, full_image, cam_k, index, open_vis):
-        render_rgb, observed_rgb = self.render_and_observe_by_pose(pose, full_image, cam_k, index, open_vis)
+        debug=False
+        use_observed_mask=True
+        # get rendered via NeRF
+        canno_cam_pose, canno_obj_pose = self.obj_pose_to_cannonical(pose)
+        render_rgb = self.render_a_view(canno_cam_pose)
+        render_rgb = (render_rgb * 255).astype(np.uint8)
+        gt_vis = get_projected_points(pose, cam_k, self.lm_evaluator.model, render_rgb, save_root=self.exp_dir, pre_str=str(index) + "_", post_str="_debug")
+        # transfer the observed to canonical
+        observed_rgb, observed_mask = self.observed_to_canonical(full_image, pose, cam_k)
+        vis_rendered = debug or open_vis
+        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
         dist = self.render_observe_dist(render_rgb, observed_rgb)
         return dist
     
@@ -294,8 +293,8 @@ class NeRFEM(nn.Module):
             posecnn_results = gt['pose_noisy_rendered']
             cur_image = images[index].cpu().numpy()
             pose_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
-            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=1)
-            # pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
+            # pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=1)
+            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
             all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_image, gt['K'], index)
             # normal procedure, evaluating one item
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, our_pose_result, gt['K'])
