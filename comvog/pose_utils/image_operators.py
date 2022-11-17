@@ -16,6 +16,12 @@ def get_bbox_from_img(image, color_thre=1e-2):
     return mask_image, xmin, xmax, ymin, ymax
     
 
+def change_background_from_black_to_white(image, color_thresh=1e-2):
+    assert image.max() > 2, "the input image must be in (0-255) scale."
+    image[image < color_thresh] = 255
+    return image
+
+
 def get_bbox_from_mask(label_img):
     contours = cv2.findNonZero(label_img)
     contours = contours.squeeze()

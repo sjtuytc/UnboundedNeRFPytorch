@@ -57,3 +57,12 @@ def pose_rot_interpolation(pose_a, pose_b, inter_num=100):
         poses[i][:3, :3] = all_rotations[i]
         poses[i][:3, -1] = poses[i][:3, :3] @ ori_t
     return poses
+
+
+def pose_to_blender(pose):
+    rot = pose[:3, :3]
+    quat = R.from_matrix(rot).as_quat()
+    trans = pose[:3, -1]
+    inv_rot = np.linalg.inv(rot)
+    cam_loc = - inv_rot @ trans 
+    return quat, cam_loc

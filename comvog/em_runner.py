@@ -226,21 +226,21 @@ class NeRFEM(nn.Module):
         height, width, _ = cropped_rendered.shape
         resized_observed_rgb = cv2.resize(observed_rgb, (width, height))
         resized_observed_mask = cv2.resize(observed_mask, (width, height), cv2.INTER_NEAREST)
-        if use_observed_mask:
-            cropped_observed = apply_mask_on_img(resized_observed_rgb, resized_observed_mask)
-            cropped_rendered = apply_mask_on_img(cropped_rendered, resized_observed_mask)
-        else:
-            cropped_observed = apply_mask_on_img(resized_observed_rgb, cropped_mask_from_render)
-            cropped_rendered = apply_mask_on_img(cropped_rendered, cropped_mask_from_render)
+        applied_mask = resized_observed_mask if use_observed_mask else cropped_mask_from_render
+        # observed mask should be more accurate
+        cropped_observed = apply_mask_on_img(resized_observed_rgb, applied_mask)
+        cropped_rendered = apply_mask_on_img(cropped_rendered, applied_mask)
         if open_vis:
             imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_rendered.png"), (cropped_rendered).astype(np.uint8))
             imageio.imwrite(os.path.join(self.exp_dir, f"{str(index)}_cropped_observed.png"), (cropped_observed).astype(np.uint8))
-        return cropped_rendered, cropped_observed
+        return cropped_rendered, cropped_observed, applied_mask
     
-    def render_observe_dist(self, render_rgb, observed_rgb, mse=False):
+    def render_observe_dist(self, render_rgb, observed_rgb, obj_mask, mse=True):
         # normalization
         render_rgb = image_normalization_for_pose(render_rgb)
         observed_rgb = image_normalization_for_pose(observed_rgb)
+        # legal_area = obj_mask.astype(np.bool) & (render_rgb[..., -1] < 0.98)
+        # render_rgb, observed_rgb = render_rgb[legal_area], observed_rgb[legal_area]
         if mse:
             mse_loss = torch.nn.functional.mse_loss(torch.tensor(render_rgb), torch.tensor(observed_rgb))
             return mse_loss.item()
@@ -255,12 +255,11 @@ class NeRFEM(nn.Module):
         canno_cam_pose, canno_obj_pose = self.obj_pose_to_cannonical(pose)
         render_rgb = self.render_a_view(canno_cam_pose)
         render_rgb = (render_rgb * 255).astype(np.uint8)
-        gt_vis = get_projected_points(pose, cam_k, self.lm_evaluator.model, render_rgb, save_root=self.exp_dir, pre_str=str(index) + "_", post_str="_debug")
         # transfer the observed to canonical
         observed_rgb, observed_mask = self.observed_to_canonical(full_image, pose, cam_k)
         vis_rendered = debug or open_vis
-        render_rgb, observed_rgb = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
-        dist = self.render_observe_dist(render_rgb, observed_rgb)
+        render_rgb, observed_rgb, obj_mask = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
+        dist = self.render_observe_dist(render_rgb, observed_rgb, obj_mask)
         return dist
     
     def render_and_observe_dist_of_poses(self, poses, full_image, cam_k, index):

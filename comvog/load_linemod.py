@@ -17,6 +17,7 @@ from comvog.pose_utils.visualization import *
 from comvog.pose_utils.projection import *
 from comvog.pose_utils.model_operations import *
 from comvog.pose_utils.image_operators import *
+from comvog.pose_utils.pose_operators import *
 
 
 trans_t = lambda t : torch.Tensor([
@@ -109,28 +110,28 @@ def uniform_three(kps):
     return return_kps
     
 
-def split_seq_info(seq_info, posecnn_results, train_ratio=0.9, val_num=20):
-    posecnn_test_inds = [pose_r['image_idx'] for pose_r in posecnn_results]
-    test_num = len(posecnn_test_inds)
-    total_num = seq_info[-1]['index']
-    train_num = int(total_num * 0.5)
+def split_seq_info_global(seq_info, train_ratio=0.95, val_num=20):
+    # train_ratio can be set to near 1.0 because we can use all synthetic data
+    total_num = len(seq_info)
+    train_num = int(total_num * train_ratio)
+    random.seed(1)
     all_indexs = [i for i in range(total_num)]
-    random.seed(0)
     train_indexs = random.sample(all_indexs, train_num)
     test_indexs = [ind for ind in all_indexs if ind not in train_indexs]
     train_info, val_info, test_info = [], [], []
-    for one_info in seq_info:
-        if int(one_info['index']) in test_indexs and int(one_info['index']) in posecnn_test_inds:
-            assert posecnn_results[one_info['index']]['image_idx'] == one_info['index']
-            one_info['pose_init_posecnn'] = se3_q2m(posecnn_results[one_info['index']]['pose'])
+    for idx, one_info in enumerate(seq_info):
+        if idx in test_indexs:
             test_info.append(one_info)
         else:
             train_info.append(one_info)
     val_info = train_info[:val_num]
+    if len(test_indexs) < 1:
+        test_info = val_info
     return train_info, val_info, test_info
+    
 
 
-def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
+def split_seq_info_syn_canonical(syn_gt, train_ratio=0.95, val_num=20):
     # train_ratio can be set to near 1.0 because we can use all synthetic data
     list_syn_gt = [syn_gt[str(key)] for key in range(len(syn_gt))]
     total_num = len(list_syn_gt)
@@ -142,7 +143,7 @@ def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
     train_info, val_info, test_info = [], [], []
     for idx, one_info in enumerate(list_syn_gt):
         one_info = one_info[0]
-        one_info['image_id'] = idx
+        one_info['image_id'] = idx  # TODO: validate this line
         if idx in test_indexs:
             test_info.append(one_info)
         else:
@@ -153,14 +154,14 @@ def split_seq_info_syn(syn_gt, train_ratio=0.95, val_num=20):
     return train_info, val_info, test_info
     
 
-def load_synthetic_data(args, cfg, sample_num=None):
+def load_synthetic_data_canonical(args, cfg, sample_num=None):
     data_root = cfg.data.datadir
     seq_name = cfg.data.seq_name
     syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')
     syn_gt = json.load(open(syn_gt_p))
     syn_cam_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_camera.json')
     syn_cam = json.load(open(syn_cam_p))
-    train_info, val_info, test_info = split_seq_info_syn(syn_gt)
+    train_info, val_info, test_info = split_seq_info_syn_canonical(syn_gt)
     all_imgs, all_poses, all_k = [], [], []
     counts = [0]
     print("Preparing the synthetic training / val / test poses and images ...")
@@ -230,7 +231,97 @@ def load_synthetic_data(args, cfg, sample_num=None):
     return data_dict
 
 
-def load_linemod_data(args, cfg, vis_final=False):
+def load_synthetic_data_global(args, cfg, sample_num=None):
+    """
+    Load synthetic data in global coordinate system.
+    """
+    data_root = cfg.data.datadir
+    seq_name = cfg.data.seq_name
+    # load images and gts from deep im and rnnpose
+    deepim_info_path = os.path.join(data_root, 'data_info/deepim', 'linemod_orig_deepim.info.train')
+    eval_info_path = os.path.join(data_root, 'data_info', 'linemod_posecnn.info.eval')
+    with open(deepim_info_path, 'rb') as f:
+        seq_info = pickle.load(f)[seq_name]
+    # load model
+    ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".xyz")
+    obj_m = o3d.io.read_point_cloud(ply_path, format='xyz')
+    obj_m = np.asarray(obj_m.points)
+    train_info, val_info, test_info = split_seq_info_global(seq_info)
+    all_imgs, all_poses, all_k = [], [], []
+    counts = [0]
+    print("Preparing the synthetic training / val / test poses and images ...")
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            split_seq = train_info
+        elif split == 'val':
+            split_seq = val_info
+        else:
+            split_seq = test_info
+        if sample_num is not None and sample_num > -1:
+            split_seq = split_seq[-sample_num:]
+        imgs, poses, ks = [], [], []
+        for idx, one_info in enumerate(tqdm(split_seq)):
+            image_id = one_info['index']
+            one_k = np.array(one_info['K']).reshape(3, 3)
+            fname = os.path.join(data_root, 'LM6d_converted/LM6d_refine', one_info['rgb_noisy_rendered'])
+            one_img = imageio.imread(fname)
+            # mask_fname = fname.replace('color', 'label')
+            # mask_img = imageio.imread(mask_fname)
+            # mask_img = mask_img / mask_img.max()
+            one_img = change_background_from_black_to_white(one_img)
+            # form obj pose
+            pose_m = one_info['pose_noisy_rendered']
+            one_obj_pose_R = np.array(pose_m[:3, :3]).reshape(3, 3)
+            one_obj_pose_t = np.array(pose_m[:3, -1]).reshape(3)
+            one_obj_pose = np.eye(4)
+            
+            one_obj_pose[:3, :3] = one_obj_pose_R
+            one_obj_pose[:3, 3] = one_obj_pose_t
+            # get_projected_points(pose_m, one_k, obj_m, one_img=one_img, post_str="global_debug" + str(idx))
+            # opencv to opengl
+            diag = torch.diag(torch.tensor([1, -1, -1, 1], dtype=torch.float32)).cpu().numpy()
+            cam_pose = one_obj_pose @ diag
+            ks.append(one_k)
+            poses.append(cam_pose)
+            imgs.append(one_img)
+        imgs = (np.array(imgs) / 255.).astype(np.float32) # keep all 4 channels (RGBA)
+        poses = np.array(poses).astype(np.float32)
+        ks = np.array(ks).astype(np.float32)
+        counts.append(counts[-1] + poses.shape[0])
+        all_imgs.append(imgs)
+        all_poses.append(poses)
+        all_k.append(ks)
+    print("Finished preparing the training / val / test poses and images !")
+    i_split = [np.arange(counts[i], counts[i+1]) for i in range(3)]
+    images = np.concatenate(all_imgs, 0)
+    poses = np.concatenate(all_poses, 0)
+    ks = np.concatenate(all_k, 0)
+    # render_poses is not useful here.
+    render_poses = torch.stack([pose_spherical(angle, 90.0, 400.0) for angle in np.linspace(-180,180,160+1)[:-1]], 0)
+    
+    i_train, i_val, i_test = i_split
+    near, far = 0., 6.
+
+    # Cast intrinsics to right types
+    HW = np.array([im.shape[:2] for im in images])
+    irregular_shape = (images.dtype is np.dtype('object'))
+    render_poses = render_poses[...,:4]
+    near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
+    far *= 3
+    data_dict = dict(HW=HW, Ks=ks,
+        near=near, far=far, near_clip=near_clip,
+        i_train=i_train, i_val=i_val, i_test=i_test,
+        poses=torch.tensor(poses), render_poses=torch.tensor(render_poses),
+        images=torch.tensor(images), depths=None,
+        irregular_shape=irregular_shape,
+    )
+    return data_dict
+
+
+def load_linemod_data(args, cfg, vis_final=False, load_canonical=False):
+    """
+    Major loading function.
+    """
     data_root = cfg.data.datadir
     seq_name = cfg.data.seq_name
     if args.program == 'tune_pose':
@@ -253,7 +344,7 @@ def load_linemod_data(args, cfg, vis_final=False):
         obj_m = np.asarray(obj_m.points)
         obj_bb8 = get_bb8_of_model(obj_m)
         
-        # load pose initializations, not useful actually
+        # load some pose initializations, not used actually
         posecnn_results_p = os.path.join(data_root, 'init_poses/linemod_posecnn_results.pkl')
         with open(posecnn_results_p, 'rb') as f:
             posecnn_results=pickle.load(f)[seq_name]
@@ -286,13 +377,19 @@ def load_linemod_data(args, cfg, vis_final=False):
                 gt_2d = get_projected_points(posecnn_pose, cam_k, obj_m, one_img=one_img, post_str="init_posecnn")
                 print("Visualization is generated!")
             images[int(img_id)] = torch.tensor(one_img.astype(np.float32))
+            # imageio.imwrite("test.png", (one_img).astype(np.uint8))
+            quat, t = pose_to_blender(gt_pose)
+            pdb.set_trace()
         data_dict = dict(gts=seq_info, images=images, obj_m=obj_m, obj_bb8=obj_bb8)
-        syn_data_dict = load_synthetic_data(args, cfg, sample_num=100)
+        syn_data_dict = load_synthetic_data_canonical(args, cfg, sample_num=100)
         for key in syn_data_dict:
             if key not in data_dict:
                 data_dict[key] = syn_data_dict[key]
         data_dict['syn_images'] = syn_data_dict['images']
         return data_dict
-    else:  # during NeRF training, load synthetic infos
-        data_dict = load_synthetic_data(args, cfg,)
+    elif load_canonical:  # during NeRF training, load synthetic infos
+        data_dict = load_synthetic_data_canonical(args, cfg, args.sample_num)
+        return data_dict
+    else:
+        data_dict = load_synthetic_data_global(args, cfg, args.sample_num)
         return data_dict

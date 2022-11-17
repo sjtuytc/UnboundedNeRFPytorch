@@ -1,3 +1,6 @@
+import numpy as np
+
+
 diameters = {
     'cat': 15.2633,
     'ape': 9.74298,
@@ -18,3 +21,7 @@ diameters = {
 }
 
 linemod_cls_names = ['ape', 'cam', 'cat', 'duck', 'glue', 'iron', 'phone', 'benchvise', 'can', 'driller', 'eggbox', 'holepuncher', 'lamp']
+
+linemod_K = np.array([[572.4114, 0., 325.2611],
+                  [0., 573.57043, 242.04899],
+                  [0., 0., 1.]])
