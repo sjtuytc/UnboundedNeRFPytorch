@@ -11,6 +11,8 @@ import random
 from comvog import utils
 import open3d as o3d
 from tqdm import tqdm
+from pytorch3d.io import load_obj, load_ply
+from pytorch3d.io import IO
 from scipy.spatial.transform import Rotation as R
 from transforms3d.quaternions import mat2quat, quat2mat, qmult
 from comvog.pose_utils.visualization import *
@@ -110,6 +112,17 @@ def uniform_three(kps):
     return return_kps
     
 
+def sort_pose_by_rot(seq_info):
+    pick_pose = seq_info[0]['gt_pose']
+    idx_diff = []
+    for idx, one_info in enumerate(seq_info):
+        cur_pose = one_info['gt_pose']
+        ang_diff = cal_pose_rot_diff(pick_pose, cur_pose)
+        idx_diff.append([idx, ang_diff])
+    sorted(idx_diff, key=lambda row:row[1])
+    return idx_diff
+
+
 def split_seq_info_global(seq_info, train_ratio=0.95, val_num=20):
     # train_ratio can be set to near 1.0 because we can use all synthetic data
     total_num = len(seq_info)
@@ -143,7 +156,7 @@ def split_seq_info_syn_canonical(syn_gt, train_ratio=0.95, val_num=20):
     train_info, val_info, test_info = [], [], []
     for idx, one_info in enumerate(list_syn_gt):
         one_info = one_info[0]
-        one_info['image_id'] = idx  # TODO: validate this line
+        one_info['image_id'] = idx
         if idx in test_indexs:
             test_info.append(one_info)
         else:
@@ -152,11 +165,15 @@ def split_seq_info_syn_canonical(syn_gt, train_ratio=0.95, val_num=20):
     if len(test_indexs) < 1:
         test_info = val_info
     return train_info, val_info, test_info
-    
+
 
 def load_synthetic_data_canonical(args, cfg, sample_num=None):
     data_root = cfg.data.datadir
     seq_name = cfg.data.seq_name
+    # load model
+    ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".xyz")
+    obj_m = o3d.io.read_point_cloud(ply_path, format='xyz')
+    obj_m = np.asarray(obj_m.points)
     syn_gt_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_gt.json')
     syn_gt = json.load(open(syn_gt_p))
     syn_cam_p = os.path.join(data_root, 'train', str(cfg.data.seq_id).zfill(6), 'scene_camera.json')
@@ -190,10 +207,14 @@ def load_synthetic_data_canonical(args, cfg, sample_num=None):
             one_obj_pose = np.eye(4)
             one_obj_pose[:3, :3] = one_obj_pose_R
             one_obj_pose[:3, 3] = one_obj_pose_t
+            # get_projected_points(one_obj_pose[:3, :4], one_k, obj_m, one_img=one_img, post_str="canonical_debug" + str(idx))
             # from object pose to camera pose, [R, t] -> [R^-1, -R^-1t]
-            cam_pose = np.linalg.inv(one_obj_pose)
-            # transfer from outward to inward, [R^-1, -R^-1t] -> [R^-1, R^-1t]
-            cam_pose[:3, -1] = - cam_pose[:3, -1]
+            cam_pose = one_obj_pose.copy()
+            cam_pose[:3, :3] = one_obj_pose_R.transpose()
+            cam_pose[:3, -1] = -one_obj_pose_R.transpose() @ one_obj_pose_t
+            # opencv to opengl
+            diag = torch.diag(torch.tensor([1, -1, -1, 1], dtype=torch.float32)).cpu().numpy()
+            cam_pose = cam_pose @ diag
             ks.append(one_k)
             poses.append(cam_pose)
             imgs.append(one_img)
@@ -220,7 +241,7 @@ def load_synthetic_data_canonical(args, cfg, sample_num=None):
     irregular_shape = (images.dtype is np.dtype('object'))
     render_poses = render_poses[...,:4]
     near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
-    far *= 3
+    far *= 5
     data_dict = dict(HW=HW, Ks=ks,
         near=near, far=far, near_clip=near_clip,
         i_train=i_train, i_val=i_val, i_test=i_test,
@@ -274,7 +295,6 @@ def load_synthetic_data_global(args, cfg, sample_num=None):
             one_obj_pose_R = np.array(pose_m[:3, :3]).reshape(3, 3)
             one_obj_pose_t = np.array(pose_m[:3, -1]).reshape(3)
             one_obj_pose = np.eye(4)
-            
             one_obj_pose[:3, :3] = one_obj_pose_R
             one_obj_pose[:3, 3] = one_obj_pose_t
             # get_projected_points(pose_m, one_k, obj_m, one_img=one_img, post_str="global_debug" + str(idx))
@@ -318,7 +338,7 @@ def load_synthetic_data_global(args, cfg, sample_num=None):
     return data_dict
 
 
-def load_linemod_data(args, cfg, vis_final=False, load_canonical=False):
+def load_linemod_data(args, cfg, vis_final=False, load_canonical=True):
     """
     Major loading function.
     """
@@ -339,9 +359,11 @@ def load_linemod_data(args, cfg, vis_final=False, load_canonical=False):
                 test_indexs.append(index)
         
         # load model
-        ply_path = os.path.join(data_root, 'models', seq_name, seq_name + ".xyz")
-        obj_m = o3d.io.read_point_cloud(ply_path, format='xyz')
-        obj_m = np.asarray(obj_m.points)
+        # xyz_model_p = os.path.join(data_root, 'models', seq_name, seq_name + ".xyz")
+        # obj_m = o3d.io.read_point_cloud(xyz_model_p, format='xyz')
+        # obj_m = np.asarray(obj_m.points)
+        ply_model_p = os.path.join(data_root, 'models', seq_name, seq_name + ".ply")
+        obj_m = np.array(o3d.io.read_point_cloud(ply_model_p, format='ply').points)
         obj_bb8 = get_bb8_of_model(obj_m)
         
         # load some pose initializations, not used actually
@@ -378,8 +400,7 @@ def load_linemod_data(args, cfg, vis_final=False, load_canonical=False):
                 print("Visualization is generated!")
             images[int(img_id)] = torch.tensor(one_img.astype(np.float32))
             # imageio.imwrite("test.png", (one_img).astype(np.uint8))
-            quat, t = pose_to_blender(gt_pose)
-            pdb.set_trace()
+            # quat, t = pose_to_blender(gt_pose)
         data_dict = dict(gts=seq_info, images=images, obj_m=obj_m, obj_bb8=obj_bb8)
         syn_data_dict = load_synthetic_data_canonical(args, cfg, sample_num=100)
         for key in syn_data_dict:

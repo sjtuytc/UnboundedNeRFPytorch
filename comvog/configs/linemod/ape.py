@@ -2,7 +2,7 @@ _base_ = '../default.py'
 seq_name = 'ape'
 seq_id = 1
 expname = f'{seq_name}_nov11_'
-pose_expname = 'bayes_nerf_v1_12'
+pose_expname = 'bayes_nerf_v1_13'
 basedir = 'logs/linemod'
 
 data = dict(
@@ -16,13 +16,8 @@ data = dict(
     load2gpu_on_the_fly=True,
 )
 
-# coarse_train = dict(
-#     N_iters=0, # use this in global rendering only, remove this in canonical rendering
-# )
-
 fine_train = dict(
-    # ray_sampler='flatten', # use this in global rendering only, remove this in canonical rendering
-    N_iters=50*(10**4),
+    N_iters=1*(10**4),
 )
 
 # voxel_num=32**3

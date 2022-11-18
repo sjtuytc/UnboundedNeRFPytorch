@@ -252,9 +252,11 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         render_result = model(rays_o, rays_d, viewdirs, global_step=global_step, is_train=True,
             **render_kwargs)
         optimizer.zero_grad(set_to_none=True)
-        # Zelin added
-        mse_loss = F.mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
-        freq_loss = fourier_mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
+        # use these two lines to mask off white background
+        # mse_loss = F.mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
+        # freq_loss = fourier_mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
+        mse_loss = F.mse_loss(render_result['rgb_marched'], target)
+        freq_loss = fourier_mse_loss(render_result['rgb_marched'], target)
         psnr = utils.mse2psnr(mse_loss.detach())
         loss = cfg_train.weight_main * mse_loss + cfg_train.weight_freq * freq_loss
         if cfg_train.weight_entropy_last > 0:

@@ -11,6 +11,11 @@ def rotation_angle_chordal(R1, R2):
     return 2*np.arcsin(chordal_distance(R1,R2)/np.sqrt(8))
 
 
+def cal_pose_rot_diff(pose1, pose2):
+    ang_err_chordal = rotation_angle_chordal(pose1[:3, :3], pose2[:3, :3])
+    return ang_err_chordal
+
+
 def rot_diff_to_norm_angle(rotation_difference):
     theta = np.arccos((np.trace(rotation_difference) - 1) / 2)
     theta = np.rad2deg(theta)
