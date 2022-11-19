@@ -3,6 +3,10 @@ Weekly Classified Neural Radiance Fields - human ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Nov13 - Nov19, 2022
+## Nov6 - Nov12, 2022
+## Oct30 - Nov5, 2022
+## Oct23 - Oct29, 2022
 ## Oct16 - Oct22, 2022
   - [NeARportation: A Remote Real-time Neural Rendering Framework, VRST22](https://arxiv.org/abs/2210.12398) | [code]
     > While the presentation of photo-realistic appearance plays a major role in immersion in an augmented virtuality environment, displaying the photo-realistic appearance of real objects remains a challenging problem. Recent developments in photogrammetry have facilitated the incorporation of real objects into virtual space. However, photo-realistic photogrammetry requires a dedicated measurement environment, and there is a trade-off between measurement cost and quality. Furthermore, even with photo-realistic appearance measurements, there is a trade-off between rendering quality and framerate. There is no framework that could resolve these trade-offs and easily provide a photo-realistic appearance in real-time. Our NeARportation framework combines server-client bidirectional communication and neural rendering to resolve these trade-offs. Neural rendering on the server receives the client's head posture and generates a novel-view image with realistic appearance reproduction, which is streamed onto the client's display. By applying our framework to a stereoscopic display, we confirmed that it could display a high-fidelity appearance on full-HD stereo videos at 35-40 frames-per-second (fps), according to the user's head motion.

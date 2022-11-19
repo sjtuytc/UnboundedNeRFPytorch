@@ -3,6 +3,10 @@ Weekly Classified Neural Radiance Fields - lighting ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Nov13 - Nov19, 2022
+## Nov6 - Nov12, 2022
+## Oct30 - Nov5, 2022
+## Oct23 - Oct29, 2022
 ## Oct16 - Oct22, 2022
 ## Oct9 - Oct15, 2022
   - [LB-NERF: Light Bending Neural Radiance Fields for Transparent Medium, ICIP2022](https://ieeexplore.ieee.org/abstract/document/9897642) | [code]

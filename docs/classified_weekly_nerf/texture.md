@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - texture ![Awesome](https://cdn.rawgit
 ===================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Nov13 - Nov19, 2022
+## Nov6 - Nov12, 2022
+## Oct30 - Nov5, 2022
+  - [Deep Appearance Prefiltering, ToG2022](https://dl.acm.org/doi/abs/10.1145/3570327) | [code]
+    > Physically based rendering of complex scenes can be prohibitively costly with a potentially unbounded and uneven distribution of complexity across the rendered image. The goal of an ideal level of detail (LoD) method is to make rendering costs independent of the 3D scene complexity, while preserving the appearance of the scene. However, current prefiltering LoD methods are limited in the appearances they can support due to their reliance of approximate models and other heuristics. We propose the first comprehensive multi-scale LoD framework for prefiltering 3D environments with complex geometry and materials (e.g., the Disney BRDF), while maintaining the appearance with respect to the ray-traced reference. Using a multi-scale hierarchy of the scene, we perform a data-driven prefiltering step to obtain an appearance phase function and directional coverage mask at each scale. At the heart of our approach is a novel neural representation that encodes this information into a compact latent form that is easy to decode inside a physically based renderer. Once a scene is baked out, our method requires no original geometry, materials, or textures at render time. We demonstrate that our approach compares favorably to state-of-the-art prefiltering methods and achieves considerable savings in memory for complex scenes.
+## Oct23 - Oct29, 2022
 ## Oct16 - Oct22, 2022
 ## Oct9 - Oct15, 2022
   - [IBL-NeRF: Image-Based Lighting Formulation of Neural Radiance Fields](https://arxiv.org/abs/2210.08202) | [code]
