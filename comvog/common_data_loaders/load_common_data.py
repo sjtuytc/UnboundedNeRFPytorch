@@ -122,8 +122,12 @@ def load_common_data(args):
                 images[i] = images[i] * masks[i][...,None]
 
     elif args.dataset_type == 'nerfpp':
+        if not 'training_ids' in args:
+            training_ids = None
+        else:
+            training_ids = args['training_ids']
         images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir, 
-                                                                        training_ids=args.training_ids)
+                                                                        training_ids=training_ids)
         print('Loaded nerf_pp', images.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
         # TODO: remove the near clip and far arguments

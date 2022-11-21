@@ -1,11 +1,13 @@
+# tanks and temples
+python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 56
+python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
+
 # linemod train NeRF
 python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_test --exp_id 38
 # linemod estimate pose
-python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 22
+python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 49
 # waymo dataset
 python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --render_video --exp_id 30
-# tanks and temples
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 53
 # original DVGOv2 training
 # python run_comvog.py --program train --config comvog/configs/waymo/block_0_tt.py
 # -----------------------------------------------------------------------

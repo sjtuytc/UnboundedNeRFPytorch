@@ -198,24 +198,39 @@ class NeRFEM(nn.Module):
     
     def obj_pose_to_cannonical(self, obj_pose):
         rot, trans = obj_pose[:3, :3], obj_pose[:3, -1]
-        rot_inv = np.linalg.inv(rot)
-        cannonical_obj_pose, cannonical_cam_pose = obj_pose.copy(), obj_pose.copy()
-        cannonical_cam_pose[:3, :3] = rot_inv
-        cannonical_cam_pose[:3, -1] = rot_inv @ self.canonical_t
-        cannonical_obj_pose[:3, :3] = rot
-        cannonical_obj_pose[:3, -1] = rot @ self.canonical_t
-        return cannonical_cam_pose, cannonical_obj_pose
+        cam_pose = obj_pose.copy()
+        cam_pose[:3, :3] = rot.transpose()
+        cam_pose[:3, -1] = -rot.transpose() @ self.canonical_t
+        # opencv to opengl
+        diag = torch.diag(torch.tensor([1, -1, -1, 1], dtype=torch.float32)).cpu().numpy()
+        cannonical_cam_pose = cam_pose @ diag
+        # old code is below
+        # rot_inv = np.linalg.inv(rot)
+        # cannonical_obj_pose, cannonical_cam_pose = obj_pose.copy(), obj_pose.copy()
+        # cannonical_cam_pose[:3, :3] = rot_inv
+        # cannonical_cam_pose[:3, -1] = rot_inv @ self.canonical_t
+        # cannonical_obj_pose[:3, :3] = rot
+        # cannonical_obj_pose[:3, -1] = rot @ self.canonical_t
+        return cannonical_cam_pose, None
     
-    def observed_to_canonical(self, full_image, obj_pose, cam_k, ):
-        observed_points = get_projected_points(obj_pose, cam_k, self.lm_evaluator.model, one_img=None)
+    def observed_to_canonical(self, full_image, pose_pred, pose_gt, cam_k, ):
+        # get observed mask
+        observed_points = get_projected_points(pose_pred, cam_k, self.lm_evaluator.model, one_img=None)
         observed_mask = np.zeros(full_image.shape[:2])
         observed_points = observed_points.astype(np.int)
         observed_mask[observed_points[:, -1], observed_points[:, 0]] = 1
+        # get gt mask
+        gt_points = get_projected_points(pose_gt, cam_k, self.lm_evaluator.model, one_img=None)
+        gt_mask = np.zeros(full_image.shape[:2])
+        gt_points = gt_points.astype(np.int)
+        gt_mask[gt_points[:, -1], gt_points[:, 0]] = 1
+        iou = (observed_mask.astype(np.bool) & gt_mask.astype(np.bool)).sum() / (observed_mask.astype(np.bool) | gt_mask.astype(np.bool)).sum()
+        # crop via the mask
         xmin, xmax = observed_points[:, 0].min(), observed_points[:, 0].max()
         ymin, ymax = observed_points[:, 1].min(), observed_points[:, 1].max()
         observed_crop = full_image[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
         observed_mask = observed_mask[int(ymin):ceil(ymax), int(xmin):ceil(xmax)]
-        return observed_crop, observed_mask
+        return observed_crop, observed_mask, iou
     
     def preprocess_render_observed(self, render_rgb, observed_rgb, observed_mask, index, use_observed_mask, open_vis):
         # crop render rgb
@@ -239,8 +254,6 @@ class NeRFEM(nn.Module):
         # normalization
         render_rgb = image_normalization_for_pose(render_rgb)
         observed_rgb = image_normalization_for_pose(observed_rgb)
-        # legal_area = obj_mask.astype(np.bool) & (render_rgb[..., -1] < 0.98)
-        # render_rgb, observed_rgb = render_rgb[legal_area], observed_rgb[legal_area]
         if mse:
             mse_loss = torch.nn.functional.mse_loss(torch.tensor(render_rgb), torch.tensor(observed_rgb))
             return mse_loss.item()
@@ -248,28 +261,29 @@ class NeRFEM(nn.Module):
             lpips = utils.rgb_lpips(np.float32(render_rgb), np.float32(observed_rgb), net_name='vgg', device=device)
             return lpips
     
-    def render_and_observe_dist_of_one_pose(self, pose, full_image, cam_k, index, open_vis):
+    def render_and_observe_dist_of_one_pose(self, pose_pred, pose_gt, full_image, cam_k, index, open_vis):
         debug=False
         use_observed_mask=True
         # get rendered via NeRF
-        canno_cam_pose, canno_obj_pose = self.obj_pose_to_cannonical(pose)
+        canno_cam_pose, canno_obj_pose = self.obj_pose_to_cannonical(pose_pred)
         render_rgb = self.render_a_view(canno_cam_pose)
         render_rgb = (render_rgb * 255).astype(np.uint8)
         # transfer the observed to canonical
-        observed_rgb, observed_mask = self.observed_to_canonical(full_image, pose, cam_k)
-        vis_rendered = debug or open_vis
-        render_rgb, observed_rgb, obj_mask = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
-        dist = self.render_observe_dist(render_rgb, observed_rgb, obj_mask)
+        observed_rgb, observed_mask, iou = self.observed_to_canonical(full_image, pose_pred, pose_gt, cam_k)
+        # vis_rendered = debug or open_vis
+        # render_rgb, observed_rgb, obj_mask = self.preprocess_render_observed(render_rgb, observed_rgb, observed_mask, index, use_observed_mask, vis_rendered)
+        # dist = self.render_observe_dist(render_rgb, observed_rgb, obj_mask)
+        dist = 1 - iou
         return dist
     
-    def render_and_observe_dist_of_poses(self, poses, full_image, cam_k, index):
+    def render_and_observe_dist_of_poses(self, poses, cur_pose_gt, full_image, cam_k, index):
         all_dists = []
-        for _, pose in enumerate(tqdm(poses)):
-            dist = self.render_and_observe_dist_of_one_pose(pose, full_image, cam_k, index, open_vis=False)
+        for _, pose_pred in enumerate(tqdm(poses)):
+            dist = self.render_and_observe_dist_of_one_pose(pose_pred, cur_pose_gt, full_image, cam_k, index, open_vis=False)
             all_dists.append(dist)
         min_pos = np.argmin(all_dists)
         # render best pose again
-        self.render_and_observe_dist_of_one_pose(poses[min_pos], full_image, cam_k, index, open_vis=True)
+        self.render_and_observe_dist_of_one_pose(poses[min_pos], cur_pose_gt, full_image, cam_k, index, open_vis=True)
         return all_dists, poses[min_pos]
     
     def proposal_filter(self, pose_proposals, cur_pose_gt, leave_num):
@@ -278,7 +292,7 @@ class NeRFEM(nn.Module):
             rot_dist_add = cal_one_add(self.lm_evaluator.model, pose, cur_pose_gt)
             pose_distance.append([pose, rot_dist_add])
         sorted_pose_distance = sorted(pose_distance, key=lambda one_pd: one_pd[1])
-        final_proposals = [one_pd[0] for one_pd in sorted_pose_distance][:leave_num]
+        final_proposals = [one_pd[0] for one_pd in sorted_pose_distance][1:leave_num + 1]
         final_proposals = np.array(final_proposals)
         return final_proposals
     
@@ -292,9 +306,9 @@ class NeRFEM(nn.Module):
             posecnn_results = gt['pose_noisy_rendered']
             cur_image = images[index].cpu().numpy()
             pose_proposals = self.apply_res_poses(posecnn_results, rot_deltas, trans_deltas)
-            # pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=1)
-            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
-            all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_image, gt['K'], index)
+            pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=1)
+            # pose_proposals = self.proposal_filter(pose_proposals, cur_pose_gt, leave_num=300)
+            all_dists, our_pose_result = self.render_and_observe_dist_of_poses(pose_proposals, cur_pose_gt, cur_image, gt['K'], index)
             # normal procedure, evaluating one item
             ret = self.lm_evaluator.evaluate_linemod(cur_pose_gt, our_pose_result, gt['K'])
             res_display = str('%.3f' % ret['ang_err_euler'] + ', %.3f' % ret['trans_err'] + ', %.3f' % ret['add_value'] + str(ret['add_final']))

@@ -2,7 +2,7 @@ _base_ = '../default.py'
 seq_name = 'ape'
 seq_id = 1
 expname = f'{seq_name}_nov11_'
-pose_expname = 'bayes_nerf_v1_13'
+pose_expname = 'bayes_nerf_v2_4'
 basedir = 'logs/linemod'
 
 data = dict(
