@@ -75,8 +75,10 @@ def load_common_data(args):
         print('Loaded tankstemple', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
 
-        near, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0)
-        
+        # changed by Zelin, needs verification
+        # near, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0)
+        near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
+        near = 0
         if images.shape[-1] == 4:
             if args.white_bkgd:
                 images = images[...,:3]*images[...,-1:] + (1.-images[...,-1:])

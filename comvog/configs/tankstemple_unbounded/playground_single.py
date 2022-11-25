@@ -18,23 +18,23 @@ if visualize_poses:  # for debugging
 else:
     unbounded_inward = True
     coarse_iter = 0
-    fast_color_thres={
-            '_delete_': True,                           # to ignore the base config
-            0   : 1e-4,                                 # 0.5e-5
-        }
-    # fast_color_thres={   # default
+    # fast_color_thres={
     #         '_delete_': True,                           # to ignore the base config
-    #         0   : alpha_init*stepsize/10,               # 0.5e-5
-    #         1500: min(alpha_init, 1e-4)*stepsize/5,     # 1e-5
-    #         2500: min(alpha_init, 1e-4)*stepsize/2,     # 2.5e-5
-    #         3500: min(alpha_init, 1e-4)*stepsize/1.5,   
-    #         4500: min(alpha_init, 1e-4)*stepsize,
-    #         5500: min(alpha_init, 1e-4),
-    #         6500: 1e-4,
+    #         0   : 1e-4,                                 # 0.5e-5
     #     }
+    fast_color_thres={   # default
+            '_delete_': True,                           # to ignore the base config
+            0   : alpha_init*stepsize/10,               # 0.5e-5
+            1500: min(alpha_init, 1e-4)*stepsize/5,     # 1e-5
+            2500: min(alpha_init, 1e-4)*stepsize/2,     # 2.5e-5
+            3500: min(alpha_init, 1e-4)*stepsize/1.5,   
+            4500: min(alpha_init, 1e-4)*stepsize,
+            5500: min(alpha_init, 1e-4),
+            6500: 1e-4,
+        }
     maskout_near_cam_vox = False
     pervoxel_lr = False
-    weight_distortion = -1
+    weight_distortion = 0.01
 
 data = dict(
     dataset_type='nerfpp',
@@ -44,7 +44,7 @@ data = dict(
     unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
     datadir='./data/tanks_and_temples/tat_intermediate_Playground',
-    unbounded_inner_r=0.8,
+    unbounded_inner_r=1.0,
     ndc=False,
     # remove noisy training images
     training_ids=[1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,\
@@ -94,8 +94,8 @@ coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
 )
 
-voxel_size_density = 320  # default 400
-voxel_size_rgb = 320  # default 320
+voxel_size_density = 200  # default 400
+voxel_size_rgb = 200  # default 320
 voxel_size_viewdir = -1
 # voxel_size_viewdir = 64
 
@@ -110,11 +110,11 @@ fine_model_and_render = dict(
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
     # contracted_norm='l2', # default
-    rgbnet_dim=3,
-    # rgbnet_dim=12, # default
+    # rgbnet_dim=3,
+    rgbnet_dim=12, # default
     rgbnet_depth=3, # default
-    viewbase_pe=2, # default=4
+    # viewbase_pe=2, # default=4
     bbox_thres=-1,
     maskout_near_cam_vox=False,
-    bg_len=0.2,   # default=0.2
+    # bg_len=0.2,   # default=0.2
 )

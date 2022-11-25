@@ -1,5 +1,6 @@
 _base_ = '../default.py'
-expname = 'm60_nov21_'
+expname = 'family_nov24_'
+basedir = './logs/tanks_and_temple'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
@@ -34,43 +35,36 @@ else:
         }
     maskout_near_cam_vox = False
     pervoxel_lr = False
-    weight_distortion = -1
+    weight_distortion = 0.01
 
 data = dict(
-    dataset_type='nerfpp',
+    datadir='./data/TanksAndTemple/Family',
+    dataset_type='tankstemple',
     inverse_y=True,
-    white_bkgd=True,
-    rand_bkgd=True,
-    unbounded_inward=unbounded_inward,
     load2gpu_on_the_fly=True,
-    datadir='./data/tanks_and_temples/tat_intermediate_M60',
+    white_bkgd=True,
+    movie_render_kwargs={'pitch_deg': 20},
+    unbounded_inward=unbounded_inward,
     unbounded_inner_r=1.0,
     ndc=False,
-    # # remove noisy training images
-    # training_ids=[106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
-    #               121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
-    #               136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
-    #               151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 221, 222, 223, 224,
-    #               225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
-    #               240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254,
-    #               255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269,
-    #               270, 271, 272, 273, 274, 275]
 )
 
 coarse_train = dict(
+    # pervoxel_lr_downrate=2,
     N_iters=coarse_iter, 
     pervoxel_lr = pervoxel_lr,
 )
 
+
 fine_train = dict(
     # N_iters=3000,
-    N_iters=30000,
+    N_iters=100000,
     # N_rand=2048,  # reduce this to fit into memory
     N_rand=4096,  # default
     ray_sampler='flatten',
     # ray_sampler='random',
     weight_distortion=weight_distortion,
-    pg_scale=[1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    pg_scale=[1000,2000,3000,4000,5000,6000],
     tv_before=1e9,  # always use tv
     tv_dense_before=10000,
     tv_after=0, # start from beginning
@@ -88,6 +82,7 @@ fine_train = dict(
     weight_main=1.0,              # default = 1
     weight_freq=0.0,            
 )
+
 
 coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,

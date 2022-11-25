@@ -1,9 +1,9 @@
 _base_ = '../default.py'
-expname = 'm60_nov21_'
+expname = 'Caterpillar_nov24_'
+basedir = './logs/tanks_and_temple'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
-basedir = './logs/tanks_and_temple_unbounded'
 visualize_poses = False
 alpha_init = 1e-4
 stepsize = 0.5
@@ -18,10 +18,6 @@ if visualize_poses:  # for debugging
 else:
     unbounded_inward = True
     coarse_iter = 0
-    # fast_color_thres={
-    #         '_delete_': True,                           # to ignore the base config
-    #         0   : 1e-4,                                 # 0.5e-5
-    #     }
     fast_color_thres={   # default
             '_delete_': True,                           # to ignore the base config
             0   : alpha_init*stepsize/10,               # 0.5e-5
@@ -34,27 +30,18 @@ else:
         }
     maskout_near_cam_vox = False
     pervoxel_lr = False
-    weight_distortion = -1
+    weight_distortion = 0.01
 
 data = dict(
-    dataset_type='nerfpp',
+    datadir='./data/TanksAndTemple/Caterpillar',
+    dataset_type='tankstemple',
     inverse_y=True,
+    load2gpu_on_the_fly=True,
     white_bkgd=True,
     rand_bkgd=True,
     unbounded_inward=unbounded_inward,
-    load2gpu_on_the_fly=True,
-    datadir='./data/tanks_and_temples/tat_intermediate_M60',
     unbounded_inner_r=1.0,
     ndc=False,
-    # # remove noisy training images
-    # training_ids=[106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
-    #               121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
-    #               136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
-    #               151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 221, 222, 223, 224,
-    #               225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
-    #               240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254,
-    #               255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269,
-    #               270, 271, 272, 273, 274, 275]
 )
 
 coarse_train = dict(
@@ -64,7 +51,7 @@ coarse_train = dict(
 
 fine_train = dict(
     # N_iters=3000,
-    N_iters=30000,
+    N_iters=100000,
     # N_rand=2048,  # reduce this to fit into memory
     N_rand=4096,  # default
     ray_sampler='flatten',
@@ -86,15 +73,16 @@ fine_train = dict(
     weight_rgbper=1e-2,           # default
     weight_nearclip=0,
     weight_main=1.0,              # default = 1
-    weight_freq=0.0,            
+    weight_freq=0.3,            
 )
+
 
 coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
 )
 
-voxel_size_density = 160  # default 400
-voxel_size_rgb = 160  # default 320
+voxel_size_density = 200  # default 400
+voxel_size_rgb = 200  # default 320
 voxel_size_viewdir = -1
 # voxel_size_viewdir = 64
 

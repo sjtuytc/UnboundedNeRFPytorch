@@ -103,7 +103,8 @@ class MegaImageModel(nn.Module):
             rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
         indexs_train = None
-        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
+        comvog_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+        if cfg.data.dataset_type in comvog_datasets:
             rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = self.comvog_get_training_rays(
             rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
             ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
