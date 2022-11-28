@@ -3,6 +3,7 @@ expname = 'room_nov25_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
+model='comvog'
 basedir = './logs/360'
 alpha_init = 1e-4
 stepsize = 0.5
@@ -24,7 +25,7 @@ weight_distortion = 0.01
 data = dict(
     dataset_type='llff',
     spherify=True,
-    factor=4,
+    factor=8,
     llffhold=8,
     white_bkgd=True,
     rand_bkgd=True,
@@ -44,7 +45,7 @@ coarse_train = dict(N_iters=0)
 
 fine_train = dict(
     N_iters=40000,
-    N_rand=4096,
+    N_rand=2048,
     lrate_decay=80,
     ray_sampler='flatten',
     weight_nearclip=1.0,
@@ -56,9 +57,18 @@ fine_train = dict(
     weight_tv_k0=1e-7,
 )
 
+voxel_size_density = 200  # default 400
+voxel_size_rgb = 200  # default 320
+voxel_size_viewdir = -1
+
 fine_model_and_render = dict(
-    num_voxels=320**3,
-    num_voxels_base=320**3,
+    num_voxels_density=voxel_size_density**3,
+    num_voxels_base_density=voxel_size_density**3,
+    num_voxels_rgb=voxel_size_rgb**3,
+    num_voxels_base_rgb=voxel_size_rgb**3,
+    num_voxels_viewdir=voxel_size_viewdir**3,
+    # num_voxels=320**3,
+    # num_voxels_base=320**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
     fast_color_thres={
