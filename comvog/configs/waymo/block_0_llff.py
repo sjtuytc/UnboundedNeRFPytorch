@@ -1,5 +1,5 @@
 _base_ = './default_waymo.py'
-
+model='comvog'
 expname = 'sep13_waymo'
 
 data = dict(

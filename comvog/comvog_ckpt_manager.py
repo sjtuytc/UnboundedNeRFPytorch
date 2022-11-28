@@ -26,7 +26,7 @@ class ComVoGCheckpointManager:
     def load_existing_model(self, args, cfg, cfg_train, reload_ckpt_path, device):
         # not used in training
         comvog_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
-        if cfg.data.dataset_type in comvog_datasets:
+        if cfg.data.dataset_type in comvog_datasets or cfg.model == 'comvog':
             model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO

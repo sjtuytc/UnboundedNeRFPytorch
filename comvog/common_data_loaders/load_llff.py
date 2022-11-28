@@ -325,7 +325,6 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
     poses[:,:3,3] *= sc
     bds *= sc
     depths *= sc
-    pdb.set_trace()
     if recenter:
         poses = recenter_poses(poses)
 

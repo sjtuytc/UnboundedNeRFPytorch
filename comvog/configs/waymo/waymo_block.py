@@ -1,4 +1,5 @@
 _base_ = './waymo_base.py'
+model='comvog'
 cam_id = 73
 expname = f'oct99_waymo_{cam_id}_tt'
 vis = dict(

@@ -120,8 +120,9 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
     elif cfg.data.dataset_type == "mega":
         xyz_min, xyz_max = comvog_compute_bbox_by_cam_frustrm_mega(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
-    # todo: use another function to for tankstemple
-    elif cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple":
+    # todo: use another function to for tankstemple or llff
+    # elif cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple":
+    elif cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple" or cfg.model == 'comvog':
         xyz_min, xyz_max = comvog_compute_bbox_by_cam_frustrm_nerfpp(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.unbounded_inward:

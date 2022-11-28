@@ -1,4 +1,5 @@
 _base_ = '../default.py'
+model='comvog'
 data_name = 'rubble'
 basedir = f'./logs/mega/{data_name}'
 visualize_poses = False

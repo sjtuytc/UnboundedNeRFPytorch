@@ -3,10 +3,14 @@ python run_comvog.py --program train --config comvog/configs/tankstemple_unbound
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 12
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/truck_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/m60_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 6
-# bounded tanks and temples
-python run_comvog.py --program train --config comvog/configs/tankstemple/caterpillar_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
-python run_comvog.py --program train --config comvog/configs/tankstemple/barn_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
-python run_comvog.py --program train --config comvog/configs/tankstemple/family_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
+# 360 degree dataset
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/room_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 5
+
+
+# # bounded tanks and temples
+# python run_comvog.py --program train --config comvog/configs/tankstemple/caterpillar_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
+# python run_comvog.py --program train --config comvog/configs/tankstemple/barn_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
+# python run_comvog.py --program train --config comvog/configs/tankstemple/family_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
 
 # linemod train NeRF
 python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_test --exp_id 38

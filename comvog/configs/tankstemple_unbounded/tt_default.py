@@ -1,5 +1,5 @@
 _base_ = '../default.py'
-
+model='comvog'
 basedir = './logs/tanks_and_temple_unbounded'
 visualize_poses = False
 alpha_init = 1e-4

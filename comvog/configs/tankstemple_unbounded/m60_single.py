@@ -1,5 +1,6 @@
 _base_ = '../default.py'
 expname = 'm60_nov21_'
+model='comvog'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )

@@ -1,5 +1,6 @@
 _base_ = '../default.py'
 data_name = 'building'
+model='comvog'
 basedir = f'./logs/mega/{data_name}'
 visualize_poses = False
 alpha_init = 1e-4

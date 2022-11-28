@@ -3,6 +3,7 @@ expname = 'oct29_dvgo_Playground_unbounded_baseline'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
+model='comvog'
 basedir = './logs/tanks_and_temple_unbounded'
 visualize_poses = False
 alpha_init = 1e-4

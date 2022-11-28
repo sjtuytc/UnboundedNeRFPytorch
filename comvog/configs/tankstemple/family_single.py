@@ -1,5 +1,6 @@
 _base_ = '../default.py'
 expname = 'family_nov24_'
+model='comvog'
 basedir = './logs/tanks_and_temple'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height

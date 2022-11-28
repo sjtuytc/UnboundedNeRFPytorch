@@ -48,7 +48,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rays_d = rays_d.flatten(0,-2)
         viewdirs = viewdirs.flatten(0,-2)
         comvog_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
-        if cfg.data.dataset_type in comvog_datasets:
+        if cfg.data.dataset_type in comvog_datasets or cfg.model == 'comvog':
             indexs = torch.zeros_like(rays_o)
             indexs.copy_(torch.tensor(i).long().to(rays_o.device))  # add image index
             render_result_chunks = [
@@ -213,7 +213,7 @@ def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
         ckpt_name = ckpt_path.split('/')[-1][:-4]
         comvog_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
-        if cfg.data.dataset_type in comvog_datasets:
+        if cfg.data.dataset_type in comvog_datasets or cfg.model == 'comvog':
             model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO

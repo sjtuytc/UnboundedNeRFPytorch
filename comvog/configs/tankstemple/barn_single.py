@@ -1,4 +1,5 @@
 _base_ = '../default.py'
+model='comvog'
 expname = 'Barn_nov25_'
 basedir = './logs/tanks_and_temple'
 vis = dict(

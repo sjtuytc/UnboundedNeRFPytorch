@@ -1,5 +1,6 @@
 _base_ = '../default.py'
 basedir = './logs/waymo'
+model='comvog'
 visualize_poses = False
 alpha_init = 1e-2  # default: 1e-4
 stepsize = 0.5

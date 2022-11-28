@@ -61,7 +61,7 @@ class NeRFEM(nn.Module):
         self.lm_evaluator = LineMODEvaluator(class_name=cfg.data.seq_name, obj_m=model)
         # load pretrained NeRF model
         ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
-        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp":
+        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.data.dataset_type == "nerfpp" or cfg.model == 'comvog':
             model_class = ComVoGModel
         elif cfg.data.ndc:
             model_class = dmpigo.DirectMPIGO

@@ -13,4 +13,3 @@ data = dict(
         pitch_deg=-40, # negative look downward
     ),
 )
-

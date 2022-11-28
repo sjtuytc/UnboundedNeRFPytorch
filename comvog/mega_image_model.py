@@ -104,7 +104,7 @@ class MegaImageModel(nn.Module):
 
         indexs_train = None
         comvog_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
-        if cfg.data.dataset_type in comvog_datasets:
+        if cfg.data.dataset_type in comvog_datasets or cfg.model == 'comvog':
             rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = self.comvog_get_training_rays(
             rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
             ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,

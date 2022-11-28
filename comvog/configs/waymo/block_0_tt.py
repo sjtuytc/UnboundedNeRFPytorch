@@ -1,5 +1,5 @@
 _base_ = './tankstemple_base.py'
-
+model='comvog'
 expname = 'sep15_waymo_5_images_vis_poses'
 
 data = dict(
