@@ -5,9 +5,12 @@ python run_comvog.py --program train --config comvog/configs/tankstemple_unbound
 python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/m60_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 6
 # 360 degree dataset
 python run_comvog.py --program train --config comvog/configs/nerf_unbounded/room_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 5
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/stump.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bicycle.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bonsai.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/stump_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bicycle_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bonsai_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/garden_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/kitchen_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
+python run_comvog.py --program train --config comvog/configs/nerf_unbounded/counter_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 2
 
 # # bounded tanks and temples
 # python run_comvog.py --program train --config comvog/configs/tankstemple/caterpillar_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4

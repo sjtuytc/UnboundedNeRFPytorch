@@ -1,5 +1,5 @@
 _base_ = './nerf_unbounded_default.py'
-expname = 'room_nov25_'
+expname = 'counter_nov29_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
@@ -21,24 +21,19 @@ fast_color_thres={   # default
     }
 maskout_near_cam_vox = False
 pervoxel_lr = False
-# weight_distortion = 0.01
-weight_distortion = 0.02
+# weight_distortion = 0.01 # exp2
+weight_distortion = 0.0
 data = dict(
     dataset_type='llff',
-    spherify=True,
-    factor=8,
-    llffhold=8,
-    white_bkgd=True,
-    rand_bkgd=True,
-    unbounded_inward=True,
-    load2gpu_on_the_fly=True,
-    datadir='./data/360_v2/room',
+    datadir='./data/360_v2/counter',
+    # factor=2, # 1558x1038
+    factor=8, # 1558x1038
     movie_render_kwargs=dict(
         shift_x=0.0,  # positive right
-        shift_y=-0.3, # negative down
+        shift_y=-0.2, # negative down
         shift_z=0,
-        scale_r=0.2,
-        pitch_deg=-40, # negative look downward
+        scale_r=0.9,
+        pitch_deg=-30, # negative look downward
     ),
 )
 
