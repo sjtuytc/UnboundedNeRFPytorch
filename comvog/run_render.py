@@ -85,10 +85,10 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
                 lpips_vgg.append(utils.rgb_lpips(rgb, gt_imgs[i], net_name='vgg', device=c2w.device))
 
     if len(psnrs):
-        print('Testing psnr', np.mean(psnrs), '(avg)')
-        if eval_ssim: print('Testing ssim', np.mean(ssims), '(avg)')
-        if eval_lpips_vgg: print('Testing lpips (vgg)', np.mean(lpips_vgg), '(avg)')
-        if eval_lpips_alex: print('Testing lpips (alex)', np.mean(lpips_alex), '(avg)')
+        print('Psnr', np.mean(psnrs), '(avg)')
+        if eval_ssim: print('Ssim', np.mean(ssims), '(avg)')
+        if eval_lpips_vgg: print('Lpips (vgg)', np.mean(lpips_vgg), '(avg)')
+        if eval_lpips_alex: print('Lpips (alex)', np.mean(lpips_alex), '(avg)')
 
     if render_video_flipy:
         for i in range(len(rgbs)):

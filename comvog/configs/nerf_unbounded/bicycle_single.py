@@ -51,7 +51,7 @@ fine_train = dict(
     weight_tv_density=1e-6,
     weight_tv_k0=1e-7,
     weight_main=1.0,
-    weight_freq=0.1,
+    weight_freq=5.0,
 )
 
 voxel_size_density = 200  # default 400
