@@ -21,8 +21,7 @@ fast_color_thres={   # default
     }
 maskout_near_cam_vox = False
 pervoxel_lr = False
-# weight_distortion = 0.01 # exp2
-weight_distortion = 0.0
+weight_distortion = 0.01
 data = dict(
     dataset_type='llff',
     datadir='./data/360_v2/counter',
