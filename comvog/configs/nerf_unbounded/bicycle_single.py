@@ -26,7 +26,9 @@ weight_distortion = 0.05
 data = dict(
     dataset_type='llff',
     datadir='./data/360_v2/bicycle',
-    factor=8, # 1237x822
+    factor=16, # 1237x822
+    # width=320,
+    # height=240,
     movie_render_kwargs=dict(
         shift_x=0.0,  # positive right
         shift_y=0, # negative down
@@ -55,8 +57,9 @@ fine_train = dict(
     weight_freq=5.0,
 )
 
-voxel_size_density = 220  # default 400
-voxel_size_rgb = 220  # default 320
+voxel_size_for_all = 200 # default 220
+voxel_size_density = voxel_size_for_all
+voxel_size_rgb = voxel_size_for_all
 voxel_size_viewdir = -1
 
 fine_model_and_render = dict(

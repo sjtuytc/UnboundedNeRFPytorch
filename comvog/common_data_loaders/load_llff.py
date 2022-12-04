@@ -70,7 +70,7 @@ def _minify(basedir, factors=[], resolutions=[]):
         check_output('cp {}/* {}'.format(imgdir_orig, imgdir), shell=True)
 
         ext = imgs[0].split('.')[-1]
-        args = ' '.join(['mogrify', '-resize', resizearg, '-format', 'png', '*.{}'.format(ext)])
+        args = ' '.join(['magick mogrify', '-resize', resizearg, '-format', 'png', '*.{}'.format(ext)])
         print(args)
         os.chdir(imgdir)
         check_output(args, shell=True)
@@ -118,11 +118,10 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
         sfx = '_{}x{}'.format(width, height)
     else:
         factor = 1
-
     imgdir = os.path.join(basedir, 'images' + sfx)
     print(f'Loading images from {imgdir}')
     if not os.path.exists(imgdir):
-        print( imgdir, 'does not exist, returning' )
+        print(imgdir, 'does not exist, returning' )
         return
 
     imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) if f.endswith('JPG') or f.endswith('jpg') or f.endswith('png')]
@@ -154,7 +153,6 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
 
     if not load_imgs:
         return poses, bds
-
     imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
     imgs = np.stack(imgs, -1)
 
