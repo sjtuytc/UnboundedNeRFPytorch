@@ -3,6 +3,7 @@ Weekly Classified Neural Radiance Fields - editing ![Awesome](https://cdn.rawgit
 ===================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Nov20 - Nov26, 2022
 ## Nov13 - Nov19, 2022
 ## Nov6 - Nov12, 2022
   - [Learning-based Inverse Rendering of Complex Indoor Scenes with Differentiable Monte Carlo Raytracing, SIGGRAPH-Asia2022](https://jingsenzhu.github.io/invrend/) | [code]
