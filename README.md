@@ -57,6 +57,7 @@ The other features of this project would be:
 Hope our efforts could help your research or projects!
 
 ## 2. News
+- [2022.12.23] Released several weeks' NeRF. Too many papers pop out these days so the update speed is slow.
 - [2022.9.12] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
 - [2022.8.24] Support the full Mega-NeRF pipeline.

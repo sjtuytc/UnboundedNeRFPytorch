@@ -3,6 +3,8 @@ Weekly Classified Neural Radiance Fields - editing ![Awesome](https://cdn.rawgit
 ===================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Dec4 - Dec10, 2022
+## Nov27 - Dec3, 2022
 ## Nov20 - Nov26, 2022
 ## Nov13 - Nov19, 2022
 ## Nov6 - Nov12, 2022

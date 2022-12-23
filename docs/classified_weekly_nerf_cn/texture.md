@@ -3,6 +3,8 @@
 ====================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
+## Dec4 - Dec10, 2022
+## Nov27 - Dec3, 2022
 ## Nov20 - Nov26, 2022
 ## Nov13 - Nov19, 2022
 ## Nov6 - Nov12, 2022
