@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - semantic ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Dec27 - Jan3, 2023
+## Dec25 - Dec31, 2022
+## Dec18 - Dec24, 2022
+  - [iLabel: Revealing Objects in Neural Fields, RAL2022](https://ieeexplore.ieee.org/abstract/document/9996585) | [code]
+    > A neural field trained with self-supervision to efficiently represent the geometry and colour of a 3D scene tends to automatically decompose it into coherent and accurate object-like regions, which can be revealed with sparse labelling interactions to produce a 3D semantic scene segmentation. Our real-time iLabel system takes input from a hand-held RGB-D camera, requires zero prior training data, and works in an ‘open set’ manner, with semantic classes defined on the fly by the user. iLabel's underlying model is a simple multilayer perceptron (MLP), trained from scratch to learn a neural representation of a single 3D scene. The model is updated continually and visualised in real-time, allowing the user to focus interactions to achieve extremely efficient semantic segmentation. A room-scale scene can be accurately labelled into 10+ semantic categories with around 100 clicks, taking less than 5 minutes. Quantitative labelling accuracy scales powerfully with the number of clicks, and rapidly surpasses standard pre-trained semantic segmentation methods. We also demonstrate a hierarchical labelling variant of iLabel and a ‘hands-free’ mode where the user only needs to supply label names for automatically-generated locations.
+## Dec11 - Dec17, 2022
 ## Dec4 - Dec10, 2022
 ## Nov27 - Dec3, 2022
 ## Nov20 - Nov26, 2022

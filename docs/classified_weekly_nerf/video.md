@@ -3,6 +3,12 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Dec27 - Jan3, 2023
+  - [Boosting UAV Tracking with Voxel-Based Trajectory-Aware Pre-Training, RAL2022](https://ieeexplore.ieee.org/abstract/document/10015867) | [code]
+    > Siamese network-based object tracking has remarkably promoted the automatic capability for highly-maneuvered unmanned aerial vehicles (UAVs). However, the leading-edge tracking framework often depends on template matching, making it trapped when facing multiple views of object in consecutive frames. Moreover, the general image-level pretrained backbone can overfit to holistic representations, causing the misalignment to learn object-level properties in UAV tracking. To tackle these issues, this work presents TRTrack , a comprehensive framework to fully exploit the stereoscopic representation for UAV tracking. Specifically, a novel pre-training paradigm method is proposed. Through trajectory-aware reconstruction training (TRT), the capability of the backbone to extract stereoscopic structure feature is strengthened without any parameter increment. Accordingly, an innovative hierarchical self-attention Transformer is proposed to capture the local detail information and global structure knowledge. For optimizing the correlation map, we proposed a novel spatial correlation refinement (SCR) module, which promotes the capability of modeling the long-range spatial dependencies. Comprehensive experiments on three UAV challenging benchmarks demonstrate that the proposed TRTrack achieves superior UAV tracking performance in both precision and efficiency. Quantitative tests in real-world settings fully prove the effectiveness of our work.
+## Dec25 - Dec31, 2022
+## Dec18 - Dec24, 2022
+## Dec11 - Dec17, 2022
 ## Dec4 - Dec10, 2022
 ## Nov27 - Dec3, 2022
   - [QuadStream: A Quad-Based Scene Streaming Architecture for Novel Viewpoint Reconstruction, ToG2022](https://dl.acm.org/doi/abs/10.1145/3550454.3555524) | [code]

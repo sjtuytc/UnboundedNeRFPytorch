@@ -3,6 +3,10 @@
 ==================================================================================================================================
 ## 按类别筛选: 
  [全部](../weekly_nerf_cn.md) | [动态](./dynamic.md) | [编辑](./editing.md) | [快速](./fast.md) | [泛化](./generalization.md) | [人体](./human.md) | [视频](./video.md) | [光照](./lighting.md) | [重建](./reconstruction.md) | [纹理](./texture.md) | [语义](./semantic.md) | [姿态-SLAM](./pose-slam.md) | [其他](./others.md) 
+## Dec27 - Jan3, 2023
+## Dec25 - Dec31, 2022
+## Dec18 - Dec24, 2022
+## Dec11 - Dec17, 2022
 ## Dec4 - Dec10, 2022
 ## Nov27 - Dec3, 2022
   - [NeuWigs：用于体积头发捕捉和动画的神经动态模型](https://arxiv.org/abs/2212.00613) | [code]

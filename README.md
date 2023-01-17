@@ -11,7 +11,7 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 ## 1. Introduction
 
-**Since I changed my research direction, the updates on the following codes might be slow. Many improvements in this repo are not going to be published at this moment, so feel free to use it. The weekly NeRF would be updated as usual.**
+**I was writing a paper about our progress now but feel free to use our code without citing us.**
 
 This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms, not restricted to the original Block-NeRF algorithm.
 

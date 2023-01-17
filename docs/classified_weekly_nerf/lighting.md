@@ -3,6 +3,10 @@ Weekly Classified Neural Radiance Fields - lighting ![Awesome](https://cdn.rawgi
 ====================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
+## Dec27 - Jan3, 2023
+## Dec25 - Dec31, 2022
+## Dec18 - Dec24, 2022
+## Dec11 - Dec17, 2022
 ## Dec4 - Dec10, 2022
 ## Nov27 - Dec3, 2022
   - [Neural Subspaces for Light Fields, TVCG2022](https://ieeexplore.ieee.org/abstract/document/9968104) | [code]
