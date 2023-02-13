@@ -11,19 +11,23 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 ## 1. Introduction
 
+**I was writing a paper about our progress now but feel free to use our code without citing us.**
+
 This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms, not restricted to the original Block-NeRF algorithm.
 
 The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
-
-Our reproduced results of Block-NeRF (current PSNR: 24.3):
-
-![test](https://user-images.githubusercontent.com/31123348/188263832-f2eaaaaf-a998-4428-adf9-57f176ca3a8d.gif)
 
 This project is the **non-official** implementation of Block-NeRF. You are expected to get the following results in this repository:
 
 1. **Large-scale NeRF training.** The current results are as follows:
 
-https://user-images.githubusercontent.com/31123348/184644052-0e8b33d9-8678-4c95-afe8-d192b309de72.mp4
+Training splits:
+
+https://user-images.githubusercontent.com/31123348/200509378-4b9fe63f-4fa4-40b1-83a9-b8950d981a3b.mp4
+
+Rotation: 
+
+https://user-images.githubusercontent.com/31123348/200509910-a5d8f820-143a-4e03-8221-b04d0db2d050.mov
 
 2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
 
@@ -53,6 +57,7 @@ The other features of this project would be:
 Hope our efforts could help your research or projects!
 
 ## 2. News
+- [2022.12.23] Released several weeks' NeRF. Too many papers pop out these days so the update speed is slow.
 - [2022.9.12] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
 - [2022.8.24] Support the full Mega-NeRF pipeline.
@@ -71,7 +76,8 @@ Hope our efforts could help your research or projects!
 
 1. Create conda environment.
    ```bash
-   conda create -n nerf-block python=3.9
+   conda create -n large-scale-nerf python=3.9
+   conda activate large-scale-nerf
    ```
 2. Install tensorflow, pytorch and other libs. Our version: tensorflow with CUDA11.7.
    ```bash
@@ -86,10 +92,6 @@ Hope our efforts could help your research or projects!
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
    conda install pytorch-scatter -c pyg  # or install via https://github.com/rusty1s/pytorch_scatter
-   python setup.py install
-   cd comvog/cuda/
-   python setup.py install
-   cd ../../
    ```
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
@@ -175,8 +177,6 @@ bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Bloc
 
 ## 5. Build your custom large-scale NeRF
 
-## TODO: remove this part.
-
 <details>
 <summary>Expand / collapse steps for building custom NeRF world.</summary>
 
@@ -195,7 +195,7 @@ bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Bloc
 2. Run COLMAP to reconstruct scenes. This would probably cost a long time.
 
 	```bash
-	python comvog/tools/imgs2poses.py data/Madoka
+	python tools/imgs2poses.py data/Madoka
 	```
    You can replace data/Madoka by your data folder.
    If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in the colmap_wrapper.py.
@@ -203,14 +203,14 @@ bash scripts/block_nerf_train.sh ${BLOCK_INDEX}                   # For the Bloc
 3. Training NeRF scenes.
 
 	```bash
-	python run_comvog.py --config configs/custom/Madoka.py
+	python run.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
 
 4. Validating the training results to generate a fly-through video.
 
 	```bash
-	python run_comvog.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
+	python run.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
 	```
 </details>
 
