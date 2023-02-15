@@ -79,15 +79,15 @@ Hope our efforts could help your research or projects!
    conda create -n large-scale-nerf python=3.9
    conda activate large-scale-nerf
    ```
-2. Install tensorflow, pytorch and other libs. Our version: tensorflow with CUDA11.7.
+2. Install tensorflow, pytorch and other libs. Make sure your Pytorch version is compatible with your CUDA.
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
-   pip install tensorflow 
+   pip install tensorflow
    pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-   conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+   conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
    ```
-3. Install other libs used for reconstructing custom scenes, which is only needed when you need to build your scenes.
+3. Install other libs used for reconstructing **custom** scenes. This is only needed when you need to build your scenes.
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
