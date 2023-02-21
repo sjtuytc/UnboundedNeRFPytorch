@@ -175,8 +175,8 @@ linewidth = 3
 line_alpha = .8
 
 # begin plot 
-fig3 = plt.figure(constrained_layout=True, figsize=(8, 2))
-gs = fig3.add_gridspec(1, 3, width_ratios=[1, 1, 1])
+fig3 = plt.figure(constrained_layout=True, figsize=(4, 2))
+gs = fig3.add_gridspec(1, 2, width_ratios=[1, 1])
 # 100 * 100 datapoints, 10*10 params (grid_len=10)
 test_vg = VG(grid_len=grid_len * freq_num)
 vg_gtk = test_vg()
@@ -195,6 +195,11 @@ ax.imshow(fg_gtk)
 ax.set_xticks([*range(0, 100, 20)] + [100])
 ax.set_yticks([*range(0, 100, 20)] + [100])
 ax.set_title('(b) FG GTK', y=title_offset)
+
+# generate figures
+plt.savefig("figures/vg_fg_gtk.jpg", dpi=800)
+plt.savefig("figures/vg_fg_gtk.pdf", format="pdf")
+pdb.set_trace()
 
 
 def sample_random_signal(key, decay_vec):
