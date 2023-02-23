@@ -86,7 +86,7 @@ Hope our efforts could help your research or projects!
 3. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
    ```bash
    apt-get install g++ build-essential  # ensure you have g++ and other build essentials, sudo access required.
-   cd comvog/cuda
+   cd FourierGrid/cuda
    python setup.py install
    cd ../../
    ```
@@ -165,10 +165,10 @@ The downloaded data would look like this:
 <details>
 <summary> 4.2 Train models and see the results!</summary>
 
-You only need to run "python run_comvog.py" to finish the train-test-render cycle. Explanations of some arguments: 
+You only need to run "python run_FourierGrid.py" to finish the train-test-render cycle. Explanations of some arguments: 
 ```bash
 --program: the program to run, normally --program train will be all you need.
---config: the config pointing to the scene file, e.g., --config comvog/configs/tankstemple_unbounded/truck_single.py.
+--config: the config pointing to the scene file, e.g., --config FourierGrid/configs/tankstemple_unbounded/truck_single.py.
 --num_per_block: number of blocks used in large-scale NeRFs, normally this is set to -1, unless specially needed.
 --render_train: render the trained model on the train split.
 --render_train: render the trained model on the test split.
@@ -177,26 +177,26 @@ You only need to run "python run_comvog.py" to finish the train-test-render cycl
 --eval_ssim / eval_lpips_vgg: report SSIM / LPIPS(VGG) scores.
 ```
 
-While we list major of the commands in scripts/train_comvog.sh, we list some of commands below for better reproducibility.
+While we list major of the commands in scripts/train_FourierGrid.sh, we list some of commands below for better reproducibility.
 
 ```bash
 # Unbounded tanks and temples
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 57
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 12
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/truck_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
-python run_comvog.py --program train --config comvog/configs/tankstemple_unbounded/m60_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 6
+python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 57
+python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 12
+python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/truck_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
+python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/m60_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 6
 
 # 360 degree dataset
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/room_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 9
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/stump_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 10
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bicycle_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 11
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/bonsai_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 3
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/garden_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/kitchen_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
-python run_comvog.py --program train --config comvog/configs/nerf_unbounded/counter_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/room_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 9
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/stump_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 10
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/bicycle_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 11
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/bonsai_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 3
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/garden_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/kitchen_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
+python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/counter_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
 
 # San Francisco Mission Bay dataset
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --num_per_block 100 --render_video --exp_id 30
+python run_FourierGrid.py --program train --config FourierGrid/configs/waymo/waymo_no_block.py --num_per_block 100 --render_video --exp_id 30
 ```
 
 The old version of Block-NeRF is still provided to serve as a baseline, but it will be deprecated soon. We will mainly work on grid-based models later because they are simple and fast. Run the following command to reproduce the old Block-NeRF experiments:
@@ -237,14 +237,14 @@ bash scripts/block_nerf_eval.sh
 3. Training NeRF scenes.
 
 	```bash
-	python run_comvog.py --config configs/custom/Madoka.py
+	python run_FourierGrid.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
 
 4. Validating the training results to generate a fly-through video.
 
 	```bash
-	python run_comvog.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
+	python run_FourierGrid.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
 	```
 </details>
 
