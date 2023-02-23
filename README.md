@@ -35,7 +35,55 @@ You are expected to get the following results in this repository:
 
 <summary> Expand / collapse qualitative results. </summary>
 
-## San Francisco Mission Bay (provided by [Block-NeRF](https://waymo.com/research/block-nerf/)):
+## Tanks and Temples:
+
+* Playground:
+
+https://user-images.githubusercontent.com/31123348/220946729-d88db335-0618-4b75-9fc2-8de577e1ddb5.mp4
+
+* Truck:
+
+https://user-images.githubusercontent.com/31123348/220946857-0f4b7239-8be6-4fca-9bba-2f2425e857a5.mp4
+
+* M60:
+
+https://user-images.githubusercontent.com/31123348/220947063-068b94f6-3afb-421d-8746-43bcf9643a37.mp4
+
+* Train:
+
+https://user-images.githubusercontent.com/31123348/220947239-6528d542-b2b8-45e3-8e69-6e0eff869720.mp4
+
+## Mip-NeRF-360 Benchmark:
+
+* Bicycle:
+
+https://user-images.githubusercontent.com/31123348/220947385-ab31c646-c671-4522-8e4f-a1982d98c753.mp4
+
+* Stump:
+
+https://user-images.githubusercontent.com/31123348/220947472-47dc4716-095b-45ec-890b-d6afd97de9e9.mp4
+
+* Kitchen:
+
+https://user-images.githubusercontent.com/31123348/220947597-68f7ec32-c761-4253-955a-a2acc6a2eb25.mp4
+
+* Bonsai:
+
+https://user-images.githubusercontent.com/31123348/220947686-d8957a2e-ef52-46cf-b437-28de91f55871.mp4
+
+* Garden:
+
+https://user-images.githubusercontent.com/31123348/220947771-bbd249c0-3d0b-4d25-9b79-d4de9af17c4a.mp4
+
+* Counter:
+
+https://user-images.githubusercontent.com/31123348/220947818-e5c6b07f-c930-48b2-8aa7-363182dea6be.mp4
+
+* Room:
+
+https://user-images.githubusercontent.com/31123348/220948025-25ce5cc1-3c9a-450c-920d-98a8f153a0fa.mp4
+
+## San Francisco Mission Bay (dataset released by [Block-NeRF](https://waymo.com/research/block-nerf/)):
 * Training splits:
 
   https://user-images.githubusercontent.com/31123348/200509378-4b9fe63f-4fa4-40b1-83a9-b8950d981a3b.mp4
