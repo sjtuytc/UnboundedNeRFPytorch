@@ -152,7 +152,7 @@ The downloaded data would look like this:
       |        ...
       |——————pytorch_waymo_dataset                     // the root folder for San Fran Cisco Mission Bay
       |        └——————cam_info.json                    // extracted cam2img information in dict.
-      |        └——————coordinates.pt                   // global camera information used in Mega-NeRF
+      |        └——————coordinates.pt                   // global camera information used in Mega-NeRF, deprecated
       |        └——————train                            // train data
       |        |         └——————metadata               // meta data per image (camera information, etc)
       |        |         └——————rgbs                   // rgb images

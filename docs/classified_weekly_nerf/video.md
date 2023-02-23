@@ -3,19 +3,31 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 =================================================================================================================================================================
 ## Filter by classes: 
  [all](../weekly_nerf.md) | [dynamic](./dynamic.md) | [editing](./editing.md) | [fast](./fast.md) | [generalization](./generalization.md) | [human](./human.md) | [video](./video.md) | [lighting](./lighting.md) | [reconstruction](./reconstruction.md) | [texture](./texture.md) | [semantic](./semantic.md) | [pose-slam](./pose-slam.md) | [others](./others.md) 
-## Oct2- Oct8, 2022
+## Dec27 - Jan3, 2023
+  - [Boosting UAV Tracking with Voxel-Based Trajectory-Aware Pre-Training, RAL2022](https://ieeexplore.ieee.org/abstract/document/10015867) | [code]
+    > Siamese network-based object tracking has remarkably promoted the automatic capability for highly-maneuvered unmanned aerial vehicles (UAVs). However, the leading-edge tracking framework often depends on template matching, making it trapped when facing multiple views of object in consecutive frames. Moreover, the general image-level pretrained backbone can overfit to holistic representations, causing the misalignment to learn object-level properties in UAV tracking. To tackle these issues, this work presents TRTrack , a comprehensive framework to fully exploit the stereoscopic representation for UAV tracking. Specifically, a novel pre-training paradigm method is proposed. Through trajectory-aware reconstruction training (TRT), the capability of the backbone to extract stereoscopic structure feature is strengthened without any parameter increment. Accordingly, an innovative hierarchical self-attention Transformer is proposed to capture the local detail information and global structure knowledge. For optimizing the correlation map, we proposed a novel spatial correlation refinement (SCR) module, which promotes the capability of modeling the long-range spatial dependencies. Comprehensive experiments on three UAV challenging benchmarks demonstrate that the proposed TRTrack achieves superior UAV tracking performance in both precision and efficiency. Quantitative tests in real-world settings fully prove the effectiveness of our work.
+## Dec25 - Dec31, 2022
+## Dec18 - Dec24, 2022
+## Dec11 - Dec17, 2022
+## Dec4 - Dec10, 2022
+## Nov27 - Dec3, 2022
+  - [QuadStream: A Quad-Based Scene Streaming Architecture for Novel Viewpoint Reconstruction, ToG2022](https://dl.acm.org/doi/abs/10.1145/3550454.3555524) | [code]
+    > Streaming rendered 3D content over a network to a thin client device, such as a phone or a VR/AR headset, brings high-fidelity graphics to platforms where it would not normally possible due to thermal, power, or cost constraints. Streamed 3D content must be transmitted with a representation that is both robust to latency and potential network dropouts. Transmitting a video stream and reprojecting to correct for changing viewpoints fails in the presence of disocclusion events; streaming scene geometry and performing high-quality rendering on the client is not possible on limited-power mobile GPUs. To balance the competing goals of disocclusion robustness and minimal client workload, we introduce QuadStream, a new streaming content representation that reduces motion-to-photon latency by allowing clients to efficiently render novel views without artifacts caused by disocclusion events. Motivated by traditional macroblock approaches to video codec design, we decompose the scene seen from positions in a view cell into a series of quad proxies, or view-aligned quads from multiple views. By operating on a rasterized G-Buffer, our approach is independent of the representation used for the scene itself; the resulting QuadStream is an approximate geometric representation of the scene that can be reconstructed by a thin client to render both the current view and nearby adjacent views. Our technical contributions are an efficient parallel quad generation, merging, and packing strategy for proxy views covering potential client movement in a scene; a packing and encoding strategy that allows masked quads with depth information to be transmitted as a frame-coherent stream; and an efficient rendering approach for rendering our QuadStream representation into entirely novel views on thin clients. We show that our approach achieves superior quality compared both to video data streaming methods, and to geometry-based streaming.
+## Nov20 - Nov26, 2022
+## Nov13 - Nov19, 2022
+## Nov6 - Nov12, 2022
+## Oct30 - Nov5, 2022
+## Oct23 - Oct29, 2022
+## Oct16 - Oct22, 2022
+## Oct9 - Oct15, 2022
+## Oct2 - Oct8, 2022
 ## Sep25 - Oct1, 2022
   - [MonoNeuralFusion: Online Monocular Neural 3D Reconstruction with Geometric Priors](https://arxiv.org/abs/2209.15153) | [code]
     > High-fidelity 3D scene reconstruction from monocular videos continues to be challenging, especially for complete and fine-grained geometry reconstruction. The previous 3D reconstruction approaches with neural implicit representations have shown a promising ability for complete scene reconstruction, while their results are often over-smooth and lack enough geometric details. This paper introduces a novel neural implicit scene representation with volume rendering for high-fidelity online 3D scene reconstruction from monocular videos. For fine-grained reconstruction, our key insight is to incorporate geometric priors into both the neural implicit scene representation and neural volume rendering, thus leading to an effective geometry learning mechanism based on volume rendering optimization. Benefiting from this, we present MonoNeuralFusion to perform the online neural 3D reconstruction from monocular videos, by which the 3D scene geometry is efficiently generated and optimized during the on-the-fly 3D monocular scanning. The extensive comparisons with state-of-the-art approaches show that our MonoNeuralFusion consistently generates much better complete and fine-grained reconstruction results, both quantitatively and qualitatively.
 ## Sep18 - Sep24, 2022
 ## Sep11 - Sep17, 2022
-## Previous weeks
 ## Sep4 - Sep10, 2022
 ## Aug28 - Sep3, 2022
-## Aug21 - Aug27, 2022
-## Previous weeks
-  - [﻿Plenoxels: Radiance Fields without Neural Networks, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
-    > We introduce Plenoxels (plenoptic voxels), a system for photorealistic view synthesis. Plenoxels represent a scene as a sparse 3D grid with spherical harmonics. This representation can be optimized from calibrated images via gradient methods and regularization without any neural components. On standard, benchmark tasks, Plenoxels are optimized two orders of magnitude faster than Neural Radiance Fields with no loss in visual quality.
 ## Aug21 - Aug27, 2022
 ## Aug14 - Aug20, 2022
   - [Temporal View Synthesis of Dynamic Scenes through 3D Object Motion Estimation with Multi-Plane Images, ISMAR2022](https://arxiv.org/abs/2208.09463) | [***``[code]``***](https://github.com/NagabhushanSN95/DeCOMPnet)
@@ -30,6 +42,8 @@ Weekly Classified Neural Radiance Fields - video ![Awesome](https://cdn.rawgit.c
 ## Jul31 - Aug6, 2022
 ## Jul24 - Jul30, 2022
 ## Previous weeks
+  - [﻿Plenoxels: Radiance Fields without Neural Networks, CVPR2022(oral)](https://arxiv.org/abs/2112.05131) | [***``[code]``***](https://alexyu.net/plenoxels)
+    > We introduce Plenoxels (plenoptic voxels), a system for photorealistic view synthesis. Plenoxels represent a scene as a sparse 3D grid with spherical harmonics. This representation can be optimized from calibrated images via gradient methods and regularization without any neural components. On standard, benchmark tasks, Plenoxels are optimized two orders of magnitude faster than Neural Radiance Fields with no loss in visual quality.
   - [Neural Scene Flow Fields for Space-Time View Synthesis of Dynamic Scenes, CVPR2021](http://www.cs.cornell.edu/~zl548/NSFF/) | [***``[code]``***](https://github.com/zhengqili/Neural-Scene-Flow-Fields)
     > We present a method to perform novel view and time synthesis of dynamic scenes, requiring only a monocular video with known camera poses as input. To do this, we introduce Neural Scene Flow Fields, a new representation that models the dynamic scene as a time-variant continuous function of appearance, geometry, and 3D scene motion. Our representation is optimized through a neural network to fit the observed input views. We show that our representation can be used for complex dynamic scenes, including thin structures, view-dependent effects, and natural degrees of motion. We conduct a number of experiments that demonstrate our approach significantly outperforms recent monocular view synthesis methods, and show qualitative results of space-time view synthesis on a variety of real-world videos.
   - [Neural 3D Video Synthesis from Multi-view Video, CVPR2022(oral)](https://neural-3d-video.github.io/) | [code]

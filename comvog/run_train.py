@@ -8,7 +8,6 @@ from tqdm import tqdm, trange
 from comvog.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_by_coarse_geo
 from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.comvog_model import ComVoGModel
-from comvog.mega_image_model import MegaImageModel
 from comvog.load_everything import load_existing_model
 from torch_efficient_distloss import flatten_eff_distloss
 from comvog.run_export_bbox import run_export_bbox_cams
@@ -34,12 +33,6 @@ def create_new_model(data_dict, args, cfg, cfg_model, cfg_train, xyz_min, xyz_ma
             xyz_min=xyz_min, xyz_max=xyz_max,
             num_voxels_density=num_voxels_density, num_voxels_rgb=num_voxels_rgb, verbose=verbose,
             **model_kwargs)
-    elif cfg.data.dataset_type == "mega":
-        model = MegaImageModel(
-            xyz_min=xyz_min, xyz_max=xyz_max, data_dict=data_dict,
-            num_voxels_density=num_voxels_density, num_voxels_rgb=num_voxels_rgb, verbose=verbose,
-            **model_kwargs
-        )
     elif cfg.data.ndc:
         model = dmpigo.DirectMPIGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
