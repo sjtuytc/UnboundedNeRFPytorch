@@ -1,4 +1,4 @@
-# This code is originated from [nerf plus plus](https://github.com/Kai-46/nerfplusplus)
+# This code (visualization utils) is originated from [nerf plus plus](https://github.com/Kai-46/nerfplusplus)
 import torch
 import os
 import torchvision

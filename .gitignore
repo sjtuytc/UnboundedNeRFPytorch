@@ -134,3 +134,6 @@ logs/*
 ckpts/
 ckpts/*
 data
+*.png
+.vscode
+.vscode/*

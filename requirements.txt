@@ -2,6 +2,7 @@ numpy
 scipy
 tqdm
 lpips
+pandas
 mmcv
 imageio
 imageio-ffmpeg
@@ -11,7 +12,6 @@ scikit-image
 ninja
 einops
 parscript
-pyarrow==8.0.0
 open3d # for visualization
 matplotlib 
 configargparse
@@ -22,3 +22,4 @@ torch_optimizer
 test-tube
 gdown
 pytorch_lightning
+torch_scatter
