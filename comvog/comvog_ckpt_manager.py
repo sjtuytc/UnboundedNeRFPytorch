@@ -1,4 +1,3 @@
-from matplotlib import blocking_input
 from comvog.comvog_model import ComVoGModel
 from comvog import utils, dvgo, dcvgo, dmpigo
 import torch

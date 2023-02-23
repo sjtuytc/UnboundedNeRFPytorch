@@ -10,8 +10,8 @@ from comvog.run_train import run_train
 # from comvog.run_block_train import run_block_train_and_merge
 from comvog.run_render import run_render
 from comvog.run_gen_cam_paths import run_gen_cam_paths
-from comvog.run_sfm import run_sfm
-from comvog.em_runner import NeRFEM
+# from comvog.run_sfm import run_sfm
+# from comvog.em_runner import NeRFEM
 from comvog.comvog_ckpt_manager import ComVoGCheckpointManager
 
 

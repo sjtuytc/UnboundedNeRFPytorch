@@ -13,50 +13,37 @@ We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta da
 
 **I was writing a paper about our progress now but feel free to use our code without citing us.**
 
-This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms, not restricted to the original Block-NeRF algorithm.
+This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms. We exchangely use terms "unbounded NeRF" and "large-scale NeRF" because we find the techniques behind them are closely related.
 
-The [Block-NeRF](https://waymo.com/intl/zh-cn/research/block-nerf/) builds the largest neural scene representation to date, capable of rendering an entire neighborhood of San Francisco.
+Instead of pursuing a big and complicated code system, we pursue a simple code repo with SOTA performance for unbounded NeRFs.
 
-This project is the **non-official** implementation of Block-NeRF. You are expected to get the following results in this repository:
+You are expected to get the following results in this repository:
 
-1. **Large-scale NeRF training.** The current results are as follows:
 
-Training splits:
 
-https://user-images.githubusercontent.com/31123348/200509378-4b9fe63f-4fa4-40b1-83a9-b8950d981a3b.mp4
+<details> 
 
-Rotation: 
+<summary> Expand / collapse qualitative results. </summary>
 
-https://user-images.githubusercontent.com/31123348/200509910-a5d8f820-143a-4e03-8221-b04d0db2d050.mov
+## San Francisco Mission Bay (provided by [Block-NeRF](https://waymo.com/research/block-nerf/)):
+* Training splits:
 
-2. **SOTA custom scenes.** Reconstruction SOTA NeRFs based on your collected photos. Here is a reconstructed video of my work station:
+  https://user-images.githubusercontent.com/31123348/200509378-4b9fe63f-4fa4-40b1-83a9-b8950d981a3b.mp4
 
-https://user-images.githubusercontent.com/31123348/184643776-fdc4e74d-f901-4cc5-af16-1d28a8097704.mp4
+* Rotation: 
 
-3. **Google Colab support.** Run trained Block-NeRF on Google Colab with detailed visualizations (unfinished yet):
+  https://user-images.githubusercontent.com/31123348/200509910-a5d8f820-143a-4e03-8221-b04d0db2d050.mov
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1PkzjTlXmGYhovqy68y57LejGmr4XBGrb?usp=sharing)
-
-The other features of this project would be:
-
-- [x] **PyTorch Implementation.** The official Block-NeRF paper uses tensorflow and requires TPUs. However, this implementation only needs PyTorch.
-
-- [x] **GPU efficient.** We ensure that almost all our experiments can be carried on eight NVIDIA 2080Ti GPUs.
-
-- [x] **Quick download.** We host many datasets on Google drive so that downloading becomes much faster.
-
-- [x] **Uniform data format.** The original Block-NeRF paper requires downloading tons of data from Google Cloud Platform. This repo provide processed data and convenient scripts. We provides a uniform data format that suits many datasets of large-scale neural fields.
-
-- [ ] **State-of-the-art performance.** This project produces state-of-the-art rendering quality with better efficiency.
-
-- [ ] **Quick validation.** We provide quick validation tools to evaluate your ideas so that you don't need to train on the full Block-NeRF dataset.
-
-- [x] **Open research.** Along with this project, we aim to developping a strong community working on this. We welcome you to joining us (if you have a Wechat, feel free to add my Wechat ytc407). The contributors of this project are listed at the bottom of this page.
-
+</details>
 
 Hope our efforts could help your research or projects!
 
 ## 2. News
+- [2023.2.27] **A major update of our repository with better performance and full code release**. 
+
+<details>
+<summary> Expand / collapse older news. </summary>
+	
 - [2022.12.23] Released several weeks' NeRF. Too many papers pop out these days so the update speed is slow.
 - [2022.9.12] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
@@ -69,6 +56,7 @@ Hope our efforts could help your research or projects!
 - [2022.8.8] Add the NeRF reconstruction code and doc for custom purposes.
 - [2022.7.28] The data preprocess script is finished.
 - [2022.7.20] This project started!
+</details>
 
 ## 3. Installation
 <details>
@@ -79,15 +67,22 @@ Hope our efforts could help your research or projects!
    conda create -n large-scale-nerf python=3.9
    conda activate large-scale-nerf
    ```
-2. Install tensorflow, pytorch and other libs. Make sure your Pytorch version is compatible with your CUDA.
+2. Install pytorch, and other libs. Make sure your Pytorch version is compatible with your CUDA.
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
-   pip install tensorflow
-   pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+   <!-- pip install tensorflow
+   pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html -->
    conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
+
+3. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
+   ```bash
+   apt-get install g++ build-essential  # ensure you have g++ and other build essentials, sudo access required.
+   cd comvog/cuda
+   python setup.py install
+   cd ../../
    ```
-3. Install other libs used for reconstructing **custom** scenes. This is only needed when you need to build your scenes.
+4. Install other libs used for reconstructing **custom** scenes. This is only needed when you need to build your scenes.
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
@@ -96,33 +91,34 @@ Hope our efforts could help your research or projects!
    You can use laptop version of COLMAP as well if you do not have access to sudo access on your server. However, we found if you do not set up COLMAP parameters properly, you would not get the SOTA performance.
 </details>
 
-## 4. Large-scale NeRF on the public datasets
-
-**We provide implementations for two algorithms: Block-NeRF and Mega-NeRF.** Most of the Mega-NeRF implementations is from [the official Mega-NeRF repo](https://github.com/cmusatyalab/mega-nerf) while we support [Waymo dataset training](https://waymo.com/intl/zh-cn/research/block-nerf/), visualizations and fix some Mega-NeRF bugs. In the following, the Mega-NeRF commands are commented to prevent confusions.
-
-**We provide useful debugging commands in many scripts.** Debug commands require a single GPU card only and may run slower than the standard commands. You can use the standard commands instead for conducting experiments and comparisons. A sample bash file is:
-
-```bash
-# arguments
-ARGUMENTS HERE  # we provide you sampled arguments with explanations and options here.
-# for debugging, uncomment the following line when debugging
-# DEBUG COMMAND HERE
-# for standard training, comment the following line when debugging
-STANDARD TRAINING COMMAND HERE
-```
+## 4. Unbounded NeRF on the public datasets
 
 Click the following sub-section titles to expand / collapse steps.
 
 <details>
-<summary> 4.1 Download processed data and pre-trained models.</summary>
+<summary> 4.1 Download processed data.</summary>
 
+(1) [Unbounded Tanks & Temples](https://www.tanksandtemples.org/). Download data from [here](https://drive.google.com/file/d/11KRfN91W1AxAW6lOFs4EeYDbeoQZCi87/view). Then unzip the data.
+
+```bash
+gdown --id 11KRfN91W1AxAW6lOFs4EeYDbeoQZCi87
+# Then unzip the data.
+```
+	
+(2) The [Mip-NeRF-360](https://jonbarron.info/mipnerf360/) dataset.
+
+```bash
+cd data
+wget http://storage.googleapis.com/gresearch/refraw360/360_v2.zip
+unzip 360
+```
+
+(3) San Fran Cisco Mission Bay.
 What you should know before downloading the data:
 
-   (1) **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
+- **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
 
-   (2) Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. Furthermore, the processed data support training by Mega-NeRF and Block-NeRF both.
-
-Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) and [pretrained models](https://drive.google.com/drive/folders/1O7uzcPBQHNAcmAcmcS6TRbLqiIDE3D0y?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines.
+- Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines.
 
 If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
 
@@ -140,9 +136,6 @@ The downloaded data would look like this:
       |        |         └——————train_all_meta.json    // all meta informations in train folder
       |        └——————val                              // val data with the same structure as train
    ```
-
-If you wish to run the Mega-NeRF algorithm, you will need to create masks prior to the training or evaluation. Please refer to [this doc](./docs/mega_nerf_mask_creation.md) for more details. You can download other Mega-NeRF benchmarks following [this doc](./docs/download_and_process_mega.md).
-
 </details>
 
 <details>

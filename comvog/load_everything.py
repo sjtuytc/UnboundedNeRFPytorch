@@ -3,7 +3,7 @@ import pdb
 from comvog.common_data_loaders.load_common_data import load_common_data
 from comvog.load_waymo import load_waymo_data
 from comvog.load_mega import load_mega_data
-from comvog.load_linemod import load_linemod_data
+# from comvog.load_linemod import load_linemod_data
 from comvog import utils, dvgo, dcvgo, dmpigo
 from comvog.comvog_model import ComVoGModel
 

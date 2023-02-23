@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
   long_description = fh.read()
 
 setuptools.setup(
-    name="dvlab_nerf", # Replace with your own username
+    name="large_scale_nerf",
     version="0.0.2",
     author="Zelin Zhao",
     author_email="sjtuytc@gmail.com",

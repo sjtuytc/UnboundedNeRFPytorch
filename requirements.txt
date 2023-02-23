@@ -12,7 +12,6 @@ scikit-image
 ninja
 einops
 parscript
-pyarrow==8.0.0
 open3d # for visualization
 matplotlib 
 configargparse
@@ -23,4 +22,4 @@ torch_optimizer
 test-tube
 gdown
 pytorch_lightning
-neural-tangents # for ntk analysis
+torch_scatter
