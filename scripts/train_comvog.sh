@@ -18,12 +18,7 @@ python run_comvog.py --program train --config comvog/configs/nerf_unbounded/coun
 # python run_comvog.py --program train --config comvog/configs/tankstemple/barn_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
 # python run_comvog.py --program train --config comvog/configs/tankstemple/family_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
 
-# linemod train NeRF
-python run_comvog.py --program train --config comvog/configs/linemod/ape.py --render_train --render_test --exp_id 38
-# linemod estimate pose
-python run_comvog.py --program tune_pose --config comvog/configs/linemod/ape.py --exp_id 49
-# waymo dataset
-python run_comvog.py --program train --config comvog/configs/waymo/waymo_no_block.py --render_video --exp_id 30
+
 # original DVGOv2 training
 # python run_comvog.py --program train --config comvog/configs/waymo/block_0_tt.py
 # -----------------------------------------------------------------------

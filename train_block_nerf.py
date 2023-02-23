@@ -3,7 +3,6 @@ import torch
 from torch.utils.data import DataLoader
 from collections import defaultdict
 from block_nerf.waymo_dataset import *
-# from datasets.WaymoDataset_test import *
 from block_nerf.block_nerf_model import *
 from block_nerf.block_nerf_lightning import *
 from block_nerf.rendering import *

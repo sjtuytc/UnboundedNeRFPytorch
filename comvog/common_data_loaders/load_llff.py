@@ -406,10 +406,10 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
     c2w = poses_avg(poses)
     print('Data:')
     print(poses.shape, images.shape, bds.shape)
-
+    # this part is written by DVGO.
     dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
     i_test = np.argmin(dists)
-    print('HOLDOUT view is', i_test)
+    print('HOLDOUT view is', i_test) 
 
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
