@@ -90,7 +90,7 @@ Hope our efforts could help your research or projects!
    python setup.py install
    cd ../../
    ```
-4. Install other libs used for reconstructing **custom** scenes. This is only needed when you need to build your scenes.
+4. Install other libs used for reconstructing **custom** scenes. **This is only needed when you need to build your scenes.**
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
@@ -109,8 +109,10 @@ Click the following sub-section titles to expand / collapse steps.
 (1) [Unbounded Tanks & Temples](https://www.tanksandtemples.org/). Download data from [here](https://drive.google.com/file/d/11KRfN91W1AxAW6lOFs4EeYDbeoQZCi87/view). Then unzip the data.
 
 ```bash
+cd data
 gdown --id 11KRfN91W1AxAW6lOFs4EeYDbeoQZCi87
 unzip tanks_and_temples.zip
+cd ../
 ```
 	
 (2) The [Mip-NeRF-360](https://jonbarron.info/mipnerf360/) dataset.
@@ -120,6 +122,7 @@ cd data
 wget http://storage.googleapis.com/gresearch/refraw360/360_v2.zip
 mkdir 360_v2
 unzip 360_v2.zip -d 360_v2
+cd ../
 ```
 
 (3) [San Fran Cisco Mission Bay](https://waymo.com/research/block-nerf/).
