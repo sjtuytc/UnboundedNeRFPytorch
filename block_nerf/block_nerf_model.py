@@ -1,157 +1,176 @@
-from pytorch_lightning import LightningModule, Trainer
 import torch
-import os
-from collections import defaultdict
-from torch.utils.data import DataLoader
-from block_nerf.waymo_dataset import *
-from block_nerf.block_nerf_model import *
-from block_nerf.rendering import *
-from block_nerf.metrics import *
-from block_nerf.block_visualize import *
-from block_nerf.learning_utils import *
+from torch import nn
 
 
-class Block_NeRF_System(LightningModule):
+class BlockNeRFLoss(nn.Module):
+    def __init__(self, lambda_mu=0.01, Visi_loss=1e-2):
+        super(BlockNeRFLoss, self).__init__()
+        self.lambda_mu = lambda_mu
+        self.Visi_loss = Visi_loss
 
-    def __init__(self, hparams):
-        super(Block_NeRF_System, self).__init__()
-        self.hyper_params = hparams
-        self.save_hyperparameters(hparams)
-        self.loss = BlockNeRFLoss(1e-2)  # hparams['Visi_loss']
-
-        self.xyz_IPE = InterPosEmbedding(hparams['N_IPE_xyz'])
-        self.dir_exposure_PE = PosEmbedding(hparams['N_PE_dir_exposure'
-                ])
-        self.embedding_appearance = torch.nn.Embedding(hparams['N_vocab'
-                ], hparams['N_appearance'])
-
-        self.Embedding = {'IPE': self.xyz_IPE,
-                          'PE': self.dir_exposure_PE,
-                          'appearance': self.embedding_appearance}
-
-        self.Block_NeRF = Block_NeRF(in_channel_xyz=6
-                * hparams['N_IPE_xyz'], in_channel_dir=6
-                * hparams['N_PE_dir_exposure'], in_channel_exposure=2
-                * hparams['N_PE_dir_exposure'],
-                in_channel_appearance=hparams['N_appearance'])
-
-        self.Visibility = Visibility(in_channel_xyz=6
-                * hparams['N_IPE_xyz'], in_channel_dir=6
-                * hparams['N_PE_dir_exposure'])
-
-        self.models_to_train = []
-        self.models_to_train += [self.embedding_appearance]
-        self.models_to_train += [self.Block_NeRF]
-        self.models_to_train += [self.Visibility]
-
-    def forward(self, rays, ts):
-        B = rays.shape[0]
-        model = {'block_model': self.Block_NeRF,
-                 'visibility_model': self.Visibility}
-
-        results = defaultdict(list)
-        for i in range(0, B, self.hparams['chunk']):
-            rendered_ray_chunks = render_rays(
-                model,
-                self.Embedding,
-                rays[i:i + self.hparams['chunk']],
-                ts[i:i + self.hparams['chunk']],
-                N_samples=self.hparams['N_samples'],
-                N_importance=self.hparams['N_importance'],
-                chunk=self.hparams['chunk'],
-                type='train',
-                use_disp=self.hparams['use_disp'],
-                )
-            for (k, v) in rendered_ray_chunks.items():
-                results[k] += [v]
-
-        for (k, v) in results.items():
-            results[k] = torch.cat(v, 0)
-
-        return results
-
-    def setup(self, stage):
-        self.train_dataset = WaymoDataset(
-            root_dir=self.hparams['root_dir'],
-            split='train',
-            block=self.hparams['block_index'],
-            img_downscale=self.hparams['img_downscale'],
-            near=self.hparams['near'],
-            far=self.hparams['far'],
-            )
-        self.val_dataset = WaymoDataset(
-            root_dir=self.hparams['root_dir'],
-            split='val',
-            block=self.hparams['block_index'],
-            img_downscale=self.hparams['img_downscale'],
-            near=self.hparams['near'],
-            far=self.hparams['far'],
-            )
-
-    def configure_optimizers(self):
-        self.optimizer = get_optimizer(self.hparams,
-                self.models_to_train)
-        scheduler = get_scheduler(self.hparams, self.optimizer)
-        return ([self.optimizer], [scheduler])
-
-    def train_dataloader(self):
-        return DataLoader(self.train_dataset, shuffle=True,
-                          num_workers=8,
-                          batch_size=self.hparams['batch_size'],
-                          pin_memory=True)
-
-    def val_dataloader(self):
-        return DataLoader(self.val_dataset, shuffle=False,
-                          num_workers=8, batch_size=1, pin_memory=True)
-
-    def training_step(self, batch, batch_nb):
-        (rays, rgbs, ts) = (batch['rays'], batch['rgbs'], batch['ts'])
-        results = self(rays, ts)
-        loss_d = self.loss(results, rgbs)
-        loss = sum(l for l in loss_d.values())
-
-        with torch.no_grad():
-            psnr_ = psnr(results['rgb_fine'], rgbs)
-
-        self.log('lr', get_learning_rate(self.optimizer))
-        self.log('train/loss', loss)
-
-        # for k, v in loss_d.items():
-        #     self.log(f'train/{k}', v, prog_bar=True)
-
-        self.log('train/psnr', psnr_, prog_bar=True)
+    def forward(self, inputs, targets):
+        loss = {}
+        # RGB
+        loss['rgb_coarse'] = self.lambda_mu * ((inputs['rgb_coarse'] - targets[..., :3]) ** 2).mean()
+        loss['rgb_fine'] = ((inputs['rgb_fine'] - targets[..., :3]) ** 2).mean()
+        # visibility
+        loss["transmittance_coarse"] = self.lambda_mu * self.Visi_loss * ((inputs['transmittance_coarse_real'].detach() -
+                                                                     inputs['transmittance_coarse_vis'].squeeze()) ** 2).mean()
+        loss["transmittance_fine"] = self.Visi_loss * ((inputs['transmittance_fine_real'].detach() - inputs[
+            'transmittance_fine_vis'].squeeze()) ** 2).mean()
 
         return loss
 
-    def validation_step(self, batch, batch_nb):
-        (rays, rgbs, ts) = (batch['rays'].squeeze(), batch['rgbs'
-                            ].squeeze(), batch['ts'].squeeze())
-        (W, H) = batch['w_h']
-        results = self(rays, ts)
-        loss_d = self.loss(results, rgbs)
-        loss = sum(l for l in loss_d.values())
 
-        if batch_nb == 0:
-            img = results['rgb_fine'].view(H, W, 3).permute(2, 0,
-                    1).cpu()  # (3, H, W)
-            img_gt = rgbs.view(H, W, 3).permute(2, 0, 1).cpu()  # (3, H, W)
-            depth = visualize_depth(results['depth_fine'].view(H, W))  # (3, H, W)
-            stack = torch.stack([img_gt, img, depth])  # (3, 3, H, W)
-            self.logger.experiment.add_images('val/GT_pred_depth',
-                    stack, self.global_step)
+class InterPosEmbedding(nn.Module):
+    def __init__(self, N_freqs=10):
+        super(InterPosEmbedding, self).__init__()
+        self.N_freqs = N_freqs
+        self.funcs = [torch.sin, torch.cos]
 
-        psnr_ = psnr(results['rgb_fine'], rgbs)
+        # [2^0,2^1,...,2^(n-1)]: for sin
+        self.freq_band_1 = 2 ** torch.linspace(0, N_freqs - 1, N_freqs)
+        # [4^0,4^1,...,4^(n-1)]: for diag(∑)
+        self.freq_band_2 = self.freq_band_1 ** 2
 
-        log = {'val_loss': loss}
-        for (k, v) in loss_d.items():
-            log['val_' + str(k)] = v
-        log['val_psnr'] = psnr_
+    def forward(self, mu, diagE):
+        sin_out = []
+        sin_cos = []
+        for freq in self.freq_band_1:
+            for func in self.funcs:
+                sin_cos.append(func(freq * mu))
+            sin_out.append(sin_cos)
+            sin_cos = []
+        # sin_out:list:[sin(mu),cos(mu)]
+        diag_out = []
+        for freq in self.freq_band_2:
+            diag_out.append(freq * diagE)
+        # diag_out:list:[4^(L-1)*diag(∑)]
+        out = []
+        for sc_γ, diag_Eγ in zip(sin_out, diag_out):
+            # torch.exp(-0.5 * x_var) * torch.sin(x)
+            for sin_cos in sc_γ:  # [sin,cos]
+                out.append(sin_cos * torch.exp(-0.5 * diag_Eγ))
+        return torch.cat(out, -1)
 
-        return log
 
-    def validation_epoch_end(self, outputs):
-        mean_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        mean_psnr = torch.stack([x['val_psnr'] for x in outputs]).mean()
+class PosEmbedding(nn.Module):
+    def __init__(self, N_freqs):
+        """
+        Defines a function that embeds x to (x, sin(2^k x), cos(2^k x), ...)
+        in_channels: number of input channels (3 for both xyz and direction)
+        """
+        super().__init__()
+        self.N_freqs = N_freqs
+        self.funcs = [torch.sin, torch.cos]
+        # [2^0,2^1,...,2^(n-1)]
+        self.freq_bands = 2 ** torch.linspace(0, N_freqs - 1, N_freqs)
 
-        self.log('val/loss', mean_loss)
-        self.log('val/psnr', mean_psnr, prog_bar=True)
+    def forward(self, x):
+        out = []
+        for freq in self.freq_bands:  # [2^0,2^1,...,2^(n-1)]
+            for func in self.funcs:
+                out += [func(freq * x)]
+        # xyz——>63,dir——>27
+        return torch.cat(out, -1)
+
+class Block_NeRF(nn.Module):
+    def __init__(self, D=8, W=256, skips=[4],
+                 in_channel_xyz=60, in_channel_dir=24,
+                 in_channel_exposure=8,  # exposure is in 1d and dirs are in 3d
+                 in_channel_appearance=32,
+                 add_apperance=True,
+                 add_exposure=True):
+        # input：[xyz60,dir24,exposure24,appearance24]
+        super(Block_NeRF, self).__init__()
+        self.D = D
+        self.W = W
+        self.skips = skips
+        self.in_channel_xyz = in_channel_xyz
+        self.in_channel_dir = in_channel_dir
+        self.in_channel_exposure = in_channel_exposure
+        self.in_channel_appearance = in_channel_appearance
+        self.add_appearance = add_apperance
+        self.add_exposure = add_exposure
+
+        for i in range(D):
+            if i == 0:
+                layer = nn.Linear(in_channel_xyz, W)
+            elif i in skips:
+                layer = nn.Linear(W + in_channel_xyz, W)
+            else:
+                layer = nn.Linear(W, W)
+            layer = nn.Sequential(layer, nn.ReLU(True))
+            setattr(self, f'xyz_encoding_{i + 1}', layer)
+        self.xyz_encoding_final = nn.Linear(W, W)
+
+        input_channel = W + in_channel_dir
+        if add_apperance:
+            input_channel += in_channel_appearance
+        if add_exposure:
+            input_channel += in_channel_exposure
+        # 3层128
+        self.dir_encoding = nn.Sequential(  # RGB由dir,Exposure,Appearance决定
+            nn.Linear(
+                input_channel,
+                W // 2
+            ), nn.ReLU(True),
+            nn.Linear(W // 2, W // 2), nn.ReLU(True),
+            nn.Linear(W // 2, W // 2), nn.ReLU(True)
+        )
+
+        self.static_sigma = nn.Sequential(nn.Linear(W, 1), nn.Softplus())
+        self.static_rgb = nn.Sequential(nn.Linear(W // 2, 3), nn.Sigmoid())
+
+    def forward(self, x, sigma_only=False):
+        if sigma_only:
+            input_xyz = x
+        else:
+            input_xyz, input_dir, input_exp, input_appear = torch.split(x, [self.in_channel_xyz, self.in_channel_dir,
+                                                                        self.in_channel_exposure,
+                                                                        self.in_channel_appearance], dim=-1)
+        xyz = input_xyz
+        for i in range(self.D):
+            if i in self.skips:
+                xyz = torch.cat([xyz, input_xyz], dim=-1)
+            xyz = getattr(self, f'xyz_encoding_{i + 1}')(xyz)
+
+        static_sigma = self.static_sigma(xyz)
+        if sigma_only:
+            return static_sigma
+
+        xyz_feature = self.xyz_encoding_final(xyz)
+        input_xyz_feature = torch.cat([xyz_feature, input_dir], dim=-1)
+        if self.add_exposure:
+            input_xyz_feature = torch.cat([input_xyz_feature, input_exp], dim=-1)
+        if self.add_appearance:
+            input_xyz_feature = torch.cat([input_xyz_feature, input_appear], dim=-1)
+        
+        dir_encoding = self.dir_encoding(input_xyz_feature)
+
+        static_rgb = self.static_rgb(dir_encoding)
+        static_rgb_sigma = torch.cat([static_rgb, static_sigma], dim=-1)
+
+        return static_rgb_sigma
+
+
+class Visibility(nn.Module):
+    def __init__(self,
+                 in_channel_xyz=60, in_channel_dir=24,
+                 W=128):
+        super(Visibility, self).__init__()
+        self.in_channel_xyz = in_channel_xyz
+        self.in_channel_dir = in_channel_dir
+
+        self.vis_encoding = nn.Sequential(
+            nn.Linear(in_channel_xyz + in_channel_dir, W), nn.ReLU(True),
+            nn.Linear(W, W), nn.ReLU(True),
+            nn.Linear(W, W), nn.ReLU(True),
+            nn.Linear(W, W), nn.ReLU(True),
+        )
+        self.visibility = nn.Sequential(nn.Linear(W, 1), nn.Softplus())
+
+    def forward(self, x):
+        vis_encode = self.vis_encoding(x)
+        visibility = self.visibility(vis_encode)
+        return visibility

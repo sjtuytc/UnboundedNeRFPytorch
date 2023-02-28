@@ -100,6 +100,7 @@ def get_opts():
 
 
 def main(hparams):
+    print("Warning, this old implementation of BlockNeRF will be deprecated in the next version!")
     hparams['block_index'] = 'block_' + str(hparams['block_index'])
     system = Block_NeRF_System(hparams)
     checkpoint_callback = \

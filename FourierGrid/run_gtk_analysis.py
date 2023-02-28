@@ -7,15 +7,17 @@ import pdb
 import time
 import torch
 # import random
-from jax import random
+# from jax import random
 import torch.nn as nn
 import numpy as np
+from scipy.special import jv
+from scipy.ndimage import gaussian_filter1d
 
 
-class VG(nn.Module):
-    # the VG operator
+class VoxelGrid(nn.Module):
+    # the V o x e l G ri d operator
     def __init__(self, grid_len=1000):
-        super(VG, self).__init__()
+        super(VoxelGrid, self).__init__()
         self.grid_len = grid_len
         self.interval_num = grid_len - 1
         axis_coord = np.array([0 + i * 1 / grid_len for i in range(grid_len)])
@@ -39,7 +41,7 @@ class VG(nn.Module):
             real_x = idx / data_point_num
             left_grid = int(real_x // (1 / self.grid_len))
             right_grid = left_grid + 1
-            if left_grid > 0:
+            if left_grid >= 0:
                 jacobian_y_w[idx][left_grid] = abs(real_x - right_grid * 1 / self.grid_len) * self.grid_len
             if right_grid < self.grid_len:
                 jacobian_y_w[idx][right_grid] = abs(real_x - left_grid * 1 / self.grid_len) * self.grid_len
@@ -77,10 +79,10 @@ class VG(nn.Module):
         return train_loss, test_loss, y_test
 
 
-class FG(nn.Module):
-    # the FG operator
+class FourierGrid(nn.Module):
+    # the FourierGrid operator
     def __init__(self, grid_len=1000, band_num=10):
-        super(FG, self).__init__()
+        super(FourierGrid, self).__init__()
         self.grid_len = grid_len
         self.interval_num = self.grid_len - 1
         self.band_num = band_num
@@ -160,8 +162,34 @@ class FG(nn.Module):
         test_loss = np.mean(test_loss)
         return train_loss, test_loss, y_test
 
+
+# build models and train them
+def train_model(one_model):
+    # training and testing VoxelGrid
+    optimizer = torch.optim.Adam(one_model.parameters(), lr=lr)
+    iterations = 150
+    epoch_iter = tqdm(range(iterations))
+    for epoch in epoch_iter:
+        optimizer.zero_grad() # to make the gradients zero
+        train_loss, test_loss, test_y = one_model.one_d_regress(x_train, x_test, y_train, y_test_gt)
+        train_loss.backward() # This is for computing gradients using backward propagation
+        optimizer.step()      # This is equivalent to: theta_new = theta_old - alpha * derivative of J w.r.t theta
+        epoch_iter.set_description(f"Training loss: {train_loss.item()}; Testing Loss: {test_loss}")
+    return train_loss, test_loss, test_y
+
+
+def get_fg_gtk_spectrum_by_band_num(band_num):
+    test_fg = FourierGrid(grid_len=grid_len, band_num=band_num * 2)
+    fg_gtk = test_fg()
+    # fg_gtk = (fg_gtk - fg_gtk.min()) / (fg_gtk.max() - fg_gtk.min())
+    fg_gtk_spectrum = 10**fplot(fg_gtk)
+    fg_plot = gaussian_filter1d(fg_gtk_spectrum[0], sigma=2)
+    return fg_plot
+
+
 # hyperparameters
-title_offset = -0.4
+title_offset = -0.29
+bbox_offset = 1.44
 data_point_num = 100
 grid_len = 10
 freq_num = 10
@@ -171,35 +199,62 @@ colors_k = np.array([[0.8872, 0.4281, 0.1875],
     [0.0943, 0.5937, 0.8793],
     [0.3936, 0.2946, 0.6330],
     [0.7123, 0.2705, 0.3795]])
-linewidth = 3
+linewidth = 1.0
 line_alpha = .8
+title_font_size = 7.4
+legend_font_size = 6
+label_size = 7
+# matplotlib.rcParams["font.family"] = 'Arial'
+matplotlib.rcParams['xtick.labelsize'] = label_size 
+matplotlib.rcParams['ytick.labelsize'] = label_size 
 
 # begin plot 
-fig3 = plt.figure(constrained_layout=True, figsize=(4, 2))
-gs = fig3.add_gridspec(1, 2, width_ratios=[1, 1])
+fig3 = plt.figure(constrained_layout=True, figsize=(4, 4))
+gs = fig3.add_gridspec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
 # 100 * 100 datapoints, 10*10 params (grid_len=10)
-test_vg = VG(grid_len=grid_len * freq_num)
+test_vg = VoxelGrid(grid_len=grid_len * freq_num)
 vg_gtk = test_vg()
-vg_gtk = (vg_gtk - vg_gtk.min()) / vg_gtk.max()
+vg_gtk_normalized = (vg_gtk - vg_gtk.min()) / (vg_gtk.max() - vg_gtk.min())
 ax = fig3.add_subplot(gs[0, 0])
-ax.imshow(vg_gtk)
+ax.imshow(vg_gtk_normalized)
 ax.set_xticks([*range(0, 100, 20)] + [100])
 ax.set_yticks([*range(0, 100, 20)] + [100])
-ax.set_title('(a) VG GTK', y=title_offset)
+ax.grid(linestyle = '--', linewidth = 0.3)
+ax.set_title('(a) VoxelGrid GTK', y=title_offset, fontsize=title_font_size)
 
 ax = fig3.add_subplot(gs[0, 1])
-test_fg = FG(grid_len=grid_len, band_num=freq_num)
+test_fg = FourierGrid(grid_len=grid_len, band_num=freq_num)
 fg_gtk = test_fg()
-fg_gtk = (fg_gtk - fg_gtk.min()) / fg_gtk.max()
+fg_gtk = (fg_gtk - fg_gtk.min()) / (fg_gtk.max() - fg_gtk.min())
 ax.imshow(fg_gtk)
 ax.set_xticks([*range(0, 100, 20)] + [100])
 ax.set_yticks([*range(0, 100, 20)] + [100])
-ax.set_title('(b) FG GTK', y=title_offset)
+ax.grid(linestyle = '--', linewidth = 0.3)
+ax.set_title('(b) FourierGrid GTK', y=title_offset, fontsize=title_font_size)
 
-# generate figures
-plt.savefig("figures/vg_fg_gtk.jpg", dpi=800)
-plt.savefig("figures/vg_fg_gtk.pdf", format="pdf")
-pdb.set_trace()
+ax = fig3.add_subplot(gs[1, 0])
+w_vg, v_vg = np.linalg.eig(vg_gtk)
+w_fg, v_fg = np.linalg.eig(fg_gtk)
+fplot = lambda x : np.fft.fftshift(np.log10(np.abs(np.fft.fft(x))))
+vg_gtk_spectrum = 10**fplot(vg_gtk)
+vg_plot = gaussian_filter1d(vg_gtk_spectrum[0], sigma=2)
+
+fg_gtk_plot_1 = get_fg_gtk_spectrum_by_band_num(band_num=1)
+fg_gtk_plot_5 = get_fg_gtk_spectrum_by_band_num(band_num=5)
+fg_gtk_plot_10 = get_fg_gtk_spectrum_by_band_num(band_num=10)
+plt.autoscale(enable=True, axis='x', tight=True)
+# plt.plot(vg_plot, label='VoxelGrid', color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
+plt.semilogy(np.append(vg_plot, vg_plot[0]), label='VoxelGrid', color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
+# plt.semilogy(fg_gtk_plot_1, label='FourierGrid (l=1)', color=colors_k[2], alpha=line_alpha, linewidth=linewidth)
+plt.semilogy(np.append(fg_gtk_plot_1, fg_gtk_plot_1[0]), label='FourierGrid (l=1)', color=colors_k[2], alpha=line_alpha, linewidth=linewidth)
+# plt.semilogy(fg_gtk_plot_5, label='FourierGrid (l=5)', color=colors_k[3], alpha=line_alpha, linewidth=linewidth)
+plt.semilogy(np.append(fg_gtk_plot_5, fg_gtk_plot_5[0]), label='FourierGrid (l=5)', color=colors_k[3], alpha=line_alpha, linewidth=linewidth)
+# plt.semilogy(fg_gtk_plot_10, label='FourierGrid (l=10)', color=colors_k[4], alpha=line_alpha, linewidth=linewidth)
+plt.semilogy(np.append(fg_gtk_plot_10, fg_gtk_plot_10[0]), label='FourierGrid (l=10)', color=colors_k[4], alpha=line_alpha, linewidth=linewidth)
+plt.xticks([0,25,50,75,100], ['$-\pi$','$-\pi/2$','$0$','$\pi/2$','$\pi$'])
+ax.set_yticks([0.1, 1, 10, 100])
+ax.legend(loc='upper left', bbox_to_anchor=(-0.01, bbox_offset), handlelength=1, fontsize=legend_font_size, fancybox=False, ncol=1)
+ax.set_title('(c) GTK Fourier Spectrum', y=title_offset, fontsize=title_font_size)
 
 
 def sample_random_signal(key, decay_vec):
@@ -219,6 +274,14 @@ def sample_random_powerlaw(key, N, power):
   return sample_random_signal(key, decay_vec)
 
 
+def get_sine_signal():
+    return np.array([np.sin(x / (train_num*sample_interval) * 2 * np.pi) for x in range(train_num*sample_interval)])
+
+
+def get_bessel_signal():
+    # return np.array([np.exp(x / train_num*sample_interval) for x in range(train_num*sample_interval)])
+    return np.array([jv(1, x / 4) for x in range(train_num*sample_interval)])
+
 ##  Fitting experiments
 # hyperparameters
 rand_key = np.array([0, 0], dtype=np.uint32)
@@ -230,60 +293,38 @@ lr = 1
 
 # setup data
 x_test = np.float32(np.linspace(0, 1., train_num * sample_interval, endpoint=False))
-x_train = x_test[::sample_interval]
-# s = sample_random_powerlaw(rand_key, train_num * sample_interval, data_power) 
-signal = np.array([np.sin(x / (train_num*sample_interval) * 2 * np.pi) for x in range(train_num*sample_interval)])
+x_train = x_test[0:len(x_test):sample_interval]
+
+# signal = get_sine_signal()
+signal = get_bessel_signal()
 signal = (signal-signal.min()) / (signal.max()-signal.min())
 
-y_train = signal[::sample_interval]
+y_train = signal[0:len(x_test):sample_interval]
 y_test_gt = signal
 
 
-# build models and train them
-def train_model(one_model):
-    # training and testing VG
-    optimizer = torch.optim.Adam(one_model.parameters(), lr=lr)
-    iterations = 150
-    epoch_iter = tqdm(range(iterations))
-    for epoch in epoch_iter:
-        optimizer.zero_grad() # to make the gradients zero
-        train_loss, test_loss, test_y = one_model.one_d_regress(x_train, x_test, y_train, y_test_gt)
-        train_loss.backward() # This is for computing gradients using backward propagation
-        optimizer.step()      # This is equivalent to: theta_new = theta_old - alpha * derivative of J w.r.t theta
-        epoch_iter.set_description(f"Training loss: {train_loss.item()}; Testing Loss: {test_loss}")
-    return train_loss, test_loss, test_y
-
 freq_num = 3
-test_vg_small = VG(grid_len=10 * freq_num)
-test_vg_large = VG(grid_len=100 * freq_num)
-test_fg_small = FG(grid_len=10, band_num=freq_num)
-test_fg_large = FG(grid_len=100, band_num=freq_num)
+test_vg_small = VoxelGrid(grid_len=10 * freq_num)
+test_vg_large = VoxelGrid(grid_len=100 * freq_num)
+test_fg_small = FourierGrid(grid_len=10, band_num=freq_num)
+test_fg_large = FourierGrid(grid_len=100, band_num=freq_num)
 train_loss, test_loss, test_y_vg_small = train_model(test_vg_small)
 train_loss, test_loss, test_y_fg_small = train_model(test_fg_small)
 
-
-ax = fig3.add_subplot(gs[0, 2])
+ax = fig3.add_subplot(gs[1, 1])
 ax.plot(x_test, signal, label='Target signal', color='k', linewidth=1, alpha=line_alpha, zorder=1)
-ax.plot(x_test, test_y_vg_small, label='Learned by VG', color=colors_k[1], linewidth=1, alpha=line_alpha, zorder=1)
-ax.plot(x_test, test_y_fg_small, label='Learned by FG', color=colors_k[2], linewidth=1, alpha=line_alpha, zorder=1)
+ax.plot(x_test, test_y_vg_small, label='Learned by VoxelGrid', color=colors_k[0], linewidth=1, alpha=line_alpha, zorder=1)
+ax.plot(x_test, test_y_fg_small, label='Learned by FourierGrid', color=colors_k[3], linewidth=1, alpha=line_alpha, zorder=1)
 ax.scatter(x_train, y_train, color='w', edgecolors='k', linewidths=1, s=20, linewidth=1, label='Training points', zorder=2)
-ax.set_title('(c) 1D Regression', y=title_offset)
+ax.set_title('(d) 1D Regression', y=title_offset, fontsize=title_font_size)
 ax.set_xticks(np.linspace(0.0, 1.0, num=5, endpoint=True))
+ax.legend(loc='upper left', bbox_to_anchor=(-0.01, bbox_offset), handlelength=1, fontsize=legend_font_size, fancybox=False, ncol=1)
 
-# ax.set_xticks([])
-# ax.set_yticks([])
-# ax.legend(loc='upper right', ncol=2)
-ax.legend(loc='upper left', bbox_to_anchor=(1.03, 0.78), handlelength=1)
-
-# plt.xlabel('x')
-# plt.ylabel('y')
-# plt.grid(True, which='both', alpha=.3)
-
-
-# generate figures
-plt.savefig("figures/final_vg_fg.jpg", dpi=800)
-plt.savefig("figures/final_vg_fg.pdf", format="pdf")
+print("Plotting figures!")
+plt.savefig("figures/vg_fg_gtk.jpg", dpi=300) # for example
+plt.savefig("figures/vg_fg_gtk.pdf", format="pdf")
 pdb.set_trace()
+
 
 
 # # unused codes
@@ -294,8 +335,8 @@ pdb.set_trace()
 # fg_spec = 10**fplot(fg_gtk)
 # w_vg, v_vg = np.linalg.eig(vg_gtk)
 # w_fg, v_fg = np.linalg.eig(fg_gtk)
-# plt.semilogy(vg_spec[0], label="VG", color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
-# plt.semilogy(fg_spec[0], label="FG", color=colors_k[1], alpha=line_alpha, linewidth=linewidth)
+# plt.semilogy(vg_spec[0], label="VoxelGrid", color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
+# plt.semilogy(fg_spec[0], label="FourierGrid", color=colors_k[1], alpha=line_alpha, linewidth=linewidth)
 # # ax.plot(np.linspace(-.5, .5, 10100, endpoint=True), np.append(vg_spec, vg_spec[0]), label="vg", color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
 # ax.set_title('(c) GTK Fourier spectrum', y=title_offset)
 

@@ -134,6 +134,7 @@ def Inverse_Interpolation(model_result, W_H):
 
 
 if __name__ == '__main__':
+    print("Warning, this old implementation of BlockNeRF will be deprecated in the next version!")
     torch.cuda.empty_cache()
     hparams = get_hparams()
     os.makedirs(hparams['save_path'], exist_ok=True)
