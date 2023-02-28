@@ -109,8 +109,7 @@ class Block_NeRF(nn.Module):
             input_channel += in_channel_appearance
         if add_exposure:
             input_channel += in_channel_exposure
-        # 3层128
-        self.dir_encoding = nn.Sequential(  # RGB由dir,Exposure,Appearance决定
+        self.dir_encoding = nn.Sequential(
             nn.Linear(
                 input_channel,
                 W // 2

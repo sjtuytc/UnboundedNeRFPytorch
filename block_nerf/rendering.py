@@ -16,7 +16,7 @@ def get_cone_mean_conv(
     middle_t = (t0 + t1) / 2
     difference_t = (t1 - t0) / 2
     mean_t = difference_t ** 2 / 3 - 4 / 15 * (difference_t ** 4 * (12
-            * mean_t ** 2 - difference_t ** 2) / (3 * mean_t ** 2
+            * middle_t ** 2 - difference_t ** 2) / (3 * middle_t ** 2
             + difference_t ** 2) ** 2)
     variance_t = difference_t ** 2 / 3 - 4 / 15 * (difference_t ** 4
             * (12 * middle_t ** 2 - difference_t ** 2) / (3 * middle_t
