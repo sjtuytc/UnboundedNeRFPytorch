@@ -50,12 +50,22 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "buer1121",
+      "name": "buer1121",
+      "avatar_url": "https://avatars.githubusercontent.com/u/48516434?v=4",
+      "profile": "https://github.com/buer1121",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
   "projectName": "LargeScaleNeRFPytorch",
-  "projectOwner": "dvlab-research",
+  "projectOwner": "sjtuytc",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true
+  "skipCi": true,
+  "commitConvention": "angular"
 }
