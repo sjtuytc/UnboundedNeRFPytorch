@@ -12,13 +12,15 @@ import torch.nn as nn
 import numpy as np
 from scipy.special import jv
 from scipy.ndimage import gaussian_filter1d
+from mpl_toolkits.mplot3d import axes3d
 
 
 class VoxelGrid(nn.Module):
     # the V o x e l G ri d operator
-    def __init__(self, grid_len=1000):
+    def __init__(self, grid_len=1000, data_point_num=100):
         super(VoxelGrid, self).__init__()
         self.grid_len = grid_len
+        self.data_point_num = data_point_num
         self.interval_num = grid_len - 1
         axis_coord = np.array([0 + i * 1 / grid_len for i in range(grid_len)])
         self.ms_x, self.ms_t = np.meshgrid(axis_coord, axis_coord)  # x and t of the grid
@@ -36,9 +38,9 @@ class VoxelGrid(nn.Module):
     
     def forward(self,):  # calculate GTK
         # the data is [0, 1/data_point_num, 2/data_point_num, ..., 1]
-        jacobian_y_w = np.zeros((data_point_num, self.grid_len))
-        for idx in range(data_point_num):
-            real_x = idx / data_point_num
+        jacobian_y_w = np.zeros((self.data_point_num, self.grid_len))
+        for idx in range(self.data_point_num):
+            real_x = idx / self.data_point_num
             left_grid = int(real_x // (1 / self.grid_len))
             right_grid = left_grid + 1
             if left_grid >= 0:
@@ -81,9 +83,10 @@ class VoxelGrid(nn.Module):
 
 class FourierGrid(nn.Module):
     # the FourierGrid operator
-    def __init__(self, grid_len=1000, band_num=10):
+    def __init__(self, grid_len=1000, band_num=10, data_point_num=100):
         super(FourierGrid, self).__init__()
         self.grid_len = grid_len
+        self.data_point_num = data_point_num
         self.interval_num = self.grid_len - 1
         self.band_num = band_num
         axis_coord = np.array([0 + i * 1 / grid_len for i in range(grid_len)])
@@ -109,9 +112,9 @@ class FourierGrid(nn.Module):
         return fourier
         
     def forward(self,):  # calculate GTK
-        jacobian_y_w = np.zeros((data_point_num, self.grid_len * self.band_num))
-        for idx in range(data_point_num):  # for all data points
-            real_x = idx / data_point_num   # the real x value
+        jacobian_y_w = np.zeros((self.data_point_num, self.grid_len * self.band_num))
+        for idx in range(self.data_point_num):  # for all data points
+            real_x = idx / self.data_point_num   # the real x value
             for jdx in range(self.band_num):
                 fourier = self.gamma_x_i(real_x, jdx)
                 left_grid = int(fourier // (1 / self.grid_len))
@@ -313,309 +316,123 @@ train_loss, test_loss, test_y_fg_small = train_model(test_fg_small)
 
 ax = fig3.add_subplot(gs[1, 1])
 ax.plot(x_test, signal, label='Target signal', color='k', linewidth=1, alpha=line_alpha, zorder=1)
+ax.scatter(x_train, y_train, color='w', edgecolors='k', linewidths=1, s=20, linewidth=1, label='Training points', zorder=2)
 ax.plot(x_test, test_y_vg_small, label='Learned by VoxelGrid', color=colors_k[0], linewidth=1, alpha=line_alpha, zorder=1)
 ax.plot(x_test, test_y_fg_small, label='Learned by FourierGrid', color=colors_k[3], linewidth=1, alpha=line_alpha, zorder=1)
-ax.scatter(x_train, y_train, color='w', edgecolors='k', linewidths=1, s=20, linewidth=1, label='Training points', zorder=2)
 ax.set_title('(d) 1D Regression', y=title_offset, fontsize=title_font_size)
 ax.set_xticks(np.linspace(0.0, 1.0, num=5, endpoint=True))
 ax.legend(loc='upper left', bbox_to_anchor=(-0.01, bbox_offset), handlelength=1, fontsize=legend_font_size, fancybox=False, ncol=1)
 
-print("Plotting figures!")
+print("Plotting figures 1")
 plt.savefig("figures/vg_fg_gtk.jpg", dpi=300) # for example
 plt.savefig("figures/vg_fg_gtk.pdf", format="pdf")
+
+####################################################################
+# plotting a new diagram, figure 2
+####################################################################
+def calculate_Delta(gtk, y1_data, y2_data):
+    # batch_y: [1 * 2 * B]
+    batch_y_transpose = np.expand_dims(np.stack([y1_data, y2_data]).reshape(2, -1).transpose(), axis=2)
+    batch_y = np.expand_dims(np.stack([y1_data, y2_data]).reshape(2, -1).transpose(), axis=1)
+    batch_size = batch_y.shape[0]
+    batch_gtk = np.array([np.linalg.inv(gtk) for i in range(batch_size)])
+    result = np.matmul(batch_y, np.matmul(batch_gtk, batch_y_transpose)).squeeze()
+    return result
+
+
+one_vg = VoxelGrid(grid_len=grid_len, data_point_num=2)
+vg_gtk = one_vg()
+one_fg = FourierGrid(grid_len=grid_len, data_point_num=2)
+fg_gtk = one_fg()
+y1_data, y2_data, Z = axes3d.get_test_data(0.05)
+y1_data = y1_data / y1_data.max()
+y2_data = y2_data / y2_data.max()
+vg_values = calculate_Delta(vg_gtk, y1_data, y2_data).reshape(Z.shape)
+vg_values /= vg_values.max()
+fg_values = calculate_Delta(fg_gtk, y1_data, y2_data).reshape(Z.shape) 
+fg_values /= fg_values.max()
+
+# begin plot 
+fig4 = plt.figure(constrained_layout=True, figsize=(4, 2))
+gs = fig4.add_gridspec(1, 2, width_ratios=[1.04, 0.96])
+# 100 * 100 datapoints, 10*10 params (grid_len=10)
+ax = fig4.add_subplot(gs[0, 0])
+
+X=np.array([0.15, 0.44, 0.3, 0.56, 0.78, 0.72])
+Y=np.array([0.18, 0.34, 0.51, 0.72, 0.81, 0.93])
+annotations=["Synthetic-NeRF", "NSVF", "BlendedMVS", "UT&T", "M360", "SFMB"]
+
+ax.scatter(X[:3], Y[:3], s=30, color=colors_k[0], marker="s")
+ax.scatter(X[3:], Y[3:], s=30, color=colors_k[3], marker="o")
+ax.annotate(annotations[0], (X[0], Y[0]), fontsize=title_font_size)
+ax.annotate(annotations[1], (X[1], Y[1]), fontsize=title_font_size)
+ax.annotate(annotations[2], (X[2], Y[2]), fontsize=title_font_size)
+ax.annotate(annotations[3], (X[3], Y[3]), fontsize=title_font_size)
+ax.annotate(annotations[4], (X[4], Y[4]), fontsize=title_font_size)
+ax.annotate(annotations[5], (X[5], Y[5]), fontsize=title_font_size)
+ax.set_xlabel("Density Norms", size=title_font_size)
+ax.set_ylabel("Generalization Gap", size=title_font_size)
+
+ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+ax.grid(linestyle='--', linewidth = 0.3)
+ax.set_title('(a) Bounded vs. Unbounded Scenes',  y=-0.4, fontsize=title_font_size)
+
+
+ax = fig4.add_subplot(gs[0, 1])
+diffrences = vg_values - fg_values
+ax.imshow(diffrences, cmap='coolwarm', )
+ax.set_xticks([0,24,48,72,96, 120], [-1,-0.6,-0.2,0.2,0.6,1])
+ax.set_yticks([0,24,48,72,96, 120], [-1,-0.6,-0.2,0.2,0.6,1])
+ax.grid(linestyle = '--', linewidth = 0.3)
+ax.set_xlabel("y1", size=title_font_size, labelpad=1)
+ax.set_ylabel("y2", size=title_font_size, labelpad=-1)
+ax.set_title('(b) Generalization Bound Diff.',  y=-0.491, fontsize=title_font_size)
+plot = ax.pcolor(diffrences)
+plt.colorbar(plot)
+
+print("Plotting figures 2")
+plt.savefig("figures/unbounded.jpg", dpi=300) # for example
+plt.savefig("figures/unbounded.pdf", format="pdf")
 pdb.set_trace()
 
 
-
-# # unused codes
-
-# fplot = lambda x : np.fft.fftshift(np.log10(np.abs(np.fft.fft(x))))
-# ax = fig3.add_subplot(gs[0, 2])
-# vg_spec = 10**fplot(vg_gtk)
-# fg_spec = 10**fplot(fg_gtk)
-# w_vg, v_vg = np.linalg.eig(vg_gtk)
-# w_fg, v_fg = np.linalg.eig(fg_gtk)
-# plt.semilogy(vg_spec[0], label="VoxelGrid", color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
-# plt.semilogy(fg_spec[0], label="FourierGrid", color=colors_k[1], alpha=line_alpha, linewidth=linewidth)
-# # ax.plot(np.linspace(-.5, .5, 10100, endpoint=True), np.append(vg_spec, vg_spec[0]), label="vg", color=colors_k[0], alpha=line_alpha, linewidth=linewidth)
-# ax.set_title('(c) GTK Fourier spectrum', y=title_offset)
-
-# pdb.set_trace()
-
-
-
-# import jax
-# from jax import random, grad, jit, vmap
-# from jax.config import config
-# from jax.lib import xla_bridge
-# import jax.numpy as np
-# import neural_tangents as nt
-# from neural_tangents import stax
-# from jax.example_libraries import optimizers
-# import os
-
-
-# # Utils
-
-# fplot = lambda x : np.fft.fftshift(np.log10(np.abs(np.fft.fft(x))))
-
-# # Signal makers
-
-# def sample_random_signal(key, decay_vec):
-#   N = decay_vec.shape[0]
-#   raw = np.random.normal(key, [N, 2]) @ np.array([1, 1j])
-#   signal_f = raw * decay_vec
-#   signal = np.real(np.fft.ifft(signal_f))
-#   return signal
-
-# def sample_random_powerlaw(key, N, power):
-#   coords = np.float32(np.fft.ifftshift(1 + N//2 - np.abs(np.fft.fftshift(np.arange(N)) - N//2)))
-#   decay_vec = coords ** -power
-#   decay_vec = np.array(decay_vec)
-#   decay_vec[N//4:] = 0
-#   return sample_random_signal(key, decay_vec)
-
-
-# # Network 
-
-# def make_network(num_layers, num_channels, ntk_params=True, num_outputs=1):
-#   layers = []
-#   for i in range(num_layers-1):
-#     if ntk_params:
-#         layers.append(stax.Dense(num_channels, parameterization='standard'))
-#     else:
-#         layers.append(stax.Dense(num_channels, parameterization='standard'))
-#     layers.append(stax.Relu(do_backprop=True))
-#   layers.append(stax.Dense(num_outputs, parameterization='standard'))
-#   return stax.serial(*layers)
-
-# # Encoding 
-
-# def compute_ntk(x, avals, bvals, kernel_fn):
-#     x1_enc = input_encoder(x, avals, bvals)
-#     x2_enc = input_encoder(np.array([0.], dtype=np.float32), avals, bvals)
-#     out = np.squeeze(kernel_fn(x1_enc, x2_enc, 'ntk'))
-#     return out
-
-
-# input_encoder = lambda x, a, b: np.concatenate([a * np.sin((2.*np.pi*x[...,None]) * b), 
-#                                                 a * np.cos((2.*np.pi*x[...,None]) * b)], axis=-1) / np.linalg.norm(a)
-
-
-# def predict_psnr_basic(kernel_fn, train_fx, test_fx, train_x, train_y, test_x, test_y, t_final, eta=None):  
-#   g_dd = kernel_fn(train_x, train_x, 'ntk')
-#   g_td = kernel_fn(test_x, train_x, 'ntk')
-#   train_predict_fn = nt.predict.gradient_descent_mse(g_dd, train_y[...,None], g_td)
-#   train_theory_y, test_theory_y = train_predict_fn(t_final, train_fx[...,None], test_fx[...,None])
-
-#   calc_psnr = lambda f, g: -10. * np.log10(np.mean((f-g)**2))
-#   return calc_psnr(test_y, test_theory_y[:,0]), calc_psnr(train_y, train_theory_y[:,0])
-
-# predict_psnr_basic = jit(predict_psnr_basic, static_argnums=(0,))
-
-
-# def train_model(rand_key, network_size, lr, iters, 
-#                 train_input, test_input, test_mask, optimizer, ab, name=''):
-#     if ab is None:
-#         ntk_params = False
-#     else:
-#         ntk_params = True
-#     init_fn, apply_fn, kernel_fn = make_network(*network_size, ntk_params=ntk_params)
-
-#     if ab is None:
-#         run_model = jit(lambda params, ab, x: np.squeeze(apply_fn(params, x[...,None] - .5)))
-#     else:
-#         run_model = jit(lambda params, ab, x: np.squeeze(apply_fn(params, input_encoder(x, *ab))))
-#     model_loss = jit(lambda params, ab, x, y: .5 * np.sum((run_model(params, ab, x) - y) ** 2))
-#     model_psnr = jit(lambda params, ab, x, y: -10 * np.log10(np.mean((run_model(params, ab, x) - y) ** 2)))
-#     model_grad_loss = jit(lambda params, ab, x, y: jax.grad(model_loss)(params, ab, x, y))
-
-#     opt_init, opt_update, get_params = optimizer(lr)
-#     opt_update = jit(opt_update)
-
-#     if ab is None:
-#         _, params = init_fn(rand_key, (-1, 1))
-#     else:
-#         _, params = init_fn(rand_key, (-1, input_encoder(train_input[0], *ab).shape[-1]))
-#     opt_state = opt_init(params)
-
-#     pred0 = run_model(get_params(opt_state), ab, test_input[0])
-#     pred0_f = np.fft.fft(pred0)
-
-#     train_psnrs = []
-#     test_psnrs = []
-#     theories = []
-#     xs = []
-#     errs = []
-#     for i in tqdm(range(iters), desc=name):
-#         opt_state = opt_update(i, model_grad_loss(get_params(opt_state), ab, *train_input), opt_state)
-
-#         if i % 20 == 0:
-#             train_psnr = model_psnr(get_params(opt_state), ab, *train_input)
-#             test_psnr = model_psnr(get_params(opt_state), ab, test_input[0][test_mask], test_input[1][test_mask])
-#             if ab is None:
-#                 train_fx = run_model(get_params(opt_state), ab, train_input[0])
-#                 test_fx = run_model(get_params(opt_state), ab, test_input[0][test_mask])
-#                 theory = predict_psnr_basic(kernel_fn, train_fx, test_fx, train_input[0][...,None]-.5, train_input[1], test_input[0][test_mask][...,None], test_input[1][test_mask], i*lr)
-#             else:
-#                 test_x = input_encoder(test_input[0][test_mask], *ab)
-#                 train_x = input_encoder(train_input[0], *ab)
-
-#                 train_fx = run_model(get_params(opt_state), ab, train_input[0])
-#                 test_fx = run_model(get_params(opt_state), ab, test_input[0][test_mask])
-#                 theory = predict_psnr_basic(kernel_fn, train_fx, test_fx, train_x, train_input[1], test_x, test_input[1][test_mask], i*lr)
-
-
-#             train_psnrs.append(train_psnr)
-#             test_psnrs.append(test_psnr)
-#             theories.append(theory)
-#             pred = run_model(get_params(opt_state), ab, train_input[0])
-#             errs.append(pred - train_input[1])
-#             xs.append(i)
-#     return get_params(opt_state), train_psnrs, test_psnrs, errs, np.array(theories), xs
-
-# N_train = 32
-# data_power = 1
-
-# network_size = (4, 1024)
-
-# learning_rate = 1e-5
-# sgd_iters = 50001
-
-# rand_key = random.PRNGKey(0)
-
-# config.update('jax_disable_jit', False)
-
-# # Signal
-# M = 8
-# N = N_train
-# x_test = np.float32(np.linspace(0,1.,N*M,endpoint=False))
-# x_train = x_test[::M]
-
-# test_mask = np.ones(len(x_test), bool)
-# test_mask[np.arange(0,x_test.shape[0],M)] = 0
-
-# s = sample_random_powerlaw(rand_key, N*M, data_power) 
-# s = (s-s.min()) / (s.max()-s.min()) - .5
-
-# # Kernels
-# bvals = np.float32(np.arange(1, N//2+1))
-# ab_dict = {}
-# # ab_dict = {r'$p = {}$'.format(p) : (bvals**-np.float32(p), bvals) for p in [0, 1]}
-# ab_dict = {r'$p = {}$'.format(p) : (bvals**-np.float32(p), bvals) for p in [0, 0.5, 1, 1.5, 2]}
-# ab_dict[r'$p = \infty$'] = (np.eye(bvals.shape[0])[0], bvals)
-# ab_dict['No mapping'] = None
-
-
-# # Train the networks
-
-# rand_key, *ensemble_key = random.split(rand_key, 1 + len(ab_dict))
-
-# outputs = {k : train_model(key, network_size, learning_rate, sgd_iters, 
-#                            (x_train, s[::M]), (x_test, s), test_mask,
-#                            optimizer=optimizers.sgd, ab=ab_dict[k], name=k) for k, key in zip(ab_dict, ensemble_key)}
-
-# ab_dict.update({r'$p = {}$'.format(p) : (bvals**-np.float32(p), bvals) for p in [0.5, 1.5, 2]})
-
-# prop_cycle = plt.rcParams['axes.prop_cycle']
-# colors = prop_cycle.by_key()['color']
-
-
-# params = {'legend.fontsize': 24,
-#          'axes.labelsize': 22,
-#          'axes.titlesize': 26,
-#          'xtick.labelsize':20,
-#          'ytick.labelsize':20}
-# pylab.rcParams.update(params)
-
-
-# matplotlib.rcParams['mathtext.fontset'] = 'cm'
-# matplotlib.rcParams['mathtext.rm'] = 'serif'
-
-# plt.rcParams["font.family"] = "cmr10"
-# names = ['$p = 0$', 
-#          '$p = 0.5$',
-#          '$p = 1$',
-#          '$p = 1.5$',
-#          '$p = 2$',
-#          '$p = \\infty$']
-
-# N_kernels = len(names)
-
-# colors_k = np.array([[0.8872, 0.4281, 0.1875],
-#     [0.8136, 0.6844, 0.0696],
-#     [0.2634, 0.6634, 0.4134],
-#     [0.0943, 0.5937, 0.8793],
-#     [0.3936, 0.2946, 0.6330],
-#     [0.7123, 0.2705, 0.3795]])
-# linewidth = 3
-# line_alpha = .8
-# title_offset = -0.3
-
-# xs = outputs[names[0]][-1]
-# t_final = learning_rate * sgd_iters
-
-# init_fn, apply_fn, kernel_fn = make_network(*network_size)
-# run_model = jit(lambda params, ab, x: np.squeeze(apply_fn(params, input_encoder(x, *ab))))
-
-# fig3 = plt.figure(constrained_layout=True, figsize=(22,4))
-# gs = fig3.add_gridspec(1, 4, width_ratios=[1,1,1.3,1.3])
-
-# ### Plot NTK stuff
-
-# H_rows = {k : compute_ntk(x_train, *ab_dict[k], kernel_fn) for k in names}
-
-# samples = 100
-# x_no_encoding = np.linspace(-np.pi, np.pi, samples)
-# x_basic = np.stack([np.sin(x_no_encoding),np.cos(x_no_encoding)], axis=-1)
-# relu_NTK = kernel_fn(x_no_encoding[:,None], x_no_encoding[:,None], 'ntk')
-# basic_NTK = kernel_fn(x_basic, x_basic, 'ntk')
-
-# ax = fig3.add_subplot(gs[0, 0])
-# ax.imshow(relu_NTK, cmap='inferno', extent=[-.5,.5,.5,-.5])
-# ax.xaxis.tick_top()
-# extent = [-.5,.5]
-# ax.set_xticks([-.5,.5])
-# ax.set_yticks([-.5,.5])
-# ax.set_xticklabels([fr'${t:g}$' for t in extent])
-# ax.set_yticklabels([fr'${t:g}$' for t in extent])
-# xtick = ax.get_xticks()
-# ax.set_xticks(xtick)
-# ax.set_xticklabels([fr'${t:g}$' for t in xtick])
-# ax.set_title('(a) No mapping NTK', y=title_offset)
-
 # ax = fig3.add_subplot(gs[0, 1])
-# ax.imshow(basic_NTK, cmap='inferno', extent=[-.5,.5,.5,-.5])
-# ax.xaxis.tick_top()
-# ax.set_xticks([-.5,.5])
-# ax.set_yticks([-.5,.5])
-# ax.set_xticklabels([fr'${t:g}$' for t in extent])
-# ax.set_yticklabels([fr'${t:g}$' for t in extent])
-# ax.set_title('(b) Basic mapping NTK', y=title_offset)
+# test_fg = FourierGrid(grid_len=grid_len, band_num=freq_num)
+# fg_gtk = test_fg()
+# fg_gtk = (fg_gtk - fg_gtk.min()) / (fg_gtk.max() - fg_gtk.min())
+# ax.imshow(fg_gtk)
+# ax.set_xticks([*range(0, 100, 20)] + [100])
+# ax.set_yticks([*range(0, 100, 20)] + [100])
+# ax.grid(linestyle = '--', linewidth = 0.3)
+# ax.set_title('(b) FourierGrid GTK', y=title_offset, fontsize=title_font_size)
 
-# ax = fig3.add_subplot(gs[0, 2])
-# for c, k in zip(colors_k, H_rows):
-#   ntk_spatial = np.fft.fftshift(H_rows[k])
-#   ax.plot(np.linspace(-.5, .5, 33, endpoint=True), np.append(ntk_spatial, ntk_spatial[0]), label=k, color=c, alpha=line_alpha, linewidth=linewidth)
-# ax.set_title('(c) NTK spatial', y=title_offset)
-# xtick = ax.get_xticks()
-# ax.set_xticks(xtick)
-# ax.set_xticklabels([fr'${t:g}$' for t in xtick])
+pdb.set_trace()
 
-# plt.grid(True, which='both', alpha=.3)
-# plt.autoscale(enable=True, axis='x', tight=True)
+######################################################################
+# 3D plotting
+######################################################################
 
-# ax = fig3.add_subplot(gs[0, 3])
-# for c, k in zip(colors_k, H_rows):
-#   ntk_spectrum = 10**fplot(H_rows[k])
-#   plt.semilogy(np.append(ntk_spectrum, ntk_spectrum[0]), label=k, color=c, alpha=line_alpha, linewidth=linewidth)
-# ax.set_title('(d) NTK Fourier spectrum', y=title_offset)
-# plt.xticks([0,8,16,24,32], ['$-\pi$','$-\pi/2$','$0$','$\pi/2$','$\pi$'])
+ax = plt.figure(constrained_layout=True).add_subplot(projection='3d')
 
-# plt.autoscale(enable=True, axis='x', tight=True)
-# plt.grid(True, which='major', alpha=.3)
-# plt.legend(loc='center left', bbox_to_anchor=(1,.5), handlelength=1)
+# Plot the 3D surface
+ax.plot_surface(y1_data, y2_data, vg_values, color=colors_k[0], edgecolor=colors_k[0], lw=0.5, rstride=8, cstride=8,
+                alpha=0.3)
+ax.plot_surface(y1_data, y2_data, fg_values, color=colors_k[3], edgecolor=colors_k[3], lw=0.5, rstride=8, cstride=8,
+                alpha=0.3)
+# Plot projections of the contours for each dimension.  By choosing offsets
+# that match the appropriate axes limits, the projected contours will sit on
+# the 'walls' of the graph
+color_shift = 0.9
+ax.contourf(y1_data, y2_data, fg_values - vg_values + color_shift, zdir='z', offset=0.0, cmap='coolwarm', vmin=0.2, vmax=1.6)
+# ax.contourf(y1_data, y2_data, Z, zdir='x', offset=-40, cmap='coolwarm')
+# ax.contourf(y1_data, y2_data, Z, zdir='y', offset=40, cmap='coolwarm')
+ax.margins(x=0, y=0, z=0)
 
+ax.set(xlim=(-1, 1), ylim=(-1, 1), zlim=(0, 1),
+       xlabel='y1', ylabel='y2', zlabel='Gen. Bound')
 
-# plt.savefig('1D_fig2.pdf', bbox_inches='tight', pad_inches=0)
-# plt.show()
+print("Plotting figures 3, supplementary")
+plt.savefig("figures/compare_generalization.jpg", dpi=300) # for example
+plt.savefig("figures/compare_generalization.pdf", format="pdf")
+
