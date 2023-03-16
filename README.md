@@ -1,8 +1,3 @@
-# [Weekly classified NeRF](docs/weekly_nerf.md)
-We track weekly NeRF papers and classify them. All previous published NeRF papers have been added to the list. We provide an [English version](docs/weekly_nerf.md) and a [Chinese version](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
-
-We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta data) of all NeRF papers, you can add your own comments or make your own paper analysis tools based on the structured meta data.
-
 # Large-scale Neural Radiance Fields in Pytorch
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
@@ -120,25 +115,30 @@ Hope our efforts could help your research or projects!
 <details>
 <summary>Expand / collapse installation steps.</summary>
 
-1. Create conda environment.
+1. Clone this repository. Use depth == 1 to avoid download a large history.
+   ```bash
+   git clone --depth=1 git@github.com:sjtuytc/LargeScaleNeRFPytorch.git
+   ```
+
+2. Create conda environment.
    ```bash
    conda create -n large-scale-nerf python=3.9
    conda activate large-scale-nerf
    ```
-2. Install pytorch, and other libs. Make sure your Pytorch version is compatible with your CUDA.
+3. Install pytorch, and other libs. Make sure your Pytorch version is compatible with your CUDA.
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
    conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
 
-3. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
+4. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
    ```bash
    apt-get install g++ build-essential  # ensure you have g++ and other build essentials, sudo access required.
    cd FourierGrid/cuda
    python setup.py install
    cd ../../
    ```
-4. Install other libs used for reconstructing **custom** scenes. **This is only needed when you need to build your scenes.**
+5. Install other libs used for reconstructing **custom** scenes. **This is only needed when you need to build your scenes.**
    ```bash
    sudo apt-get install colmap
    sudo apt-get install imagemagick  # required sudo accesss
@@ -321,6 +321,11 @@ Consider citing the following great works:
 ```
 
 We refer to the code and data from [DVGO](https://github.com/sunset1995/DirectVoxGO), [nerf-pl](https://github.com/kwea123/nerf_pl) and [SVOX2](https://github.com/sxyu/svox2), thanks for their great work!
+
+## [Weekly classified NeRF](docs/weekly_nerf.md)
+We track weekly NeRF papers and classify them. All previous published NeRF papers have been added to the list. We provide an [English version](docs/weekly_nerf.md) and a [Chinese version](docs/weekly_nerf_cn.md). We welcome [contributions and corrections](docs/contribute_weekly_nerf.md) via PR.
+
+We also provide an [excel version](docs/weekly_nerf_meta_data.xlsx) (the meta data) of all NeRF papers, you can add your own comments or make your own paper analysis tools based on the structured meta data.
 
 ## Contributors ✨
 
