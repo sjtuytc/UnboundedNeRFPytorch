@@ -10,6 +10,48 @@ from .colmap_wrapper import run_colmap
 from . import colmap_read_model as read_model
 
 
+def load_colmap_data_nerfstudio(realdir):
+    camerasfile = os.path.join(realdir, 'sparse/0/cameras.bin')
+    camdata = read_model.read_cameras_binary(camerasfile)
+    list_of_keys = list(camdata.keys())
+    cam = camdata[list_of_keys[0]]
+    print( 'Cameras', len(cam))
+
+    h, w, f = cam.height, cam.width, cam.params[0]
+    # w, h, f = factor * w, factor * h, factor * f
+    hwf = np.array([h,w,f]).reshape([3,1])
+    
+    imagesfile = os.path.join(realdir, 'sparse/0/images.bin')
+    imdata = read_model.read_images_binary(imagesfile)
+    
+    w2c_mats = []
+    bottom = np.array([0,0,0,1.]).reshape([1,4])
+    
+    names = [imdata[k].name for k in imdata]
+    print( 'Images #', len(names))
+    perm = np.argsort(names)
+    for k in imdata:
+        im = imdata[k]
+        R = im.qvec2rotmat()
+        t = im.tvec.reshape([3,1])
+        m = np.concatenate([np.concatenate([R, t], 1), bottom], 0)
+        w2c_mats.append(m)
+    
+    w2c_mats = np.stack(w2c_mats, 0)
+    c2w_mats = np.linalg.inv(w2c_mats)
+    
+    poses = c2w_mats[:, :3, :4].transpose([1,2,0])
+    poses = np.concatenate([poses, np.tile(hwf[..., np.newaxis], [1,1,poses.shape[-1]])], 1)
+    
+    # points3dfile = os.path.join(realdir, 'dense/sparse/points3D.bin')
+    points3dfile = os.path.join(realdir, 'sparse/0/points3D.bin')
+    pts3d = read_model.read_points3d_binary(points3dfile)
+    
+    # must switch to [-u, r, -t] from [r, -u, t], NOT [r, u, -t]
+    poses = np.concatenate([poses[:, 1:2, :], poses[:, 0:1, :], -poses[:, 2:3, :], poses[:, 3:4, :], poses[:, 4:5, :]], 1)
+    return poses, pts3d, perm, names
+
+
 def load_colmap_data(realdir):
     camerasfile = os.path.join(realdir, 'dense/sparse/cameras.bin')
     # camerasfile = os.path.join(realdir, 'sparse/0/cameras.bin')

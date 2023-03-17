@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 from .load_llff import load_llff_data
+from .load_nerfstudio import load_nerfstudio_data
 from .load_blender import load_blender_data
 from .load_nsvf import load_nsvf_data
 from .load_blendedmvs import load_blendedmvs_data
@@ -14,7 +15,6 @@ def load_common_data(args):
 
     K, depths = None, None
     near_clip = None
-
     if args.dataset_type == 'llff':
         images, depths, poses, bds, render_poses, i_test = load_llff_data(
                 args.datadir, args.factor, args.width, args.height,
@@ -25,6 +25,39 @@ def load_common_data(args):
         hwf = poses[0,:3,-1]
         poses = poses[:,:3,:4]
         print('Loaded llff', images.shape, render_poses.shape, hwf, args.datadir)
+        if not isinstance(i_test, list):
+            i_test = [i_test]
+
+        if args.llffhold > 0:
+            print('Auto LLFF holdout,', args.llffhold)
+            i_test = np.arange(images.shape[0])[::args.llffhold]
+
+        i_val = i_test
+        i_train = np.array([i for i in np.arange(int(images.shape[0])) if
+                        (i not in i_test and i not in i_val)])
+
+        print('DEFINING BOUNDS')
+        if args.ndc:
+            near = 0.
+            far = 1.
+        else:
+            near_clip = max(np.ndarray.min(bds) * .9, 0)
+            _far = max(np.ndarray.max(bds) * 1., 0)
+            near = 0
+            far = inward_nearfar_heuristic(poses[i_train, :3, 3])[1]
+            print('near_clip', near_clip)
+            print('original far', _far)
+        print('NEAR FAR', near, far)
+    elif args.dataset_type == 'nerfstudio':
+        images, depths, poses, bds, render_poses, i_test = load_nerfstudio_data(
+                args.datadir, args.factor, args.width, args.height,
+                recenter=True, bd_factor=args.bd_factor,
+                spherify=args.spherify,
+                load_depths=args.load_depths,
+                movie_render_kwargs=args.movie_render_kwargs)
+        hwf = poses[0,:3,-1]
+        poses = poses[:,:3,:4]
+        print('Loaded nerfstudio', images.shape, render_poses.shape, hwf, args.datadir)
         if not isinstance(i_test, list):
             i_test = [i_test]
 

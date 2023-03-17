@@ -154,6 +154,8 @@ Click the following sub-section titles to expand / collapse steps.
 <details>
 <summary> 4.1 Download processed data.</summary>
 
+- **Disclaimer**: users are required to get permission from the original dataset provider. Any usage of the data must obey the license of the dataset owner.
+
 (1) [Unbounded Tanks & Temples](https://www.tanksandtemples.org/). Download data from [here](https://drive.google.com/file/d/11KRfN91W1AxAW6lOFs4EeYDbeoQZCi87/view). Then unzip the data.
 
 ```bash
@@ -175,8 +177,6 @@ cd ../
 
 (3) [San Fran Cisco Mission Bay](https://waymo.com/research/block-nerf/).
 What you should know before downloading the data:
-
-- **Disclaimer**: you should ensure that you get the permission for usage from the original data provider. One should first sign the license on the [official waymo webiste](https://waymo.com/research/block-nerf/licensing/) to get the permission of downloading the Waymo data. Other data should be downloaded and used without obeying the original licenses.
 
 - Our processed waymo data is significantly **smaller** than the original version (19.1GB vs. 191GB) because we store the camera poses instead of raw ray directions. Besides, our processed data is more friendly for Pytorch dataloaders. Download [the data](https://drive.google.com/drive/folders/1Lcc6MF35EnXGyUy0UZPkUx7SfeLsv8u9?usp=sharing) in the Google Drive. You may use [gdown](https://stackoverflow.com/questions/65001496/how-to-download-a-google-drive-folder-using-link-in-linux) to download the files via command lines. If you are interested in processing the raw waymo data on your own, please refer to [this doc](./docs/get_pytorch_waymo_dataset.md).
 

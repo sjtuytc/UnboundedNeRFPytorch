@@ -13,11 +13,8 @@ python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbo
 python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/kitchen_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
 python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbounded/counter_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 2
 
-# # bounded tanks and temples
-# python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple/caterpillar_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 4
-# python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple/barn_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
-# python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple/family_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 1
-
+# nerf-studio dataset
+python run_FourierGrid.py  --program train --config FourierGrid/configs/nerf_studio/Giannini_Hall.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 1
 
 # original DVGOv2 training
 # python run_FourierGrid.py --program train --config FourierGrid/configs/waymo/block_0_tt.py

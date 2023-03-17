@@ -1,0 +1,23 @@
+cd data
+wget https://data.nerf.studio/nerfstudio/Giannini-Hall.zip
+wget https://data.nerf.studio/nerfstudio/sculpture.zip
+wget https://data.nerf.studio/nerfstudio/stump.zip
+wget https://data.nerf.studio/nerfstudio/aspen.zip
+wget https://data.nerf.studio/nerfstudio/floating-tree.zip
+wget https://data.nerf.studio/nerfstudio/dozer.zip
+wget https://data.nerf.studio/nerfstudio/plane.zip
+wget https://data.nerf.studio/nerfstudio/kitchen.zip
+wget https://data.nerf.studio/nerfstudio/person.zip
+wget https://data.nerf.studio/nerfstudio/Egypt.zip
+
+unzip Giannini-Hall.zip
+unzip sculpture.zip
+unzip stump.zip
+unzip aspen.zip
+unzip floating-tree.zip
+unzip dozer.zip
+unzip plane.zip
+unzip kitchen.zip
+unzip person.zip
+unzip Egypt.zip
+cd ../

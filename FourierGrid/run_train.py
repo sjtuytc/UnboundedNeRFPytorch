@@ -9,7 +9,7 @@ from FourierGrid.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_b
 from FourierGrid import utils, dvgo, dcvgo, dmpigo
 from FourierGrid.FourierGrid_model import FourierGridModel
 from FourierGrid.load_everything import load_existing_model
-from torch_efficient_distloss import flatten_eff_distloss
+# from torch_efficient_distloss import flatten_eff_distloss
 from FourierGrid.run_export_bbox import run_export_bbox_cams
 from FourierGrid.run_export_coarse import run_export_coarse
 from FourierGrid.FourierGrid_model import FourierMSELoss
@@ -266,19 +266,18 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             if len(density):
                 nearclip_loss = (density - density.detach()).sum()
                 loss += cfg_train.weight_nearclip * nearclip_loss
-        if cfg_train.weight_distortion > 0:
-            n_max = render_result['n_max']
-            s = render_result['s']
-            w = render_result['weights']
-            ray_id = render_result['ray_id']
-            loss_distortion = flatten_eff_distloss(w, s, 1/n_max, ray_id)
-            loss += cfg_train.weight_distortion * loss_distortion
+        # if cfg_train.weight_distortion > 0:
+        #     n_max = render_result['n_max']
+        #     s = render_result['s']
+        #     w = render_result['weights']
+        #     ray_id = render_result['ray_id']
+        #     loss_distortion = flatten_eff_distloss(w, s, 1/n_max, ray_id)
+        #     loss += cfg_train.weight_distortion * loss_distortion
         if cfg_train.weight_rgbper > 0:
             rgbper = (render_result['raw_rgb'] - target[render_result['ray_id']]).pow(2).sum(-1)
             rgbper_loss = (rgbper * render_result['weights'].detach()).sum() / len(rays_o)
             loss += cfg_train.weight_rgbper * rgbper_loss
         loss.backward()
-
         if global_step<cfg_train.tv_before and global_step>cfg_train.tv_after and global_step%cfg_train.tv_every==0:
             if cfg_train.weight_tv_density>0:
                 model.density_total_variation_add_grad(
@@ -347,7 +346,6 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
             attr = getattr(args, arg)
             file.write('{} = {}\n'.format(arg, attr))
     cfg.dump(os.path.join(cfg.basedir, cfg.expname, 'config.py'))
-
     # coarse geometry searching (originally only for inward bounded scenes, extended to support waymo)
     eps_coarse = time.time()
     xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)

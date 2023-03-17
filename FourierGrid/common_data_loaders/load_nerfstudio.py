@@ -3,9 +3,12 @@ import os, imageio
 import torch
 import scipy
 import pdb
+from FourierGrid.tools.colmap_utils.pose_utils import load_colmap_data_nerfstudio
 
 ########## Slightly modified version of LLFF data loading code
 ##########  see https://github.com/Fyusion/LLFF for original
+
+
 def imread(f):
     if f.endswith('png'):
         return imageio.imread(f, ignoregamma=True)
@@ -82,16 +85,16 @@ def _minify(basedir, factors=[], resolutions=[]):
         print('Done')
 
 
-def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, load_depths=False):
+def _load_data_nerfstudio_more(basedir, poses, names, factor=None, width=None, height=None, load_imgs=True, load_depths=False):
 
-    poses_arr = np.load(os.path.join(basedir, 'poses_bounds.npy'))
-    if poses_arr.shape[1] == 17:
-        poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1,2,0])
-    elif poses_arr.shape[1] == 14:
-        poses = poses_arr[:, :-2].reshape([-1, 3, 4]).transpose([1,2,0])
-    else:
-        raise NotImplementedError
-    bds = poses_arr[:, -2:].transpose([1,0])
+    # poses_arr = np.load(os.path.join(basedir, 'poses_bounds.npy'))
+    # if poses_arr.shape[1] == 17:
+    #     poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1,2,0])
+    # elif poses_arr.shape[1] == 14:
+    #     poses = poses_arr[:, :-2].reshape([-1, 3, 4]).transpose([1,2,0])
+    # else:
+    #     raise NotImplementedError
+    # bds = poses_arr[:, -2:].transpose([1,0])
 
     img0 = [os.path.join(basedir, 'images', f) for f in sorted(os.listdir(os.path.join(basedir, 'images'))) \
             if f.endswith('JPG') or f.endswith('jpg') or f.endswith('jpeg') or f.endswith('png')][0]
@@ -124,11 +127,13 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
         print(imgdir, 'does not exist, returning' )
         return
 
-    imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) if f.endswith('JPG') or f.endswith('jpg') or f.endswith('png')]
+    imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) if f.endswith('JPG') or f.endswith('jpg') or f.endswith('jpeg') or f.endswith('png')]
+    assert len(imgfiles) > 1, "Images are too few. Do they exist?"
     if poses.shape[-1] != len(imgfiles):
-        print()
+        print("This should not happen, something is wrong!")
         print( 'Mismatch between imgs {} and poses {} !!!!'.format(len(imgfiles), poses.shape[-1]) )
-        names = set(name[:-4] for name in np.load(os.path.join(basedir, 'poses_names.npy')))
+        # names = set(name[:-4] for name in np.load(os.path.join(basedir, 'poses_names.npy')))
+        names = set(name[:-4] for name in names)
         assert len(names) == poses.shape[-1]
         print('Below failed files are skip due to SfM failure:')
         new_imgfiles = []
@@ -152,13 +157,13 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
     poses[2, 4, :] = poses[2, 4, :] * 1./factor
 
     if not load_imgs:
-        return poses, bds
+        return poses
     imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
     imgs = np.stack(imgs, -1)
 
     print('Loaded image data', imgs.shape, poses[:,-1,0])
     if not load_depths:
-        return poses, bds, imgs
+        return poses, imgs
 
     depthdir = os.path.join(basedir, 'stereo', 'depth_maps')
     assert os.path.exists(depthdir), f'Dir not found: {depthdir}'
@@ -169,7 +174,7 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
     depths = [depthread(f) for f in depthfiles]
     depths = np.stack(depths, -1)
     print('Loaded depth data', depths.shape)
-    return poses, bds, imgs, depths
+    return poses, imgs, depths
 
 
 def normalize(x):
@@ -210,6 +215,7 @@ def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
         z = normalize(c - np.dot(c2w[:3,:4], np.array([0,0,-focal, 1.])))
         render_poses.append(np.concatenate([viewmatrix(z, up, c), hwf], 1))
     return render_poses
+
 
 
 def recenter_poses(poses):
@@ -293,13 +299,48 @@ def spherify_poses(poses, bds, depths):
     return poses_reset, radius, bds, depths
 
 
-def load_llff_data(basedir, factor=8, width=None, height=None,
+def cal_colmap_bounds(poses, pts3d, perm):
+    pts_arr = []
+    vis_arr = []
+    for k in pts3d:
+        pts_arr.append(pts3d[k].xyz)
+        cams = [0] * poses.shape[-1]
+        for ind in pts3d[k].image_ids:
+            if len(cams) < ind - 1:
+                print('ERROR: the correct camera poses for current points cannot be accessed')
+                return
+            cams[ind-1] = 1
+        vis_arr.append(cams)
+
+    pts_arr = np.array(pts_arr)
+    vis_arr = np.array(vis_arr)
+    print( 'Points', pts_arr.shape, 'Visibility', vis_arr.shape )
+    
+    zvals = np.sum(-(pts_arr[:, np.newaxis, :].transpose([2,0,1]) - poses[:3, 3:4, :]) * poses[:3, 2:3, :], 0)
+    valid_z = zvals[vis_arr==1]
+    print( 'Depth stats', valid_z.min(), valid_z.max(), valid_z.mean() )
+    
+    save_arr = []
+    for i in perm:
+        vis = vis_arr[:, i]
+        zs = zvals[:, i]
+        zs = zs[vis==1]
+        close_depth, inf_depth = np.percentile(zs, .1), np.percentile(zs, 99.9)
+        # print( i, close_depth, inf_depth )
+        save_arr.append(np.array([close_depth, inf_depth]))
+    save_arr = np.stack(save_arr, axis=1)
+    return save_arr
+    
+
+def load_nerfstudio_data(basedir, factor=8, width=None, height=None,
                    recenter=True, rerotate=True,
                    bd_factor=.75, spherify=False, path_zflat=False, load_depths=False,
                    movie_render_kwargs={}):
-
-    poses, bds, imgs, *depths = _load_data(basedir, factor=factor, width=width, height=height,
-                                           load_depths=load_depths) # factor=8 downsamples original imgs by 8x
+    colmap_base_dir = os.path.join(basedir, 'colmap')
+    poses, pts3d, perm, names= load_colmap_data_nerfstudio(colmap_base_dir)
+    bds = cal_colmap_bounds(poses, pts3d, perm)
+    poses, imgs, *depths = _load_data_nerfstudio_more(basedir, poses, names, factor=factor, width=width, height=height,
+                                                           load_depths=load_depths) # factor=8 downsamples original imgs by 8x
     # poses: [3, 5, N], bds: [2, N], imgs: [H, W, 3, N], depths: []
     print('Loaded', basedir, bds.min(), bds.max())
     if load_depths:
