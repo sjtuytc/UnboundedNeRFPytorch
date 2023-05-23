@@ -122,12 +122,6 @@ if __name__=='__main__':
         run_render(args=args, cfg=cfg, data_dict=data_dict, device=device)
     elif program == 'gen_trace':
         run_gen_cam_paths(args=args, cfg=cfg, data_dict=data_dict)
-    elif program == "sfm":
-        run_sfm(args=args, cfg=cfg, data_dict=data_dict)
-    elif program == 'tune_pose':
-        args.no_reload = True
-        em_runner = NeRFEM(args=args, cfg=cfg, data_dict=data_dict)
-        em_runner.run_em()
     else:
         raise NotImplementedError(f"Program {program} is not supported!")
     

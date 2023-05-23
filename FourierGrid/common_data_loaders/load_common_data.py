@@ -50,11 +50,8 @@ def load_common_data(args):
         print('NEAR FAR', near, far)
     elif args.dataset_type == 'nerfstudio':
         images, depths, poses, bds, render_poses, i_test = load_nerfstudio_data(
-                args.datadir, args.factor, args.width, args.height,
-                recenter=True, bd_factor=args.bd_factor,
-                spherify=args.spherify,
-                load_depths=args.load_depths,
-                movie_render_kwargs=args.movie_render_kwargs)
+                args.datadir, args.factor, args.width, args.height, recenter=args.recenter, bd_factor=args.bd_factor, dvgohold=args.dvgohold,
+                spherify=args.spherify, load_depths=args.load_depths, movie_render_kwargs=args.movie_render_kwargs)
         hwf = poses[0,:3,-1]
         poses = poses[:,:3,:4]
         print('Loaded nerfstudio', images.shape, render_poses.shape, hwf, args.datadir)
@@ -78,9 +75,6 @@ def load_common_data(args):
             _far = max(np.ndarray.max(bds) * 1., 0)
             near = 0
             far = inward_nearfar_heuristic(poses[i_train, :3, 3])[1]
-            print('near_clip', near_clip)
-            print('original far', _far)
-        print('NEAR FAR', near, far)
     elif args.dataset_type == 'blender':
         images, poses, render_poses, hwf, i_split = load_blender_data(args.datadir, args.half_res, args.testskip)
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
@@ -108,7 +102,6 @@ def load_common_data(args):
         print('Loaded tankstemple', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
 
-        # changed by Zelin, needs verification
         # near, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0)
         near_clip, far = inward_nearfar_heuristic(poses[i_train, :3, 3], ratio=0.02)
         near = 0

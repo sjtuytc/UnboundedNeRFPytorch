@@ -21,13 +21,15 @@ fast_color_thres={   # default
     }
 maskout_near_cam_vox = False
 pervoxel_lr = False
-# weight_distortion = 0.01
 weight_distortion = 0.02
 data = dict(
     dataset_type='nerfstudio',
-    spherify=False,  # default: True
+    spherify=False,
+    recenter=False,
     factor=8,
-    llffhold=8,
+    llffhold=-1,
+    dvgohold=8,
+    unbounded_inner_r=1.0,
     white_bkgd=True,
     rand_bkgd=True,
     unbounded_inward=True,
@@ -46,8 +48,8 @@ data = dict(
 coarse_train = dict(N_iters=0)
 
 fine_train = dict(
-    # N_iters=10000, # zelin working
-    N_iters=100000,  
+    N_iters=10000, # zelin working
+    # N_iters=100000,  
     N_rand=2048,
     lrate_decay=80,
     ray_sampler='flatten',

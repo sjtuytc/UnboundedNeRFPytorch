@@ -312,7 +312,6 @@ def load_llff_data(basedir, factor=8, width=None, height=None,
     imgs = np.moveaxis(imgs, -1, 0).astype(np.float32)
     images = imgs
     bds = np.moveaxis(bds, -1, 0).astype(np.float32)
-
     # Rescale if bd_factor is provided
     if bds.min() < 0 and bd_factor is not None:
         print('Found negative z values from SfM sparse points!?')

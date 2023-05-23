@@ -481,6 +481,7 @@ class FourierGridModel(nn.Module):
 
     def sample_ray(self, ori_rays_o, ori_rays_d, stepsize, is_train=False, **render_kwargs):
         '''Sample query points on rays: central sampling.
+        Ori_rays_o needs to be properly scaled!
         All the output points are sorted from near to far.
         Input:
             rays_o, rayd_d:   both in [N, 3] indicating ray configurations.
@@ -540,7 +541,6 @@ class FourierGridModel(nn.Module):
 
         ret_dict = {}
         num_rays = len(rays_o)
-        
         # sample points on rays
         ray_pts, ray_indexs, inner_mask, t, rays_d_e = self.sample_ray(
                 ori_rays_o=rays_o, ori_rays_d=rays_d, is_train=global_step is not None, **render_kwargs)

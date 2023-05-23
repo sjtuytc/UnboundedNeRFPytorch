@@ -1,4 +1,4 @@
-# Large-scale Neural Radiance Fields in Pytorch
+# Unbounded Neural Radiance Fields in Pytorch
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-6-orange.svg?style=flat-square)](#contributors-)
@@ -6,7 +6,7 @@
 
 ## 1. Introduction
 
-**I was writing a paper about our progress now but feel free to use our code without citing us.**
+**This is still a research project in progress.**
 
 This project aims for benchmarking several state-of-the-art large-scale radiance fields algorithms. We exchangely use terms "unbounded NeRF" and "large-scale NeRF" because we find the techniques behind them are closely related.
 
@@ -92,11 +92,12 @@ https://user-images.githubusercontent.com/31123348/220948025-25ce5cc1-3c9a-450c-
 Hope our efforts could help your research or projects!
 
 ## 2. News
-- [2023.2.27] **A major update of our repository with better performance and full code release**. 
+- [2023.3.20] This project is renamed to "UnboundedNeRFPytorch" because we find our work is not large enough (e.g., at city level), rigorously speaking.
 
 <details>
 <summary> Expand / collapse older news. </summary>
-	
+
+- [2023.2.27] **A major update of our repository with better performance and full code release**. 
 - [2022.12.23] Released several weeks' NeRF. Too many papers pop out these days so the update speed is slow.
 - [2022.9.12] Training Block-NeRF on the Waymo dataset, reaching PSNR 24.3.
 - [2022.8.31] Training Mega-NeRF on the Waymo dataset, loss still NAN.
@@ -129,7 +130,7 @@ Hope our efforts could help your research or projects!
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
-   conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
+   conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
 
 4. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
    ```bash

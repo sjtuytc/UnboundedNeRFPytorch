@@ -16,7 +16,7 @@ from FourierGrid.FourierGrid_model import FourierMSELoss
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-def create_new_model(data_dict, args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
+def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device):
     model_kwargs = copy.deepcopy(cfg_model)
     num_voxels_density = model_kwargs.pop('num_voxels_density')
     num_voxels_rgb = model_kwargs.pop('num_voxels_rgb')
@@ -123,7 +123,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
     if reload_ckpt_path is None:
         print(f'scene_rep_reconstruction ({stage}): train from scratch')
-        model, optimizer = create_new_model(data_dict, args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
+        model, optimizer = create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
         start = 0
         if cfg_model.maskout_near_cam_vox:
             model.maskout_near_cam_vox(poses[i_train,:3,3], near)

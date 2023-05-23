@@ -3,7 +3,6 @@ import pdb
 from FourierGrid.common_data_loaders.load_common_data import load_common_data
 from FourierGrid.load_waymo import load_waymo_data
 from FourierGrid.load_mega import load_mega_data
-# from FourierGrid.load_linemod import load_linemod_data
 from FourierGrid import utils, dvgo, dcvgo, dmpigo
 from FourierGrid.FourierGrid_model import FourierGridModel
 
@@ -16,9 +15,6 @@ def load_everything(args, cfg):
         return data_dict, args
     elif cfg.data.dataset_type == "mega":
         data_dict = load_mega_data(args, cfg)
-        return data_dict, args
-    elif cfg.data.dataset_type == 'linemod':
-        data_dict = load_linemod_data(args, cfg)
         return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)

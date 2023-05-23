@@ -1,5 +1,5 @@
 _base_ = './nerf_unbounded_default.py'
-expname = 'garden_nov29_'
+expname = 'garden_may23_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )

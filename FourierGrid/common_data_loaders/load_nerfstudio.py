@@ -3,6 +3,7 @@ import os, imageio
 import torch
 import scipy
 import pdb
+import json
 from FourierGrid.tools.colmap_utils.pose_utils import load_colmap_data_nerfstudio
 
 ########## Slightly modified version of LLFF data loading code
@@ -86,20 +87,9 @@ def _minify(basedir, factors=[], resolutions=[]):
 
 
 def _load_data_nerfstudio_more(basedir, poses, names, factor=None, width=None, height=None, load_imgs=True, load_depths=False):
-
-    # poses_arr = np.load(os.path.join(basedir, 'poses_bounds.npy'))
-    # if poses_arr.shape[1] == 17:
-    #     poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1,2,0])
-    # elif poses_arr.shape[1] == 14:
-    #     poses = poses_arr[:, :-2].reshape([-1, 3, 4]).transpose([1,2,0])
-    # else:
-    #     raise NotImplementedError
-    # bds = poses_arr[:, -2:].transpose([1,0])
-
     img0 = [os.path.join(basedir, 'images', f) for f in sorted(os.listdir(os.path.join(basedir, 'images'))) \
             if f.endswith('JPG') or f.endswith('jpg') or f.endswith('jpeg') or f.endswith('png')][0]
     sh = imageio.imread(img0).shape
-
     sfx = ''
 
     if height is not None and width is not None:
@@ -129,21 +119,6 @@ def _load_data_nerfstudio_more(basedir, poses, names, factor=None, width=None, h
 
     imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) if f.endswith('JPG') or f.endswith('jpg') or f.endswith('jpeg') or f.endswith('png')]
     assert len(imgfiles) > 1, "Images are too few. Do they exist?"
-    if poses.shape[-1] != len(imgfiles):
-        print("This should not happen, something is wrong!")
-        print( 'Mismatch between imgs {} and poses {} !!!!'.format(len(imgfiles), poses.shape[-1]) )
-        # names = set(name[:-4] for name in np.load(os.path.join(basedir, 'poses_names.npy')))
-        names = set(name[:-4] for name in names)
-        assert len(names) == poses.shape[-1]
-        print('Below failed files are skip due to SfM failure:')
-        new_imgfiles = []
-        for i in imgfiles:
-            fname = os.path.split(i)[1][:-4]
-            if fname in names:
-                new_imgfiles.append(i)
-            else:
-                print('==>', i)
-        imgfiles = new_imgfiles
 
     if len(imgfiles) < 3:
         print('Too few images...')
@@ -151,11 +126,9 @@ def _load_data_nerfstudio_more(basedir, poses, names, factor=None, width=None, h
 
     sh = imageio.imread(imgfiles[0]).shape
     if poses.shape[1] == 4:
-        poses = np.concatenate([poses, np.zeros_like(poses[:,[0]])], 1)
-        poses[2, 4, :] = np.load(os.path.join(basedir, 'hwf_cxcy.npy'))[2]
+        raise RuntimeError("The shape of pose does not contain hwf, this should not happen.")
     poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
     poses[2, 4, :] = poses[2, 4, :] * 1./factor
-
     if not load_imgs:
         return poses
     imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
@@ -180,6 +153,7 @@ def _load_data_nerfstudio_more(basedir, poses, names, factor=None, width=None, h
 def normalize(x):
     return x / np.linalg.norm(x)
 
+
 def viewmatrix(z, up, pos):
     vec2 = normalize(z)
     vec1_avg = up
@@ -188,9 +162,11 @@ def viewmatrix(z, up, pos):
     m = np.stack([vec0, vec1, vec2, pos], 1)
     return m
 
+
 def ptstocam(pts, c2w):
     tt = np.matmul(c2w[:3,:3].T, (pts-c2w[:3,3])[...,np.newaxis])[...,0]
     return tt
+
 
 def poses_avg(poses):
 
@@ -202,7 +178,6 @@ def poses_avg(poses):
     c2w = np.concatenate([viewmatrix(vec2, up, center), hwf], 1)
 
     return c2w
-
 
 
 def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
@@ -217,7 +192,6 @@ def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
     return render_poses
 
 
-
 def recenter_poses(poses):
     poses_ = poses+0
     bottom = np.reshape([0,0,0,1.], [1,4])
@@ -225,7 +199,6 @@ def recenter_poses(poses):
     c2w = np.concatenate([c2w[:3,:4], bottom], -2)
     bottom = np.tile(np.reshape(bottom, [1,1,4]), [poses.shape[0],1,1])
     poses = np.concatenate([poses[:,:3,:4], bottom], -2)
-
     poses = np.linalg.inv(c2w) @ poses
     poses_[:,:3,:4] = poses[:,:3,:4]
     poses = poses_
@@ -261,7 +234,6 @@ def rerotate_poses(poses):
 
 
 def spherify_poses(poses, bds, depths):
-
     p34_to_44 = lambda p : np.concatenate([p, np.tile(np.reshape(np.eye(4)[-1,:], [1,1,4]), [p.shape[0], 1,1])], 1)
 
     rays_d = poses[:,:3,2:3]
@@ -285,7 +257,6 @@ def spherify_poses(poses, bds, depths):
     c2w = np.stack([vec1, vec2, vec0, pos], 1)
 
     poses_reset = np.linalg.inv(p34_to_44(c2w[None])) @ p34_to_44(poses[:,:3,:4])
-
     radius = np.sqrt(np.mean(np.sum(np.square(poses_reset[:,:3,3]), -1)))
 
     sc = 1./radius
@@ -299,12 +270,12 @@ def spherify_poses(poses, bds, depths):
     return poses_reset, radius, bds, depths
 
 
-def cal_colmap_bounds(poses, pts3d, perm):
+def cal_colmap_bounds(poses, pts3d, sorted_names):
     pts_arr = []
     vis_arr = []
     for k in pts3d:
         pts_arr.append(pts3d[k].xyz)
-        cams = [0] * poses.shape[-1]
+        cams = [0] * poses.shape[-1] # N
         for ind in pts3d[k].image_ids:
             if len(cams) < ind - 1:
                 print('ERROR: the correct camera poses for current points cannot be accessed')
@@ -314,31 +285,28 @@ def cal_colmap_bounds(poses, pts3d, perm):
 
     pts_arr = np.array(pts_arr)
     vis_arr = np.array(vis_arr)
-    print( 'Points', pts_arr.shape, 'Visibility', vis_arr.shape )
-    
     zvals = np.sum(-(pts_arr[:, np.newaxis, :].transpose([2,0,1]) - poses[:3, 3:4, :]) * poses[:3, 2:3, :], 0)
     valid_z = zvals[vis_arr==1]
-    print( 'Depth stats', valid_z.min(), valid_z.max(), valid_z.mean() )
+    print( 'Depth stats', valid_z.min(), valid_z.max(), valid_z.mean())
     
-    save_arr = []
-    for i in perm:
+    bds = []
+    for i in sorted_names:
         vis = vis_arr[:, i]
         zs = zvals[:, i]
         zs = zs[vis==1]
         close_depth, inf_depth = np.percentile(zs, .1), np.percentile(zs, 99.9)
-        # print( i, close_depth, inf_depth )
-        save_arr.append(np.array([close_depth, inf_depth]))
-    save_arr = np.stack(save_arr, axis=1)
-    return save_arr
+        # print( i, close_depth, inf_depth)
+        bds.append(np.array([close_depth, inf_depth]))
+    bds = np.stack(bds, axis=1)
+    return bds
     
 
 def load_nerfstudio_data(basedir, factor=8, width=None, height=None,
-                   recenter=True, rerotate=True,
-                   bd_factor=.75, spherify=False, path_zflat=False, load_depths=False,
+                   recenter=True, rerotate=True, bd_factor=.75, dvgohold=8,
+                   spherify=False, path_zflat=False, load_depths=False,
                    movie_render_kwargs={}):
-    colmap_base_dir = os.path.join(basedir, 'colmap')
-    poses, pts3d, perm, names= load_colmap_data_nerfstudio(colmap_base_dir)
-    bds = cal_colmap_bounds(poses, pts3d, perm)
+    poses, train_num, pts3d, sorted_names, names = load_colmap_data_nerfstudio(basedir)
+    bds = cal_colmap_bounds(poses[:train_num], pts3d, sorted_names)
     poses, imgs, *depths = _load_data_nerfstudio_more(basedir, poses, names, factor=factor, width=width, height=height,
                                                            load_depths=load_depths) # factor=8 downsamples original imgs by 8x
     # poses: [3, 5, N], bds: [2, N], imgs: [H, W, 3, N], depths: []
@@ -347,112 +315,41 @@ def load_nerfstudio_data(basedir, factor=8, width=None, height=None,
         depths = depths[0]
     else:
         depths = 0
-    # Correct rotation matrix ordering and move variable dim to axis 0
-    poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
+    # Correct rotation matrix ordering and move variable dim to axis 0. Commented out by Zelin.
+    # poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
     poses = np.moveaxis(poses, -1, 0).astype(np.float32)
     imgs = np.moveaxis(imgs, -1, 0).astype(np.float32)
     images = imgs
     bds = np.moveaxis(bds, -1, 0).astype(np.float32)
-
+    
     # Rescale if bd_factor is provided
     if bds.min() < 0 and bd_factor is not None:
         print('Found negative z values from SfM sparse points!?')
         print('Please try bd_factor=None. This program is terminating now!')
         import sys; sys.exit()
-    sc = 1. if bd_factor is None else 1./(bds.min() * bd_factor)
+    sc = 0.1 / poses[:,:3,3].max() if bd_factor is None else 1./(bds.min() * bd_factor)
     poses[:,:3,3] *= sc
     bds *= sc
     depths *= sc
-    if recenter:
+    if recenter:  # not affected too much
         poses = recenter_poses(poses)
 
-    if spherify:
+    if spherify:  # not affected too much
         poses, radius, bds, depths = spherify_poses(poses, bds, depths)
         if rerotate:
             poses = rerotate_poses(poses)
-
-        ### generate spiral poses for rendering fly-through movie
-        centroid = poses[:,:3,3].mean(0)
-        radcircle = movie_render_kwargs.get('scale_r', 1) * np.linalg.norm(poses[:,:3,3] - centroid, axis=-1).mean()
-        centroid[0] += movie_render_kwargs.get('shift_x', 0)
-        centroid[1] += movie_render_kwargs.get('shift_y', 0)
-        centroid[2] += movie_render_kwargs.get('shift_z', 0)
-        new_up_rad = movie_render_kwargs.get('pitch_deg', 0) * np.pi / 180
-        target_y = radcircle * np.tan(new_up_rad)
-
-        render_poses = []
-
-        for th in np.linspace(0., 2.*np.pi, 200):
-            camorigin = np.array([radcircle * np.cos(th), 0, radcircle * np.sin(th)])
-            if movie_render_kwargs.get('flip_up', False):
-                up = np.array([0,1.,0])
-            else:
-                up = np.array([0,-1.,0])
-            vec2 = normalize(camorigin)
-            vec0 = normalize(np.cross(vec2, up))
-            vec1 = normalize(np.cross(vec2, vec0))
-            pos = camorigin + centroid
-            # rotate to align with new pitch rotation
-            lookat = -vec2
-            lookat[1] = target_y
-            lookat = normalize(lookat)
-            vec2 = -lookat
-            vec1 = normalize(np.cross(vec2, vec0))
-
-            p = np.stack([vec0, vec1, vec2, pos], 1)
-
-            render_poses.append(p)
-
-        render_poses = np.stack(render_poses, 0)
-        render_poses = np.concatenate([render_poses, np.broadcast_to(poses[0,:3,-1:], render_poses[:,:3,-1:].shape)], -1)
-
-    else:
-
+  
+    render_poses = torch.Tensor(poses[4:])  # this is wrong, just for debug
+    poses = poses[:train_num]
+    # this part is written by DVGO, called dvgo split.
+    if dvgohold > 0:
         c2w = poses_avg(poses)
-        print('recentered', c2w.shape)
-        print(c2w[:3,:4])
-
-        ## Get spiral
-        # Get average pose
-        up = normalize(poses[:, :3, 1].sum(0))
-
-        # Find a reasonable "focus depth" for this dataset
-        close_depth, inf_depth = bds.min()*.9, bds.max()*5.
-        dt = .75
-        mean_dz = 1./(((1.-dt)/close_depth + dt/inf_depth))
-        focal = mean_dz * movie_render_kwargs.get('scale_f', 1)
-
-        # Get radii for spiral path
-        zdelta = movie_render_kwargs.get('zdelta', 0.5)
-        zrate = movie_render_kwargs.get('zrate', 1.0)
-        tt = poses[:,:3,3] # ptstocam(poses[:3,3,:].T, c2w).T
-        rads = np.percentile(np.abs(tt), 90, 0) * movie_render_kwargs.get('scale_r', 1)
-        c2w_path = c2w
-        N_views = 120
-        N_rots = movie_render_kwargs.get('N_rots', 1)
-        if path_zflat:
-#             zloc = np.percentile(tt, 10, 0)[2]
-            zloc = -close_depth * .1
-            c2w_path[:3,3] = c2w_path[:3,3] + zloc * c2w_path[:3,2]
-            rads[2] = 0.
-            N_rots = 1
-            N_views/=2
-
-        # Generate poses for spiral path
-        render_poses = render_path_spiral(c2w_path, up, rads, focal, zdelta, zrate=zrate, rots=N_rots, N=N_views)
-
-    render_poses = torch.Tensor(render_poses)
-
-    c2w = poses_avg(poses)
-    print('Data:')
-    print(poses.shape, images.shape, bds.shape)
-    # this part is written by DVGO.
-    dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
-    i_test = np.argmin(dists)
-    print('HOLDOUT view is', i_test) 
-
+        dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
+        i_test = np.argpartition(dists, dvgohold).tolist()[:dvgohold]
+        print('HOLDOUT views are', i_test)
+    else:
+        i_test = [0]
+        print("DVGO hold is illegal, using [0] as test split!")
     images = images.astype(np.float32)
     poses = poses.astype(np.float32)
-
     return images, depths, poses, bds, render_poses, i_test
-

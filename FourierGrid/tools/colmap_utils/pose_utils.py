@@ -3,6 +3,7 @@ import numpy as np
 import os
 import sys
 import pdb
+import json
 import imageio
 import skimage.transform
 
@@ -10,18 +11,17 @@ from .colmap_wrapper import run_colmap
 from . import colmap_read_model as read_model
 
 
-def load_colmap_data_nerfstudio(realdir):
-    camerasfile = os.path.join(realdir, 'sparse/0/cameras.bin')
+def load_colmap_data_nerfstudio(basedir):
+    colmap_base_dir = os.path.join(basedir, 'colmap')
+    camerasfile = os.path.join(colmap_base_dir, 'sparse/0/cameras.bin')
     camdata = read_model.read_cameras_binary(camerasfile)
     list_of_keys = list(camdata.keys())
     cam = camdata[list_of_keys[0]]
     print( 'Cameras', len(cam))
 
     h, w, f = cam.height, cam.width, cam.params[0]
-    # w, h, f = factor * w, factor * h, factor * f
-    hwf = np.array([h,w,f]).reshape([3,1])
-    
-    imagesfile = os.path.join(realdir, 'sparse/0/images.bin')
+    hwf = np.array([h, w, f]).reshape([3, 1])
+    imagesfile = os.path.join(colmap_base_dir, 'sparse/0/images.bin')
     imdata = read_model.read_images_binary(imagesfile)
     
     w2c_mats = []
@@ -29,7 +29,7 @@ def load_colmap_data_nerfstudio(realdir):
     
     names = [imdata[k].name for k in imdata]
     print( 'Images #', len(names))
-    perm = np.argsort(names)
+    sorted_names = np.argsort(names)
     for k in imdata:
         im = imdata[k]
         R = im.qvec2rotmat()
@@ -39,17 +39,26 @@ def load_colmap_data_nerfstudio(realdir):
     
     w2c_mats = np.stack(w2c_mats, 0)
     c2w_mats = np.linalg.inv(w2c_mats)
+    poses = c2w_mats[:, :3, :4].transpose([1, 2, 0])
+    poses = np.concatenate([poses, np.tile(hwf[..., np.newaxis], [1, 1, poses.shape[-1]])], 1)
     
-    poses = c2w_mats[:, :3, :4].transpose([1,2,0])
-    poses = np.concatenate([poses, np.tile(hwf[..., np.newaxis], [1,1,poses.shape[-1]])], 1)
+    # load render poses
+    render_cam_paths = json.load(open(os.path.join(basedir, 'camera_path.json')))
+    h, w = render_cam_paths['render_height'], render_cam_paths['render_width']
+    render_poses = np.array([p['camera_to_world'] for p in render_cam_paths['camera_path']]).reshape(-1, 4, 4)
+    hwf = np.array([h, w, f]).reshape([3, 1])
+    render_poses = render_poses[:, :3, :4].transpose([1, 2, 0])
+    render_poses = np.concatenate([render_poses, np.tile(hwf[..., np.newaxis], [1, 1, render_poses.shape[-1]])], 1)
     
-    # points3dfile = os.path.join(realdir, 'dense/sparse/points3D.bin')
-    points3dfile = os.path.join(realdir, 'sparse/0/points3D.bin')
+    train_num = len(c2w_mats)
+    # poses = np.concatenate([poses, render_poses], 2)
+    points3dfile = os.path.join(colmap_base_dir, 'sparse/0/points3D.bin')
     pts3d = read_model.read_points3d_binary(points3dfile)
     
+    # todo: validate this effect, enabled by default, commented out by zelin
     # must switch to [-u, r, -t] from [r, -u, t], NOT [r, u, -t]
     poses = np.concatenate([poses[:, 1:2, :], poses[:, 0:1, :], -poses[:, 2:3, :], poses[:, 3:4, :], poses[:, 4:5, :]], 1)
-    return poses, pts3d, perm, names
+    return poses, train_num, pts3d, sorted_names, names
 
 
 def load_colmap_data(realdir):
@@ -127,7 +136,6 @@ def save_poses(basedir, poses, pts3d, perm, names):
         zs = zs[vis==1]
         close_depth, inf_depth = np.percentile(zs, .1), np.percentile(zs, 99.9)
         # print( i, close_depth, inf_depth )
-        
         save_arr.append(np.concatenate([poses[..., i].ravel(), np.array([close_depth, inf_depth])], 0))
     save_arr = np.array(save_arr)
     

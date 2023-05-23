@@ -40,7 +40,6 @@ def get_opts():
                         help='number of additional fine samples')
 
     # NeRF-W
-
     parser.add_argument('--N_vocab', type=int, default=1500,
                         help='''number of vocabulary (number of images) 
                                         in the dataset for nn.Embedding'''

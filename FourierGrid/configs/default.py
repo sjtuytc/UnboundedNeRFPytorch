@@ -29,7 +29,8 @@ data = dict(
     factor=4,                     # [TODO]
     width=None,                   # enforce image width
     height=None,                  # enforce image height
-    llffhold=8,                   # testsplit
+    llffhold=8,                   # test split via llff
+    dvgohold=8,                   # test split via dvgo
     load_depths=False,            # load depth
 
     # Below are unbounded inward-facing specific settings.
