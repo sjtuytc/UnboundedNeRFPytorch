@@ -129,8 +129,8 @@ Hope our efforts could help your research or projects!
 3. Install pytorch, and other libs. Make sure your Pytorch version is compatible with your CUDA.
    ```bash
    pip install --upgrade pip
-   pip install -r requirements.txt
    conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
+   pip install -r requirements.txt
 
 4. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
    ```bash
