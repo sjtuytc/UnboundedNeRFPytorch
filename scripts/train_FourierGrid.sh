@@ -16,7 +16,6 @@ python run_FourierGrid.py --program train --config FourierGrid/configs/nerf_unbo
 
 # Bounded scenes
 python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple/Family_lg.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 1
-python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple/family_single.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 1
 
 
 # nerf-studio dataset

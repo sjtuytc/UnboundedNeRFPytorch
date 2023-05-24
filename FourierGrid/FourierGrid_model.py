@@ -14,7 +14,7 @@ from . import FourierGrid_grid
 from .dvgo import Raw2Alpha, Alphas2Weights
 from .dmpigo import create_full_step_id
 from FourierGrid import utils, dvgo, dcvgo, dmpigo
-
+import render_utils_cuda
 import ub360_utils_cuda
 
 
@@ -135,7 +135,7 @@ class FourierGridModel(nn.Module):
     def __init__(self, xyz_min, xyz_max, num_voxels_density=0, num_voxels_base_density=0, num_voxels_rgb=0,
                  num_voxels_base_rgb=0, num_voxels_viewdir=0, alpha_init=None, mask_cache_world_size=None, fast_color_thres=0, 
                  bg_len=0.2, contracted_norm='inf', density_type='DenseGrid', k0_type='DenseGrid', density_config={}, k0_config={},
-                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, viewbase_pe=4, img_emb_dim=-1, verbose=False,
+                 rgbnet_dim=0, rgbnet_depth=3, rgbnet_width=128, fourier_freq_num=5, viewbase_pe=4, img_emb_dim=-1, verbose=False,
                  **kwargs):
         super(FourierGridModel, self).__init__()
         xyz_min = torch.Tensor(xyz_min)
@@ -157,6 +157,7 @@ class FourierGridModel(nn.Module):
         self.verbose = verbose
 
         # determine based grid resolution
+        self.fourier_freq_num = fourier_freq_num
         self.num_voxels_base_density = num_voxels_base_density
         self.voxel_size_base_density = ((self.xyz_max - self.xyz_min).prod() / self.num_voxels_base_density).pow(1/3)
         self.num_voxels_base_rgb = num_voxels_base_rgb
@@ -176,10 +177,11 @@ class FourierGridModel(nn.Module):
         # init density voxel grid
         self.density_type = density_type
         self.density_config = density_config
+        self.world_size = self.world_size_density
         self.density = FourierGrid_grid.create_grid(
             density_type, channels=1, world_size=self.world_size_density,
             xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
-            config=self.density_config)
+            fourier_freq_num=self.fourier_freq_num, config=self.density_config)
         
         # init color representation
         self.rgbnet_kwargs = {
@@ -217,7 +219,7 @@ class FourierGridModel(nn.Module):
             self.k0 = FourierGrid_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=False,
-                config=self.k0_config)
+                fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)
             dim0 += 3  # real k0 dim is 3
@@ -239,15 +241,15 @@ class FourierGridModel(nn.Module):
             self.k0 = FourierGrid_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
                 xyz_min=self.xyz_min, xyz_max=self.xyz_max,  use_nerf_pos=False,
-                config=self.k0_config)
+                fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
             self.rgbnet = None
         else:
             # feature voxel grid + shallow MLP  (fine stage)
             self.k0_dim = rgbnet_dim
             self.k0 = FourierGrid_grid.create_grid(
                 k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
-                config=self.k0_config)
+                xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True, 
+                fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)  # view freq dim
             dim0 += self.k0_dim
@@ -268,7 +270,7 @@ class FourierGridModel(nn.Module):
         if use_view_grid:
             self.vd = FourierGrid_grid.create_grid(k0_type, channels=3, world_size=self.world_size_viewdir,
                                             xyz_min=torch.Tensor([-1, -1, -1]), xyz_max=torch.Tensor([1, 1, 1]),
-                                            use_nerf_pos=False,)
+                                            fourier_freq_num=self.fourier_freq_num, use_nerf_pos=False,)
         else:
             self.vd = None
         # Using the coarse geometry if provided (used to determine known free space and unknown space)
@@ -375,6 +377,7 @@ class FourierGridModel(nn.Module):
             'num_voxels_density': self.num_voxels_density,
             'num_voxels_rgb': self.num_voxels_rgb,
             'num_voxels_viewdir': self.num_voxels_viewdir,
+            'fourier_freq_num': self.fourier_freq_num,
             'num_voxels_base_density': self.num_voxels_base_density,
             'num_voxels_base_rgb': self.num_voxels_base_rgb,
             'alpha_init': self.alpha_init,
@@ -393,18 +396,50 @@ class FourierGridModel(nn.Module):
 
     @torch.no_grad()
     def maskout_near_cam_vox(self, cam_o, near_clip):
+        ind_norm = ((cam_o - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
+        pos_embed = self.density.nerf_pos(ind_norm).squeeze()
         # maskout grid points that between cameras and their near planes
         self_grid_xyz = torch.stack(torch.meshgrid(
-            torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size_density[0]),
-            torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size_density[1]),
-            torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size_density[2]),
+            torch.linspace(-1, 1, self.world_size_density[0]),
+            torch.linspace(-1, 1, self.world_size_density[1]),
+            torch.linspace(-1, 1, self.world_size_density[2]),
         ), -1)
-        nearest_dist = torch.stack([(self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)for co in cam_o.split(10)]).amin(0)
-        self.density.grid[nearest_dist[None,None] <= near_clip] = -100
+        for i in range(self.density.pos_embed_output_dim):
+            cur_pos_embed = pos_embed[:, 3*i:3*(i+1)].unsqueeze(0).unsqueeze(0).unsqueeze(0)
+            nearest_dist = torch.stack([(self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1) for co in cur_pos_embed.split(10)]).amin(0)
+            self.density.grid[0][i][nearest_dist <= near_clip] = -100
         
     def voxel_count_views(self, rays_o_tr, rays_d_tr, imsz, near, far, stepsize, downrate=1, irregular_shape=False):
-        raise RuntimeError("This function is deprecated!")
-        return
+        print('FourierGrid: voxel_count_views start')
+        far = 1e9  # the given far can be too small while rays stop when hitting scene bbox
+        eps_time = time.time()
+        N_samples = int(np.linalg.norm(np.array(self.world_size_density.cpu())+1) / stepsize) + 1
+        rng = torch.arange(N_samples)[None].float()
+        count = torch.zeros_like(self.density.get_dense_grid())
+        device = rng.device
+        for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
+            ones = DenseGrid(1, self.world_size_density, self.xyz_min, self.xyz_max)
+            if irregular_shape:
+                rays_o_ = rays_o_.split(10000)
+                rays_d_ = rays_d_.split(10000)
+            else:
+                rays_o_ = rays_o_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
+                rays_d_ = rays_d_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
+            for rays_o, rays_d in zip(rays_o_, rays_d_):
+                vec = torch.where(rays_d==0, torch.full_like(rays_d, 1e-6), rays_d)
+                rate_a = (self.xyz_max - rays_o) / vec
+                rate_b = (self.xyz_min - rays_o) / vec
+                t_min = torch.minimum(rate_a, rate_b).amax(-1).clamp(min=near, max=far)
+                t_max = torch.maximum(rate_a, rate_b).amin(-1).clamp(min=near, max=far)
+                step = stepsize * self.voxel_size_density * rng
+                interpx = (t_min[...,None] + step/rays_d.norm(dim=-1,keepdim=True))
+                rays_pts = rays_o[...,None,:] + rays_d[...,None,:] * interpx[...,None]
+                ones(rays_pts).sum().backward()
+            with torch.no_grad():
+                count += (ones.grid.grad > 1)
+        eps_time = time.time() - eps_time
+        print('FourierGrid: voxel_count_views finish (eps time:', eps_time, 'sec)')
+        return count
     
     @torch.no_grad()
     def scale_volume_grid(self, num_voxels_density, num_voxels_rgb):
@@ -450,7 +485,7 @@ class FourierGridModel(nn.Module):
         count = torch.zeros_like(self.density.get_dense_grid()).long()
         device = count.device
         for rays_o_, rays_d_ in zip(rays_o_tr.split(imsz), rays_d_tr.split(imsz)):
-            ones = FourierGrid_grid.DenseGrid(1, self.world_size_density, self.xyz_min, self.xyz_max)
+            ones = FourierGrid_grid.FourierGrid(1, self.world_size_density, self.xyz_min, self.xyz_max)
             for rays_o, rays_d in zip(rays_o_.split(8192), rays_d_.split(8192)):
                 ray_pts, indexs, inner_mask, t, rays_d_e = self.sample_ray(
                         ori_rays_o=rays_o.to(device), ori_rays_d=rays_d.to(device),
@@ -479,6 +514,20 @@ class FourierGridModel(nn.Module):
         shape = density.shape
         return Raw2Alpha.apply(density.flatten(), self.act_shift, interval).reshape(shape)
 
+    def hit_coarse_geo(self, rays_o, rays_d, near, far, stepsize, **render_kwargs):
+        '''Check whether the rays hit the solved coarse geometry or not'''
+        far = 1e9  # the given far can be too small while rays stop when hitting scene bbox
+        shape = rays_o.shape[:-1]
+        rays_o = rays_o.reshape(-1, 3).contiguous()
+        rays_d = rays_d.reshape(-1, 3).contiguous()
+        stepdist = stepsize * self.voxel_size_density
+        ray_pts, mask_outbbox, ray_id = render_utils_cuda.sample_pts_on_rays(
+                rays_o, rays_d, self.xyz_min, self.xyz_max, near, far, stepdist)[:3]
+        mask_inbbox = ~mask_outbbox
+        hit = torch.zeros([len(rays_o)], dtype=torch.bool)
+        hit[ray_id[mask_inbbox][self.mask_cache(ray_pts[mask_inbbox])]] = 1
+        return hit.reshape(shape)
+    
     def sample_ray(self, ori_rays_o, ori_rays_d, stepsize, is_train=False, **render_kwargs):
         '''Sample query points on rays: central sampling.
         Ori_rays_o needs to be properly scaled!

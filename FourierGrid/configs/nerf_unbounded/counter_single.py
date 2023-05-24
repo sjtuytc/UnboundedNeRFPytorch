@@ -26,7 +26,7 @@ data = dict(
     dataset_type='llff',
     datadir='./data/360_v2/counter',
     # factor=2, # 1558x1038
-    factor=8, # 1558x1038
+    factor=16, # 1558x1038
     movie_render_kwargs=dict(
         shift_x=0.0,  # positive right
         shift_y=-0.2, # negative down
@@ -46,6 +46,7 @@ fine_train = dict(
     weight_nearclip=1.0,
     weight_distortion=weight_distortion,
     pg_scale=[2000,4000,6000,8000,10000,12000,14000,16000],
+    # pg_scale=[20], # test memory
     tv_before=20000,
     tv_dense_before=20000,
     weight_tv_density=1e-6,
@@ -54,8 +55,8 @@ fine_train = dict(
     # weight_freq=0.1,
 )
 
-voxel_size_density = 200  # default 400
-voxel_size_rgb = 200  # default 320
+voxel_size_density = 200  # default 250
+voxel_size_rgb = 200  # default 250
 voxel_size_viewdir = -1
 
 fine_model_and_render = dict(
@@ -66,6 +67,7 @@ fine_model_and_render = dict(
     num_voxels_viewdir=voxel_size_viewdir**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
+    fourier_freq_num=5,
     fast_color_thres={
         '_delete_': True,
         0   : alpha_init*stepsize/10,

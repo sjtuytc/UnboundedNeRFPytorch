@@ -13,7 +13,7 @@ import total_variation_cuda
 
 def create_grid(type, **kwargs):
     if type == 'DenseGrid':
-        return DenseGrid(**kwargs)
+        return FourierGrid(**kwargs)
     else:
         raise NotImplementedError
 
@@ -36,17 +36,18 @@ class NeRFPosEmbedding(nn.Module):
         return torch.cat(out, -1)
 
 
-''' Dense 3D grid
+''' 
+Dense 3D grid
 '''
-class DenseGrid(nn.Module):
-    def __init__(self, channels, world_size, xyz_min, xyz_max, use_nerf_pos, **kwargs):
-        super(DenseGrid, self).__init__()
+class FourierGrid(nn.Module):
+    def __init__(self, channels, world_size, xyz_min, xyz_max, use_nerf_pos, fourier_freq_num, config):
+        super(FourierGrid, self).__init__()
         self.channels = channels
         self.world_size = world_size
         self.register_buffer('xyz_min', torch.Tensor(xyz_min))
         self.register_buffer('xyz_max', torch.Tensor(xyz_max))
         if use_nerf_pos:
-            self.nerf_pos_num_freq = 3
+            self.nerf_pos_num_freq = fourier_freq_num
             self.nerf_pos = NeRFPosEmbedding(num_freqs=self.nerf_pos_num_freq)
             self.pos_embed_output_dim = 1 + self.nerf_pos_num_freq * 2
             grid_channels = channels * self.pos_embed_output_dim
@@ -139,6 +140,7 @@ def compute_tensorf_feat(xy_plane, xz_plane, yz_plane, x_vec, y_vec, z_vec, f_ve
     ], dim=-1)
     feat = torch.mm(feat, f_vec)
     return feat
+
 
 def compute_tensorf_val(xy_plane, xz_plane, yz_plane, x_vec, y_vec, z_vec, ind_norm):
     # Interp feature (feat shape: [n_pts, n_comp])

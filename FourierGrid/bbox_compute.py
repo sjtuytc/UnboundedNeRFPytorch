@@ -137,8 +137,9 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
 def compute_bbox_by_coarse_geo(model_class, model_path, thres, device, args, cfg):
     print('compute_bbox_by_coarse_geo: start')
     eps_time = time.time()
-    model = utils.load_model(model_class, model_path)
-    # model, _, _ = load_existing_model(args, cfg, cfg.fine_train, model_path, device=device)
+    # model = utils.load_model(model_class, model_path)
+    # TODO: validate this, this should be fine
+    model, _, _ = load_existing_model(args, cfg, cfg.fine_train, model_path, device=device)
     model.to(device)
     interp = torch.stack(torch.meshgrid(
         torch.linspace(0, 1, model.world_size[0]),

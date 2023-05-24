@@ -9,7 +9,6 @@ from FourierGrid.bbox_compute import compute_bbox_by_cam_frustrm, compute_bbox_b
 from FourierGrid import utils, dvgo, dcvgo, dmpigo
 from FourierGrid.FourierGrid_model import FourierGridModel
 from FourierGrid.load_everything import load_existing_model
-# from torch_efficient_distloss import flatten_eff_distloss
 from FourierGrid.run_export_bbox import run_export_bbox_cams
 from FourierGrid.run_export_coarse import run_export_coarse
 from FourierGrid.FourierGrid_model import FourierMSELoss
@@ -62,15 +61,16 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
         rgb_tr_ori = [images[i].to('cpu' if cfg.data.load2gpu_on_the_fly else device) for i in i_train]
     else:
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
-
     indexs_train = None
     FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
-    if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
-        rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = model.FourierGrid_get_training_rays(
-        rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
-        ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
-        flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y, )
-    elif cfg_train.ray_sampler == 'in_maskcache':
+    # if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
+    #     rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = model.FourierGrid_get_training_rays(
+    #     rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
+    #     ndc=cfg.data.ndc, inverse_y=cfg.data.inverse_y,
+    #     flip_x=cfg.data.flip_x, flip_y=cfg.data.flip_y, )
+    # el
+    # TODO: validate the above lines.
+    if cfg_train.ray_sampler == 'in_maskcache':
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, imsz = dvgo.get_training_rays_in_maskcache_sampling(
                 rgb_tr_ori=rgb_tr_ori,
                 train_poses=poses[i_train],
@@ -156,7 +156,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     psnr = torch.tensor(0)
     training_steps = cfg_train.N_iters
     FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
-    if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
+    if cfg.data.dataset_type != 'tankstemple' and (cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid'):
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
             model.gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, render_kwargs)
     else:
@@ -164,7 +164,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs
         )
         
-    # view-count-based learning rate
+    # view-count-based learning rate, FourierGrid does not support this operation
     if cfg_train.pervoxel_lr:
         def per_voxel_init():
             cnt = model.voxel_count_views(
@@ -172,7 +172,10 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                     stepsize=cfg_model.stepsize, downrate=cfg_train.pervoxel_lr_downrate,
                     irregular_shape=data_dict['irregular_shape'])
             optimizer.set_pervoxel_lr(cnt)
-            model.mask_cache.mask[cnt.squeeze() <= 2] = False
+            if cfg.model == 'FourierGrid':  #TODO: merge the following two lines
+                model.mask_cache.mask[cnt[0][0].squeeze() <= 2] = False
+            else:
+                model.mask_cache.mask[cnt.squeeze() <= 2] = False
         per_voxel_init()
 
     if cfg_train.maskout_lt_nviews > 0:
@@ -223,8 +226,8 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                     indexs = None
             else:
                 assert len(rgb_tr.shape) == 2, "tgb_tr's shape is not correct."
-                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
-                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
+                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand], device=rgb_tr.device)
+                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand], device=rgb_tr.device)
                 target = rgb_tr[sel_b]
                 rays_o = rays_o_tr[sel_b]
                 rays_d = rays_d_tr[sel_b]

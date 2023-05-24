@@ -225,7 +225,6 @@ class DirectVoxGO(torch.nn.Module):
             else:
                 rays_o_ = rays_o_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
                 rays_d_ = rays_d_[::downrate, ::downrate].to(device).flatten(0,-2).split(10000)
-
             for rays_o, rays_d in zip(rays_o_, rays_d_):
                 vec = torch.where(rays_d==0, torch.full_like(rays_d, 1e-6), rays_d)
                 rate_a = (self.xyz_max - rays_o) / vec

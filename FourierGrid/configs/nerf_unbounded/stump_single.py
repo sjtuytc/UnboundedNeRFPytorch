@@ -44,7 +44,8 @@ fine_train = dict(
     ray_sampler='flatten',
     weight_nearclip=1.0,
     weight_distortion=weight_distortion,
-    pg_scale=[1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    # pg_scale=[1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    pg_scale=[2000,4000,6000,8000,10000,12000,14000,16000],
     # pg_scale=[10],  # test memory
     tv_before=20000,
     tv_dense_before=20000,
@@ -54,8 +55,8 @@ fine_train = dict(
     weight_freq=5.0,
 )
 
-voxel_size_density = 200  # default 400
-voxel_size_rgb = 200  # default 320
+voxel_size_density = 250  # default 250
+voxel_size_rgb = 250  # default 322500
 voxel_size_viewdir = -1
 
 fine_model_and_render = dict(
@@ -66,6 +67,7 @@ fine_model_and_render = dict(
     num_voxels_viewdir=voxel_size_viewdir**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
+    fourier_freq_num=3,
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
 )

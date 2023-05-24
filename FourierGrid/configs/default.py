@@ -121,6 +121,7 @@ fine_model_and_render.update(dict(
     fast_color_thres=1e-4,
     maskout_near_cam_vox=False,
     world_bound_scale=1.05,
+    fourier_freq_num=3,
 ))
 
 vis = dict(

@@ -1,7 +1,6 @@
 import numpy as np
 import pdb
 from .load_llff import load_llff_data
-# from .load_nerfstudio import load_nerfstudio_data
 from .load_blender import load_blender_data
 from .load_nsvf import load_nsvf_data
 from .load_blendedmvs import load_blendedmvs_data

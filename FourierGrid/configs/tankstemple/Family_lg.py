@@ -1,5 +1,6 @@
 _base_ = '../default.py'
-
+model='FourierGrid'
+# model='DVGO'
 expname = 'dvgo_Family_lg'
 basedir = './logs/tanks_and_temple'
 
