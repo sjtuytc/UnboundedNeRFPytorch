@@ -1,5 +1,5 @@
 _base_ = './nerf_unbounded_default.py'
-expname = 'stump_nov25_'
+expname = 'stump_may23_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
@@ -44,8 +44,8 @@ fine_train = dict(
     ray_sampler='flatten',
     weight_nearclip=1.0,
     weight_distortion=weight_distortion,
-    # pg_scale=[2000,4000,6000,8000,10000,12000,14000,16000],
     pg_scale=[1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    # pg_scale=[10],  # test memory
     tv_before=20000,
     tv_dense_before=20000,
     weight_tv_density=1e-6,

@@ -1,5 +1,5 @@
 _base_ = '../default.py'
-expname = 'family_nov24_'
+expname = 'family_may23_'
 model='FourierGrid'
 basedir = './logs/tanks_and_temple'
 vis = dict(

@@ -119,6 +119,8 @@ Hope our efforts could help your research or projects!
 1. Clone this repository. Use depth == 1 to avoid download a large history.
    ```bash
    git clone --depth=1 git@github.com:sjtuytc/LargeScaleNeRFPytorch.git
+   mkdir data
+   mkdir logs
    ```
 
 2. Create conda environment.
@@ -126,11 +128,12 @@ Hope our efforts could help your research or projects!
    conda create -n large-scale-nerf python=3.9
    conda activate large-scale-nerf
    ```
-3. Install pytorch, and other libs. Make sure your Pytorch version is compatible with your CUDA.
+3. Install pytorch and other libs. Make sure your Pytorch version is compatible with your CUDA.
    ```bash
    pip install --upgrade pip
    conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
    pip install -r requirements.txt
+   ```
 
 4. Install grid-based operators to avoid running them every time, cuda lib required. (Check via "nvcc -V" to ensure that you have a latest cuda.)
    ```bash

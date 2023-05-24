@@ -2,8 +2,11 @@ import numpy as np
 import os, imageio
 import torch
 import scipy
+import cv2
 import pdb
-
+from shutil import copy
+from subprocess import check_output
+    
 ########## Slightly modified version of LLFF data loading code
 ##########  see https://github.com/Fyusion/LLFF for original
 def imread(f):
@@ -43,9 +46,6 @@ def _minify(basedir, factors=[], resolutions=[]):
     if not needtoload:
         return
 
-    from shutil import copy
-    from subprocess import check_output
-
     imgdir = os.path.join(basedir, 'images')
     imgs = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir))]
     imgs = [f for f in imgs if any([f.endswith(ex) for ex in ['JPG', 'jpg', 'jpeg', 'png', 'jpeg', 'PNG']])]
@@ -62,23 +62,31 @@ def _minify(basedir, factors=[], resolutions=[]):
             resizearg = '{}x{}'.format(r[1], r[0])
         imgdir = os.path.join(basedir, name)
         if os.path.exists(imgdir):
+            print("Image folder exists, do not call the resize function.")
             continue
-
+        os.makedirs(imgdir, exist_ok=True)
         print('Minifying', r, basedir)
-
-        os.makedirs(imgdir)
-        check_output('cp {}/* {}'.format(imgdir_orig, imgdir), shell=True)
-
+        # check_output('cp {}/* {}'.format(imgdir_orig, imgdir), shell=True)
         ext = imgs[0].split('.')[-1]
-        args = ' '.join(['magick mogrify', '-resize', resizearg, '-format', 'png', '*.{}'.format(ext)])
-        print(args)
-        os.chdir(imgdir)
-        check_output(args, shell=True)
-        os.chdir(wd)
+        for idx, one_img_p in enumerate(imgs):
+            one_img = cv2.imread(one_img_p)
+            ori_h, ori_w = one_img.shape[0], one_img.shape[1]
+            if isinstance(r, int):
+                target_h, target_w = int(ori_h / r), int(ori_w / r)
+            else:
+                target_h, target_w = r[0], r[1]
+            resized = cv2.resize(one_img, (target_w, target_h), interpolation = cv2.INTER_AREA)
+            target_img_p = one_img_p.replace(imgdir_orig, imgdir)
+            cv2.imwrite(target_img_p, resized)
+        # args = ' '.join(['convert mogrify', '-resize', resizearg, '-format', 'png', '*.{}'.format(ext)])
+        # print(args)
+        # os.chdir(imgdir)
+        # check_output(args, shell=True)
+        # os.chdir(wd)
 
-        if ext != 'png':
-            check_output('rm {}/*.{}'.format(imgdir, ext), shell=True)
-            print('Removed duplicates')
+        # if ext != 'png':
+        #     check_output('rm {}/*.{}'.format(imgdir, ext), shell=True)
+        #     print('Removed duplicates')
         print('Done')
 
 

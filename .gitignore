@@ -130,6 +130,8 @@ dmypy.json
 data/
 data/*
 logs/
+logs
+data
 logs/*
 ckpts/
 ckpts/*

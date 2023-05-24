@@ -1,5 +1,5 @@
 import os, sys, copy, glob, json, time, random, argparse
-import mmcv
+import mmengine
 import numpy as np
 import pdb
 import torch
@@ -82,7 +82,7 @@ if __name__=='__main__':
     # load setup
     parser = config_parser()
     args = parser.parse_args()
-    cfg = mmcv.Config.fromfile(args.config)
+    cfg = mmengine.Config.fromfile(args.config)
     # create exp name with exp_id
     cfg.expname = cfg.expname + args.exp_id
     # init enviroment
