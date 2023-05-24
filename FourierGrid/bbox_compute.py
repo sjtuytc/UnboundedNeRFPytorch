@@ -117,12 +117,7 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
     if cfg.data.dataset_type == "waymo":
         xyz_min, xyz_max = FourierGrid_compute_bbox_by_cam_frustrm_waymo(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
-    elif cfg.data.dataset_type == "mega":
-        xyz_min, xyz_max = FourierGrid_compute_bbox_by_cam_frustrm_mega(
-                cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
-    # todo: use another function to for tankstemple or llff
-    # elif cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple":
-    elif cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple" or cfg.model == 'FourierGrid':
+    elif cfg.data.dataset_type == "nerfpp" or cfg.model == 'FourierGrid':
         xyz_min, xyz_max = FourierGrid_compute_bbox_by_cam_frustrm_nerfpp(
                 cfg, HW, Ks, poses, i_train, kwargs.get('near_clip', None))
     elif cfg.data.unbounded_inward:
@@ -136,6 +131,7 @@ def compute_bbox_by_cam_frustrm(args, cfg, HW, Ks, poses, i_train, near, far, **
         print('compute_bbox_by_cam_frustrm: xyz_max', xyz_max)
         print('compute_bbox_by_cam_frustrm: finish')
     return xyz_min, xyz_max
+
 
 @torch.no_grad()
 def compute_bbox_by_coarse_geo(model_class, model_path, thres, device, args, cfg):

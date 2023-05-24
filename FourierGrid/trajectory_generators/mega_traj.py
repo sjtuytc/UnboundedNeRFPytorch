@@ -53,12 +53,8 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, rotate_ang
     # base_pos = end_c2w[:3,3]
     # generate rotating matries
     # rotate_interval = rotate_angle / test_num
-    if args.program == 'tune_pose':
-        test_num = 4
-        rotate_interval = 10
-    else:
-        test_num = 5
-        rotate_interval = 6
+    test_num = 5
+    rotate_interval = 6
         # test_num = 200
         # rotate_interval = 0.1
     forward_dis_max = 0.0  # default is 0.0

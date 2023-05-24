@@ -47,7 +47,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
         rays_o = rays_o.flatten(0,-2)
         rays_d = rays_d.flatten(0,-2)
         viewdirs = viewdirs.flatten(0,-2)
-        FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+        FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
         if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
             indexs = torch.zeros_like(rays_o)
             indexs.copy_(torch.tensor(i).long().to(rays_o.device))  # add image index
@@ -212,7 +212,7 @@ def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
         else:
             ckpt_path = os.path.join(cfg.basedir, cfg.expname, 'fine_last.tar')
         ckpt_name = ckpt_path.split('/')[-1][:-4]
-        FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+        FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
         if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
             model_class = FourierGridModel
         elif cfg.data.ndc:

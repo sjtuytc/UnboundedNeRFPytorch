@@ -52,14 +52,8 @@ def gen_rotational_trajs(args, cfg, metadata, tr_c2w, train_HW, tr_K, tr_cam_idx
     base_rot = R.from_matrix(start_rot)
     # generate rotating matries
     # rotate_interval = rotate_angle / test_num
-    if args.program == 'tune_pose':
-        test_num = 4
-        rotate_interval = -10
-    else:
-        # test_num = 4
-        # rotate_interval = -10
-        test_num = 200
-        rotate_interval = -0.3
+    test_num = 200
+    rotate_interval = -0.3
     forward_dis_max = 0.03
     all_rot_yzx = [base_rot.as_euler('yzx', degrees=True)] 
     for i in range(test_num - 1):

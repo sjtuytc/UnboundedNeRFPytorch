@@ -13,9 +13,6 @@ def load_everything(args, cfg):
     if cfg.data.dataset_type == "waymo":
         data_dict = load_waymo_data(args, cfg)
         return data_dict, args
-    elif cfg.data.dataset_type == "mega":
-        data_dict = load_mega_data(args, cfg)
-        return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)
     
@@ -41,8 +38,8 @@ def load_everything(args, cfg):
 
 
 def load_existing_model(args, cfg, cfg_train, reload_ckpt_path, device):
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
-    if cfg.data.dataset_type or cfg.model == 'FourierGrid':
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
+    if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
         model_class = FourierGridModel
     elif cfg.data.ndc:
         model_class = dmpigo.DirectMPIGO

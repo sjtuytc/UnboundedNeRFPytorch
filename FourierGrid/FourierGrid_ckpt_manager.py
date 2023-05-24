@@ -24,7 +24,7 @@ class FourierGridCheckpointManager:
 
     def load_existing_model(self, args, cfg, cfg_train, reload_ckpt_path, device):
         # not used in training
-        FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+        FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
         if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
             model_class = FourierGridModel
         elif cfg.data.ndc:

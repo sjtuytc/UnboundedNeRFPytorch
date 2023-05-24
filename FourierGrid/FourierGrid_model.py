@@ -322,7 +322,7 @@ class FourierGridModel(nn.Module):
             rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
         indexs_train = None
-        FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+        FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
         if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
             rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = self.FourierGrid_get_training_rays(
             rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 

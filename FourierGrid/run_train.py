@@ -13,6 +13,7 @@ from FourierGrid.load_everything import load_existing_model
 from FourierGrid.run_export_bbox import run_export_bbox_cams
 from FourierGrid.run_export_coarse import run_export_coarse
 from FourierGrid.FourierGrid_model import FourierMSELoss
+from torch_efficient_distloss import flatten_eff_distloss
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -25,8 +26,8 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
         num_voxels_rgb = int(num_voxels_rgb / (2**len(cfg_train.pg_scale)))
     verbose = False
     model_kwargs['sample_num'] = args.sample_num
-    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "nerfpp" or cfg.data.dataset_type == "tankstemple" \
-        or cfg.model == 'FourierGrid':
+    # todo: change this line, only conditioned on model
+    if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "nerfpp" or cfg.model == 'FourierGrid':
         if verbose:
             print(f'Waymo scene_rep_reconstruction ({stage}): \033[96m Use FourierGrid model. \033[0m')
         model = FourierGridModel(
@@ -63,7 +64,7 @@ def gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, 
         rgb_tr_ori = images[i_train].to('cpu' if cfg.data.load2gpu_on_the_fly else device)
 
     indexs_train = None
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
     if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_train, imsz = model.FourierGrid_get_training_rays(
         rgb_tr_ori=rgb_tr_ori, train_poses=poses[i_train], HW=HW[i_train], Ks=Ks[i_train], 
@@ -120,7 +121,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         reload_ckpt_path = None
 
     # init model and optimizer
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
     if reload_ckpt_path is None:
         print(f'scene_rep_reconstruction ({stage}): train from scratch')
         model, optimizer = create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, coarse_ckpt_path, device)
@@ -153,11 +154,8 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     time0 = time.time()
     global_step = -1
     psnr = torch.tensor(0)
-    if args.program == 'tune_pose':
-        training_steps = cfg_train.N_iters_m_step
-    else:
-        training_steps = cfg_train.N_iters
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+    training_steps = cfg_train.N_iters
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
     if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = \
             model.gather_training_rays(data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, render_kwargs)
@@ -165,6 +163,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         rgb_tr, rays_o_tr, rays_d_tr, viewdirs_tr, indexs_tr, imsz, batch_index_sampler = gather_training_rays(
             data_dict, images, cfg, i_train, cfg_train, poses, HW, Ks, model, render_kwargs
         )
+        
     # view-count-based learning rate
     if cfg_train.pervoxel_lr:
         def per_voxel_init():
@@ -196,6 +195,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 raise NotImplementedError
             optimizer = utils.create_optimizer_or_freeze_model(model, cfg_train, global_step=0)
             model.act_shift -= cfg_train.decay_after_scale
+            torch.cuda.empty_cache()  # todo: validate the effects of this
 
         # random sample rays
         if cfg_train.ray_sampler in ['flatten', 'in_maskcache']:
@@ -210,9 +210,9 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
                 indexs = None
         elif cfg_train.ray_sampler == 'random':  # fixed function
             if len(rgb_tr.shape) != 2:
-                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand])
-                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand])
-                sel_c = torch.randint(rgb_tr.shape[2], [cfg_train.N_rand])
+                sel_b = torch.randint(rgb_tr.shape[0], [cfg_train.N_rand], device=rgb_tr.device)
+                sel_r = torch.randint(rgb_tr.shape[1], [cfg_train.N_rand], device=rgb_tr.device)
+                sel_c = torch.randint(rgb_tr.shape[2], [cfg_train.N_rand], device=rgb_tr.device)
                 target = rgb_tr[sel_b, sel_r, sel_c]
                 rays_o = rays_o_tr[sel_b, sel_r, sel_c]
                 rays_d = rays_d_tr[sel_b, sel_r, sel_c]
@@ -248,9 +248,6 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         render_result = model(rays_o, rays_d, viewdirs, global_step=global_step, is_train=True,
             **render_kwargs)
         optimizer.zero_grad(set_to_none=True)
-        # use these two lines to mask off white background
-        # mse_loss = F.mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
-        # freq_loss = fourier_mse_loss(render_result['rgb_marched'][target < 0.98], target[target < 0.98])
         mse_loss = F.mse_loss(render_result['rgb_marched'], target)
         freq_loss = fourier_mse_loss(render_result['rgb_marched'], target)
         psnr = utils.mse2psnr(mse_loss.detach())
@@ -266,13 +263,13 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
             if len(density):
                 nearclip_loss = (density - density.detach()).sum()
                 loss += cfg_train.weight_nearclip * nearclip_loss
-        # if cfg_train.weight_distortion > 0:
-        #     n_max = render_result['n_max']
-        #     s = render_result['s']
-        #     w = render_result['weights']
-        #     ray_id = render_result['ray_id']
-        #     loss_distortion = flatten_eff_distloss(w, s, 1/n_max, ray_id)
-        #     loss += cfg_train.weight_distortion * loss_distortion
+        if cfg_train.weight_distortion > 0:
+            n_max = render_result['n_max']
+            s = render_result['s']
+            w = render_result['weights']
+            ray_id = render_result['ray_id']
+            loss_distortion = flatten_eff_distloss(w, s, 1/n_max, ray_id)
+            loss += cfg_train.weight_distortion * loss_distortion
         if cfg_train.weight_rgbper > 0:
             rgbper = (render_result['raw_rgb'] - target[render_result['ray_id']]).pow(2).sum(-1)
             rgbper_loss = (rgbper * render_result['weights'].detach()).sum() / len(rays_o)
@@ -288,11 +285,12 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         optimizer.step()
         psnr_lst.append(psnr.item())
 
-        # update lr, continuously decaying
-        # decay_steps = cfg_train.lrate_decay * 1000
-        # decay_factor = 0.1 ** (1/decay_steps)
-        # for i_opt_g, param_group in enumerate(optimizer.param_groups):
-        #     param_group['lr'] = param_group['lr'] * decay_factor
+        # update lr, continuously decaying, used in baselines only
+        if cfg.model != 'FourierGrid':
+            decay_steps = cfg_train.lrate_decay * 1000
+            decay_factor = 0.1 ** (1/decay_steps)
+            for i_opt_g, param_group in enumerate(optimizer.param_groups):
+                param_group['lr'] = param_group['lr'] * decay_factor
 
         # check log & save
         if global_step%args.i_print==0:
@@ -305,7 +303,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         
         if global_step==1+start:  # test saving function at start
             path = os.path.join(cfg.basedir, cfg.expname, f'{stage}_{global_step:06d}.tar')
-            FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple"]
+            FourierGrid_datasets = ["waymo", "mega", "nerfpp"]
             if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
                 args.ckpt_manager.save_model(global_step, model, optimizer, path)
             else:
@@ -319,7 +317,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
 
     # final save
     if global_step != -1:
-        if cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega" or cfg.model == 'FourierGrid': 
+        if cfg.data.dataset_type == "waymo" or cfg.model == 'FourierGrid':
             args.ckpt_manager.save_model(global_step, model, optimizer, last_ckpt_path)
         else:               
             torch.save({
@@ -346,6 +344,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
             attr = getattr(args, arg)
             file.write('{} = {}\n'.format(arg, attr))
     cfg.dump(os.path.join(cfg.basedir, cfg.expname, 'config.py'))
+    
     # coarse geometry searching (originally only for inward bounded scenes, extended to support waymo)
     eps_coarse = time.time()
     xyz_min_coarse, xyz_max_coarse = compute_bbox_by_cam_frustrm(args=args, cfg=cfg, **data_dict)
@@ -371,7 +370,7 @@ def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
 
     # fine detail reconstruction
     eps_fine = time.time()
-    if cfg.coarse_train.N_iters == 0 or cfg.data.dataset_type == "waymo" or cfg.data.dataset_type == "mega":
+    if cfg.coarse_train.N_iters == 0 or cfg.data.dataset_type == "waymo":
         xyz_min_fine, xyz_max_fine = xyz_min_coarse.clone(), xyz_max_coarse.clone()
     else:
         xyz_min_fine, xyz_max_fine = compute_bbox_by_coarse_geo(

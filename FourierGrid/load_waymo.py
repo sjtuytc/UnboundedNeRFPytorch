@@ -282,20 +282,6 @@ def load_waymo(args, cfg, ):
 
     if "training_ids" in cfg.data:
         training_ids = cfg.data.training_ids
-        # if 'assign_pos' in cfg.data:
-        #     assign_pos, assign_rot = cfg.data.assign_pos, cfg.data.assign_rot
-        # else:
-        #     assign_pos, assign_rot = None, None
-        # if args.program == 'tune_pose':
-        #     rand_vec = np.random.rand(3)
-        #     lw, up = np.array(cfg.data.search_rot_lower), np.array(cfg.data.search_rot_upper)
-        #     cur_rot = lw + (up - lw) * rand_vec
-        #     rand_vec = np.random.rand(3)
-        #     lw, up = np.array(cfg.data.search_pos_lower), np.array(cfg.data.search_pos_upper)
-        #     cur_pos = lw + (up - lw) * rand_vec
-        #     assign_pos[cfg.data.tunning_id] = cur_pos.tolist()
-        #     assign_rot[cfg.data.tunning_id] = cur_rot.tolist()
-        #     args.running_rot = np.round(cur_pos, 4).tolist() + np.round(cur_rot, 2).tolist()
         metadata = sample_metadata_by_training_ids(metadata, training_ids, None, None)
     rotations = find_rotations_from_meta(metadata)
     if args.diffuse:

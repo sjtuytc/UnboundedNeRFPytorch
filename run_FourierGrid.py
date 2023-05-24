@@ -7,11 +7,8 @@ from FourierGrid.load_everything import load_everything
 from FourierGrid.run_export_bbox import *
 from FourierGrid.run_export_coarse import run_export_coarse
 from FourierGrid.run_train import run_train
-# from FourierGrid.run_block_train import run_block_train_and_merge
 from FourierGrid.run_render import run_render
 from FourierGrid.run_gen_cam_paths import run_gen_cam_paths
-# from FourierGrid.run_sfm import run_sfm
-# from FourierGrid.em_runner import NeRFEM
 from FourierGrid.FourierGrid_ckpt_manager import FourierGridCheckpointManager
 
 
@@ -98,7 +95,7 @@ if __name__=='__main__':
     args.block_num = -1
     args.running_block_id = -1
     program = args.program
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "tankstemple", "llff"]
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "llff"]
     if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
         args.ckpt_manager = FourierGridCheckpointManager(args, cfg)
         if args.num_per_block > 0:
