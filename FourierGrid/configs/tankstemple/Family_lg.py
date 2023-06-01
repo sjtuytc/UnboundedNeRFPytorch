@@ -1,6 +1,6 @@
 _base_ = '../default.py'
-model='FourierGrid'
-# model='DVGO'
+# model='FourierGrid'
+model='DVGO'
 expname = 'dvgo_Family_lg'
 basedir = './logs/tanks_and_temple'
 
@@ -15,9 +15,13 @@ data = dict(
 
 coarse_train = dict(
     pervoxel_lr_downrate=2,
+    pervoxel_lr=True,  # DVGO default is True
 )
 
-fine_train = dict(pg_scale=[1000,2000,3000,4000,5000,6000])
-fine_model_and_render = dict(num_voxels_density=256**3, num_voxels_rgb=256**3, 
-                             num_voxels_base_rgb=160**3, num_voxels_base_density=160**3)
+fine_train = dict(
+    pg_scale=[1000,2000,3000,4000,5000,6000],
+    pervoxel_lr=True,   # DVGO default is True
+    )
 
+fine_model_and_render = dict(num_voxels_density=256**3, num_voxels_rgb=256**3, fourier_freq_num=3,
+                             num_voxels_base_rgb=160**3, num_voxels_base_density=160**3)

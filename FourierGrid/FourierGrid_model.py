@@ -213,29 +213,7 @@ class FourierGridModel(nn.Module):
             self.pos_emb = None
 
         # rgbnet configurations
-        self.vector_grid = False
-        if self.vector_grid:
-            self.k0_dim = 9  # rgb * 3
-            self.k0 = FourierGrid_grid.create_grid(
-                k0_type, channels=self.k0_dim, world_size=self.world_size_rgb,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=False,
-                fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
-            self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
-            dim0 = (3+3*viewbase_pe*2)
-            dim0 += 3  # real k0 dim is 3
-            dim0 += self.img_embed_dim
-            self.rgbnet = nn.Sequential(
-                nn.Linear(dim0, rgbnet_width), nn.ReLU(inplace=True),
-                *[
-                    nn.Sequential(nn.Linear(rgbnet_width, rgbnet_width), nn.ReLU(inplace=True))
-                    for _ in range(rgbnet_depth-2)
-                ],
-                nn.Linear(rgbnet_width, 3),
-            )
-            nn.init.constant_(self.rgbnet[-1].bias, 0)
-            print('FourierGrid: feature voxel grid', self.k0)
-            print('FourierGrid: mlp', self.rgbnet)
-        elif rgbnet_dim <= 0:
+        if rgbnet_dim <= 0:
             # color voxel grid  (coarse stage)
             self.k0_dim = 3
             self.k0 = FourierGrid_grid.create_grid(
@@ -569,10 +547,7 @@ class FourierGridModel(nn.Module):
             ray_pts / norm * (B - A/ (norm ** order))
         )
         indexs = None
-        if self.vector_grid:
-            rays_d_extend = rays_d[:,None,:] * torch.ones_like(t[None,:,None])
-        else: 
-            rays_d_extend = None
+        rays_d_extend = None
         inner_mask = norm<=seperate_boundary  # this variable is not important
         return ray_pts, indexs, inner_mask.squeeze(-1), t, rays_d_extend
 
@@ -643,20 +618,9 @@ class FourierGridModel(nn.Module):
             inner_mask = inner_mask.reshape(-1)
 
         # query for color
-        if self.vector_grid:
-            k0 = self.k0.vector_forward(ray_pts, rays_d_e)
-        else:
-            k0 = self.k0(ray_pts)
+        k0 = self.k0(ray_pts)
         
-        if self.vector_grid:
-            # FourierGrid inference procedure
-            viewdirs_emb = (viewdirs.unsqueeze(-1) * self.viewfreq).flatten(-2)
-            viewdirs_emb = torch.cat([viewdirs, viewdirs_emb.sin(), viewdirs_emb.cos()], -1)
-            viewdirs_emb = viewdirs_emb.flatten(0,-2)[ray_id]
-            rgb_feat = torch.cat([k0, viewdirs_emb], -1)
-            rgb_logit = self.rgbnet(rgb_feat)
-            rgb = torch.sigmoid(rgb_logit)
-        elif self.rgbnet is None:
+        if self.rgbnet is None:
             # no view-depend effect
             rgb = torch.sigmoid(k0)
         elif self.vd is not None:

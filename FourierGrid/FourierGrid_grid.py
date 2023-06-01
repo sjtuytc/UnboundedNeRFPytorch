@@ -57,25 +57,6 @@ class FourierGrid(nn.Module):
             self.nerf_pos = None
             grid_channels = channels
         self.grid = nn.Parameter(torch.zeros([1, grid_channels, *world_size]))
-
-    def vector_forward(self, xyz, rays_d_e):
-        '''
-        xyz: global coordinates to query,
-        rays_d_e: extended ray directions.
-        '''
-        shape = xyz.shape[:-1]
-        xyz = xyz.reshape(1,1,1,-1,3)
-        # scale to [-1, 1]
-        ind_norm = ((xyz - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
-        out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
-        out = out.reshape(self.channels,-1).T.reshape(*shape,self.channels)
-        if self.channels == 1:
-            out = out.squeeze(-1)
-        num_points = len(out) # num_points
-        reshaped_out = out.reshape(num_points, 3, 3)
-        final_out = reshaped_out * rays_d_e.reshape(num_points,1,3)
-        final_out = final_out.sum(2)
-        return final_out
     
     def forward(self, xyz):
         '''

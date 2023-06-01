@@ -1,5 +1,5 @@
 _base_ = '../default.py'
-expname = 'truck_nov21_'
+expname = 'truck_may28_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
@@ -101,8 +101,8 @@ fine_model_and_render = dict(
     fast_color_thres=fast_color_thres,
     world_bound_scale=1,
     # contracted_norm='l2', # default
-    # rgbnet_dim=3,
     rgbnet_dim=12, # default
+    fourier_freq_num=4,
     rgbnet_depth=3, # default
     # viewbase_pe=4, # default=4
     bbox_thres=0.001, # should not matter

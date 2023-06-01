@@ -95,7 +95,7 @@ if __name__=='__main__':
     args.block_num = -1
     args.running_block_id = -1
     program = args.program
-    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "llff"]
+    FourierGrid_datasets = ["waymo", "mega", "nerfpp", "llff", "free"]
     if cfg.data.dataset_type in FourierGrid_datasets or cfg.model == 'FourierGrid':
         args.ckpt_manager = FourierGridCheckpointManager(args, cfg)
         if args.num_per_block > 0:

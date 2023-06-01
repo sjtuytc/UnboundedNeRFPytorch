@@ -4,5 +4,5 @@ expname = 'horns'
 
 data = dict(
     datadir='./data/nerf_llff_data/horns',
+    # dataset_type='free',
 )
-

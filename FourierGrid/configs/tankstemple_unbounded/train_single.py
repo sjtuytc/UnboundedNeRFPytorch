@@ -94,8 +94,8 @@ coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
 )
 
-voxel_size_density = 200  # default 400
-voxel_size_rgb = 200  # default 320
+voxel_size_density = 250  # default 400
+voxel_size_rgb = 250  # default 320
 voxel_size_viewdir = -1
 # voxel_size_viewdir = 64
 
@@ -111,7 +111,7 @@ fine_model_and_render = dict(
     world_bound_scale=1,
     # contracted_norm='l2', # default
     # rgbnet_dim=3,
-    rgbnet_dim=12, # default
+    rgbnet_dim=15, # default
     # rgbnet_depth=3, # default
     viewbase_pe=4, # default=4
     bbox_thres=0.001,

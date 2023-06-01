@@ -2,7 +2,7 @@ import os
 import time
 import functools
 import numpy as np
-
+import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -210,7 +210,10 @@ class MaskGrid(nn.Module):
         if path is not None:
             st = torch.load(path)
             self.mask_cache_thres = mask_cache_thres
-            density = F.max_pool3d(st['model_state_dict']['density.grid'], kernel_size=3, padding=1, stride=1)
+            density_grid = st['model_state_dict']['density.grid']
+            if density_grid.shape[1] > 1:   # handle FourierGrid, TODO: revise this
+                density_grid = density_grid[0][0].unsqueeze(0).unsqueeze(0)
+            density = F.max_pool3d(density_grid, kernel_size=3, padding=1, stride=1)
             alpha = 1 - torch.exp(-F.softplus(density + st['model_state_dict']['act_shift']) * st['model_kwargs']['voxel_size_ratio'])
             mask = (alpha >= self.mask_cache_thres).squeeze(0).squeeze(0)
             xyz_min = torch.Tensor(st['model_kwargs']['xyz_min'])
@@ -219,7 +222,6 @@ class MaskGrid(nn.Module):
             mask = mask.bool()
             xyz_min = torch.Tensor(xyz_min)
             xyz_max = torch.Tensor(xyz_max)
-
         self.register_buffer('mask', mask)
         xyz_len = xyz_max - xyz_min
         self.register_buffer('xyz2ijk_scale', (torch.Tensor(list(mask.shape)) - 1) / xyz_len)

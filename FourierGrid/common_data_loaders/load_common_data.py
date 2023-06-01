@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 from .load_llff import load_llff_data
+from .load_free import load_free_data
 from .load_blender import load_blender_data
 from .load_nsvf import load_nsvf_data
 from .load_blendedmvs import load_blendedmvs_data
@@ -14,6 +15,11 @@ def load_common_data(args):
 
     K, depths = None, None
     near_clip = None
+    if not 'training_ids' in args:
+        training_ids = None
+    else:
+        training_ids = args['training_ids']
+        
     if args.dataset_type == 'llff':
         images, depths, poses, bds, render_poses, i_test = load_llff_data(
                 args.datadir, args.factor, args.width, args.height,
@@ -47,6 +53,56 @@ def load_common_data(args):
             print('near_clip', near_clip)
             print('original far', _far)
         print('NEAR FAR', near, far)
+    elif args.dataset_type == 'free':
+        images, depths, intri, poses, bds, render_poses, i_test = load_free_data(
+            args, args.datadir, args.factor, args.width, args.height,
+            recenter=True, bd_factor=args.bd_factor,
+            spherify=args.spherify,
+            load_depths=args.load_depths,
+            movie_render_kwargs=args.movie_render_kwargs, training_ids=training_ids)
+        i_val = i_test
+        i_train = np.array([i for i in np.arange(int(images.shape[0])) if (i not in i_test and i not in i_val)])
+        near_clip = max(np.ndarray.min(bds) * .9, 0)
+        _far = max(np.ndarray.max(bds) * 1., 0)
+        if args.ndc:
+            near = 0.
+            far = 1.
+        else:
+            near = 0
+            far = inward_nearfar_heuristic(poses[i_train, :3, 3])[1]
+        
+        # print('DEFINING BOUNDS')
+        # if args.ndc:
+        #     near = 0.
+        #     far = 1.
+        # else:
+        #     near_clip = max(np.ndarray.min(bds) * .9, 0)
+        #     _far = max(np.ndarray.max(bds) * 1., 0)
+        #     near = 0
+        #     far = inward_nearfar_heuristic(poses[i_train, :3, 3])[1]
+        #     print('near_clip', near_clip)
+        #     print('original far', _far)
+        # print('NEAR FAR', near, far)
+        
+        # Cast intrinsics to right types
+        # H, W, focal = hwf
+        # H, W = int(H), int(W)
+        # hwf = [H, W, focal]
+        HW = np.array([im.shape[:2] for im in images])
+        irregular_shape = (images.dtype is np.dtype('object'))
+
+        # all data should be in [N \times D]
+        # near_clip = None
+        near_clip = max(np.ndarray.min(bds) * .9, 0)
+        data_dict = dict(
+            hwf=None, HW=HW, Ks=intri,
+            near=near, far=far, near_clip=near_clip,
+            i_train=i_train, i_val=i_val, i_test=i_test,
+            poses=poses, render_poses=render_poses,
+            images=images, depths=depths,
+            irregular_shape=irregular_shape,
+        )
+        return data_dict
     elif args.dataset_type == 'nerfstudio':
         images, depths, poses, bds, render_poses, i_test = load_nerfstudio_data(
                 args.datadir, args.factor, args.width, args.height, recenter=args.recenter, bd_factor=args.bd_factor, dvgohold=args.dvgohold,
@@ -149,11 +205,7 @@ def load_common_data(args):
                 images[i] = images[i] * masks[i][...,None]
 
     elif args.dataset_type == 'nerfpp':
-        if not 'training_ids' in args:
-            training_ids = None
-        else:
-            training_ids = args['training_ids']
-        images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir, 
+        images, poses, render_poses, hwf, K, i_split = load_nerfpp_data(args.datadir, rerotate=False,
                                                                         training_ids=training_ids)
         print('Loaded nerf_pp', images.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
@@ -181,7 +233,6 @@ def load_common_data(args):
         Ks = K[None].repeat(len(poses), axis=0)
     else:
         Ks = K
-
     render_poses = render_poses[...,:4]
     data_dict = dict(
         hwf=hwf, HW=HW, Ks=Ks,

@@ -64,14 +64,12 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    # N_iters=40000,
     N_iters=100000,
     N_rand=2048,  # reduce this to fit into memory
     # N_rand=4096,  # default
     ray_sampler='flatten',
     weight_distortion=weight_distortion,
     pg_scale=[1000,2000,3000,4000,5000,6000,7000],
-    # pg_scale=[],
     tv_before=1e9,  # always use tv
     tv_dense_before=10000,
     tv_after=0, # start from beginning

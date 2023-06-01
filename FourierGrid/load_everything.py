@@ -1,5 +1,4 @@
 import torch
-import pdb
 from FourierGrid.common_data_loaders.load_common_data import load_common_data
 from FourierGrid.load_waymo import load_waymo_data
 from FourierGrid.load_mega import load_mega_data
@@ -15,9 +14,11 @@ def load_everything(args, cfg):
         return data_dict, args
     else:
         data_dict = load_common_data(cfg.data)
-    
     # remove useless field
-    kept_keys = {'hwf', 'HW', 'Ks', 'near', 'far', 'near_clip',
+    # kept_keys = {'hwf', 'HW', 'Ks', 'near', 'far', 'near_clip',
+    #         'i_train', 'i_val', 'i_test', 'irregular_shape',
+    #         'poses', 'render_poses', 'images'}  # hwf is not used
+    kept_keys = {'HW', 'Ks', 'near', 'far', 'near_clip',
             'i_train', 'i_val', 'i_test', 'irregular_shape',
             'poses', 'render_poses', 'images'}
     for k in list(data_dict.keys()):

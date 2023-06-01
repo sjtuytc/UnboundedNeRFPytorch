@@ -1,5 +1,5 @@
 _base_ = '../default.py'
-expname = 'm60_nov21_'
+expname = 'm60_may26_'
 model='FourierGrid'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
@@ -19,10 +19,6 @@ if visualize_poses:  # for debugging
 else:
     unbounded_inward = True
     coarse_iter = 0
-    # fast_color_thres={
-    #         '_delete_': True,                           # to ignore the base config
-    #         0   : 1e-4,                                 # 0.5e-5
-    #     }
     fast_color_thres={   # default
             '_delete_': True,                           # to ignore the base config
             0   : alpha_init*stepsize/10,               # 0.5e-5
@@ -72,6 +68,7 @@ fine_train = dict(
     # ray_sampler='random',
     weight_distortion=weight_distortion,
     pg_scale=[1000, 2000, 3000, 4000, 5000, 6000, 7000],
+    # pg_scale=[10],  # test memory
     tv_before=1e9,  # always use tv
     tv_dense_before=10000,
     tv_after=0, # start from beginning
@@ -94,10 +91,9 @@ coarse_model_and_render = dict(
     maskout_near_cam_vox = maskout_near_cam_vox,
 )
 
-voxel_size_density = 160  # default 400
-voxel_size_rgb = 160  # default 320
+voxel_size_density = 200  # default 400
+voxel_size_rgb = 200  # default 320
 voxel_size_viewdir = -1
-# voxel_size_viewdir = 64
 
 fine_model_and_render = dict(
     num_voxels_density=voxel_size_density**3,
@@ -111,6 +107,7 @@ fine_model_and_render = dict(
     world_bound_scale=1,
     # contracted_norm='l2', # default
     # rgbnet_dim=3,
+    fourier_freq_num=3,
     rgbnet_dim=12, # default
     rgbnet_depth=3, # default
     # viewbase_pe=4, # default=4

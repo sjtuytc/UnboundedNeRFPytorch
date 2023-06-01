@@ -1,5 +1,5 @@
 _base_ = './nerf_unbounded_default.py'
-expname = 'counter_nov29_'
+expname = 'counter_may25_'
 vis = dict(
     height_rate = 0.6 # camera direction frustrum height
 )
@@ -55,8 +55,8 @@ fine_train = dict(
     # weight_freq=0.1,
 )
 
-voxel_size_density = 200  # default 250
-voxel_size_rgb = 200  # default 250
+voxel_size_density = 250  # default 250
+voxel_size_rgb = 250 # default 250
 voxel_size_viewdir = -1
 
 fine_model_and_render = dict(
@@ -67,7 +67,7 @@ fine_model_and_render = dict(
     num_voxels_viewdir=voxel_size_viewdir**3,
     alpha_init=alpha_init,
     stepsize=stepsize,
-    fourier_freq_num=5,
+    fourier_freq_num=4,
     fast_color_thres={
         '_delete_': True,
         0   : alpha_init*stepsize/10,

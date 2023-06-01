@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 from torch_scatter import segment_coo
 from . import grid
+from . import FourierGrid_grid
 import render_utils_cuda
 
 # from torch.utils.cpp_extension import load
@@ -54,10 +55,18 @@ class DirectVoxGO(torch.nn.Module):
         # init density voxel grid
         self.density_type = density_type
         self.density_config = density_config
-        self.density = grid.create_grid(
-                density_type, channels=1, world_size=self.world_size,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
-                config=self.density_config)
+        self.fourier_freq_num = 0  # open this to enable FourierGrid
+        self.use_fourier_grid =  self.fourier_freq_num > 1
+        if not self.use_fourier_grid:
+            self.density = grid.create_grid(
+                    density_type, channels=1, world_size=self.world_size,
+                    xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                    config=self.density_config)
+        else:
+            self.density = FourierGrid_grid.create_grid(
+                    density_type, channels=1, world_size=self.world_size,
+                    xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
+                    fourier_freq_num=self.fourier_freq_num, config=self.density_config)
 
         # init color representation
         self.rgbnet_kwargs = {
@@ -72,10 +81,16 @@ class DirectVoxGO(torch.nn.Module):
         if rgbnet_dim <= 0:
             # color voxel grid  (coarse stage)
             self.k0_dim = 3
-            self.k0 = grid.create_grid(
-                k0_type, channels=self.k0_dim, world_size=self.world_size,
-                xyz_min=self.xyz_min, xyz_max=self.xyz_max,
-                config=self.k0_config)
+            if not self.use_fourier_grid:
+                self.k0 = grid.create_grid(
+                    k0_type, channels=self.k0_dim, world_size=self.world_size,
+                    xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                    config=self.k0_config)
+            else:
+                self.k0 = FourierGrid_grid.create_grid(
+                    k0_type, channels=self.k0_dim, world_size=self.world_size,
+                    xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True,
+                    fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
             self.rgbnet = None
         else:
             # feature voxel grid + shallow MLP  (fine stage)
@@ -83,10 +98,16 @@ class DirectVoxGO(torch.nn.Module):
                 self.k0_dim = 0
             else:
                 self.k0_dim = rgbnet_dim
-            self.k0 = grid.create_grid(
-                    k0_type, channels=self.k0_dim, world_size=self.world_size,
-                    xyz_min=self.xyz_min, xyz_max=self.xyz_max,
-                    config=self.k0_config)
+            if not self.use_fourier_grid:
+                self.k0 = grid.create_grid(
+                        k0_type, channels=self.k0_dim, world_size=self.world_size,
+                        xyz_min=self.xyz_min, xyz_max=self.xyz_max,
+                        config=self.k0_config)
+            else:
+                self.k0 = FourierGrid_grid.create_grid(
+                        k0_type, channels=self.k0_dim, world_size=self.world_size,
+                        xyz_min=self.xyz_min, xyz_max=self.xyz_max, use_nerf_pos=True, 
+                        fourier_freq_num=self.fourier_freq_num, config=self.k0_config)
             self.rgbnet_direct = rgbnet_direct
             self.register_buffer('viewfreq', torch.FloatTensor([(2**i) for i in range(viewbase_pe)]))
             dim0 = (3+3*viewbase_pe*2)
@@ -162,17 +183,31 @@ class DirectVoxGO(torch.nn.Module):
 
     @torch.no_grad()
     def maskout_near_cam_vox(self, cam_o, near_clip):
-        # maskout grid points that between cameras and their near planes
-        self_grid_xyz = torch.stack(torch.meshgrid(
-            torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size[0]),
-            torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size[1]),
-            torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
-        ), -1)
-        nearest_dist = torch.stack([
-            (self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)
-            for co in cam_o.split(100)  # for memory saving
-        ]).amin(0)
-        self.density.grid[nearest_dist[None,None] <= near_clip] = -100
+        if not self.use_fourier_grid:
+            # maskout grid points that between cameras and their near planes
+            self_grid_xyz = torch.stack(torch.meshgrid(
+                torch.linspace(self.xyz_min[0], self.xyz_max[0], self.world_size[0]),
+                torch.linspace(self.xyz_min[1], self.xyz_max[1], self.world_size[1]),
+                torch.linspace(self.xyz_min[2], self.xyz_max[2], self.world_size[2]),
+            ), -1)
+            nearest_dist = torch.stack([
+                (self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1)
+                for co in cam_o.split(100)  # for memory saving
+            ]).amin(0)
+            self.density.grid[nearest_dist[None,None] <= near_clip] = -100
+        else:
+            ind_norm = ((cam_o - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
+            pos_embed = self.density.nerf_pos(ind_norm).squeeze()
+            # maskout grid points that between cameras and their near planes
+            self_grid_xyz = torch.stack(torch.meshgrid(
+                torch.linspace(-1, 1, self.world_size[0]),
+                torch.linspace(-1, 1, self.world_size[1]),
+                torch.linspace(-1, 1, self.world_size[2]),
+            ), -1)
+            for i in range(self.density.pos_embed_output_dim):
+                cur_pos_embed = pos_embed[:, 3*i:3*(i+1)].unsqueeze(0).unsqueeze(0).unsqueeze(0)
+                nearest_dist = torch.stack([(self_grid_xyz.unsqueeze(-2) - co).pow(2).sum(-1).sqrt().amin(-1) for co in cur_pos_embed.split(10)]).amin(0)
+                self.density.grid[0][i][nearest_dist <= near_clip] = -100
 
     @torch.no_grad()
     def scale_volume_grid(self, num_voxels):
@@ -309,7 +344,7 @@ class DirectVoxGO(torch.nn.Module):
         interval = render_kwargs['stepsize'] * self.voxel_size_ratio
 
         # skip known free space
-        if self.mask_cache is not None:
+        if self.mask_cache is not None and not self.use_fourier_grid:
             mask = self.mask_cache(ray_pts)
             ray_pts = ray_pts[mask]
             ray_id = ray_id[mask]
@@ -318,7 +353,7 @@ class DirectVoxGO(torch.nn.Module):
         # query for alpha w/ post-activation
         density = self.density(ray_pts)
         alpha = self.activate_density(density, interval)
-        if self.fast_color_thres > 0:
+        if self.fast_color_thres > 0 and not self.use_fourier_grid:
             mask = (alpha > self.fast_color_thres)
             ray_pts = ray_pts[mask]
             ray_id = ray_id[mask]
@@ -328,7 +363,7 @@ class DirectVoxGO(torch.nn.Module):
 
         # compute accumulated transmittance
         weights, alphainv_last = Alphas2Weights.apply(alpha, ray_id, N)
-        if self.fast_color_thres > 0:
+        if self.fast_color_thres > 0 and not self.use_fourier_grid:
             mask = (weights > self.fast_color_thres)
             weights = weights[mask]
             alpha = alpha[mask]

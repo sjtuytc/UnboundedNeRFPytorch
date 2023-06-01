@@ -90,22 +90,23 @@ def _minify(basedir, factors=[], resolutions=[]):
         print('Done')
 
 
-def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, load_depths=False):
+def normalize_scene(poses, n_images, bounds):
+    # TODO: vdalidate the effectiveness of this function
+    cam_pos = poses[:, :, 3].clone()
+    center_ = cam_pos.mean(dim=0, keepdim=False)
+    bias = cam_pos - center_.unsqueeze(0)
+    radius_ = torch.linalg.norm(bias, ord=2, dim=-1, keepdim=False).max().item()
+    cam_pos = (cam_pos - center_.unsqueeze(0)) / radius_
+    poses[:, :, 3] = cam_pos
+    bounds = (bounds / radius_)
+    return poses, bounds, center_, radius_
 
-    poses_arr = np.load(os.path.join(basedir, 'poses_bounds.npy'))
-    if poses_arr.shape[1] == 17:
-        poses = poses_arr[:, :-2].reshape([-1, 3, 5]).transpose([1,2,0])
-    elif poses_arr.shape[1] == 14:
-        poses = poses_arr[:, :-2].reshape([-1, 3, 4]).transpose([1,2,0])
-    else:
-        raise NotImplementedError
-    bds = poses_arr[:, -2:].transpose([1,0])
+
+def load_images_from_disk(basedir, factor, height, width):
     img0 = [os.path.join(basedir, 'images', f) for f in sorted(os.listdir(os.path.join(basedir, 'images'))) \
             if f.endswith('JPG') or f.endswith('jpg') or f.endswith('jpeg') or f.endswith('png')][0]
     sh = imageio.imread(img0).shape
-
     sfx = ''
-
     if height is not None and width is not None:
         _minify(basedir, resolutions=[[height, width]])
         sfx = '_{}x{}'.format(width, height)
@@ -129,58 +130,23 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True, lo
     print(f'Loading images from {imgdir}')
     if not os.path.exists(imgdir):
         print(imgdir, 'does not exist, returning' )
+        import sys; sys.exit()
         return
-
     imgfiles = [os.path.join(imgdir, f) for f in sorted(os.listdir(imgdir)) if f.endswith('JPG') or f.endswith('jpg') or f.endswith('png')]
-    if poses.shape[-1] != len(imgfiles):
-        print()
-        print( 'Mismatch between imgs {} and poses {} !!!!'.format(len(imgfiles), poses.shape[-1]) )
-        names = set(name[:-4] for name in np.load(os.path.join(basedir, 'poses_names.npy')))
-        assert len(names) == poses.shape[-1]
-        print('Below failed files are skip due to SfM failure:')
-        new_imgfiles = []
-        for i in imgfiles:
-            fname = os.path.split(i)[1][:-4]
-            if fname in names:
-                new_imgfiles.append(i)
-            else:
-                print('==>', i)
-        imgfiles = new_imgfiles
-
     if len(imgfiles) < 3:
         print('Too few images...')
         import sys; sys.exit()
 
-    sh = imageio.imread(imgfiles[0]).shape
-    if poses.shape[1] == 4:
-        poses = np.concatenate([poses, np.zeros_like(poses[:,[0]])], 1)
-        poses[2, 4, :] = np.load(os.path.join(basedir, 'hwf_cxcy.npy'))[2]
-    poses[:2, 4, :] = np.array(sh[:2]).reshape([2, 1])
-    poses[2, 4, :] = poses[2, 4, :] * 1./factor
-
-    if not load_imgs:
-        return poses, bds
-    imgs = imgs = [imread(f)[...,:3]/255. for f in imgfiles]
-    imgs = np.stack(imgs, -1)
-
-    print('Loaded image data', imgs.shape, poses[:,-1,0])
-    if not load_depths:
-        return poses, bds, imgs
-
-    depthdir = os.path.join(basedir, 'stereo', 'depth_maps')
-    assert os.path.exists(depthdir), f'Dir not found: {depthdir}'
-
-    depthfiles = [os.path.join(depthdir, f) for f in sorted(os.listdir(depthdir)) if f.endswith('.geometric.bin')]
-    assert poses.shape[-1] == len(depthfiles), 'Mismatch between imgs {} and poses {} !!!!'.format(len(depthfiles), poses.shape[-1])
-
-    depths = [depthread(f) for f in depthfiles]
-    depths = np.stack(depths, -1)
-    print('Loaded depth data', depths.shape)
-    return poses, bds, imgs, depths
-
+    imgs = [imread(f)[...,:3]/255. for f in imgfiles]
+    imgs = np.stack(imgs, 0)
+    return imgs, factor
 
 def normalize(x):
     return x / np.linalg.norm(x)
+
+def ptstocam(pts, c2w):
+    tt = np.matmul(c2w[:3,:3].T, (pts-c2w[:3,3])[...,np.newaxis])[...,0]
+    return tt
 
 def viewmatrix(z, up, pos):
     vec2 = normalize(z)
@@ -189,19 +155,6 @@ def viewmatrix(z, up, pos):
     vec1 = normalize(np.cross(vec2, vec0))
     m = np.stack([vec0, vec1, vec2, pos], 1)
     return m
-
-def ptstocam(pts, c2w):
-    tt = np.matmul(c2w[:3,:3].T, (pts-c2w[:3,3])[...,np.newaxis])[...,0]
-    return tt
-
-def poses_avg(poses):
-    assert poses.shape[-1] == 5, "HWF must be given in the pose matrix!"
-    hwf = poses[0, :3, -1:]
-    center = poses[:, :3, 3].mean(0)
-    vec2 = normalize(poses[:, :3, 2].sum(0))
-    up = poses[:, :3, 1].sum(0)
-    c2w = np.concatenate([viewmatrix(vec2, up, center), hwf], 1)
-    return c2w
 
 
 def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
@@ -216,8 +169,16 @@ def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
     return render_poses
 
 
-def recenter_poses(poses):
-    poses_ = poses+0
+def poses_avg(poses):
+    hwf = poses[0, :3, -1:]
+    center = poses[:, :3, 3].mean(0)
+    vec2 = normalize(poses[:, :3, 2].sum(0))
+    up = poses[:, :3, 1].sum(0)
+    c2w = np.concatenate([viewmatrix(vec2, up, center), hwf], 1)
+    return c2w
+
+def recenter_poses(poses, render_poses):
+    poses_ = poses + 0
     bottom = np.reshape([0,0,0,1.], [1,4])
     c2w = poses_avg(poses)
     c2w = np.concatenate([c2w[:3,:4], bottom], -2)
@@ -227,7 +188,16 @@ def recenter_poses(poses):
     poses = np.linalg.inv(c2w) @ poses
     poses_[:,:3,:4] = poses[:,:3,:4]
     poses = poses_
-    return poses
+    
+    # apply c2w to render poses
+    render_poses_ = render_poses + 0
+    bottom = np.reshape([0,0,0,1.], [1,4])
+    bottom = np.tile(np.reshape(bottom, [1,1,4]), [render_poses.shape[0],1,1])
+    render_poses = np.concatenate([render_poses[:,:3,:4], bottom], -2)
+    render_poses = np.linalg.inv(c2w) @ render_poses
+    render_poses_[:, :3, :4] = render_poses[:, :3, :4]
+    render_poses = render_poses_
+    return poses, render_poses
 
 
 def rerotate_poses(poses):
@@ -297,121 +267,74 @@ def spherify_poses(poses, bds, depths):
     return poses_reset, radius, bds, depths
 
 
-def load_llff_data(basedir, factor=8, width=None, height=None,
+def load_free_data(args, basedir, factor=8, width=None, height=None,
                    recenter=True, rerotate=True,
                    bd_factor=.75, spherify=False, path_zflat=False, load_depths=False,
-                   movie_render_kwargs={}):
-    poses, bds, imgs, *depths = _load_data(basedir, factor=factor, width=width, height=height,
-                                           load_depths=load_depths) # factor=8 downsamples original imgs by 8x
-    # poses: [3, 5, N], bds: [2, N], imgs: [H, W, 3, N], depths: []
-    print('Loaded', basedir, bds.min(), bds.max())
-    if load_depths:
-        depths = depths[0]
-    else:
-        depths = 0
-    # Correct rotation matrix ordering and move variable dim to axis 0
-    poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
-    poses = np.moveaxis(poses, -1, 0).astype(np.float32)
-    imgs = np.moveaxis(imgs, -1, 0).astype(np.float32)
-    images = imgs
-    bds = np.moveaxis(bds, -1, 0).astype(np.float32)
-    # Rescale if bd_factor is provided
-    if bds.min() < 0 and bd_factor is not None:
-        print('Found negative z values from SfM sparse points!?')
-        print('Please try bd_factor=None. This program is terminating now!')
-        import sys; sys.exit()
-    sc = 1. if bd_factor is None else 1./(bds.min() * bd_factor)
+                   movie_render_kwargs={}, training_ids=None):
+    # 1. load and parse poses, images, and bounds
+    meta_pose = torch.tensor(np.load(os.path.join(basedir, 'cams_meta.npy')))
+    n_images = meta_pose.shape[0]
+    cam_data = meta_pose.reshape(n_images, 27)
+    poses = cam_data[:, 0:12].reshape(-1, 3, 4)
+    intri = cam_data[:, 12:21].reshape(-1, 3, 3)
+    poses = poses.cpu().numpy()
+    intri = intri.cpu().numpy()
+    
+    # 2. Rotation matrix correct, this has been done in colmap2standard
+    # poses = np.concatenate([poses[:, 1:2, :], -poses[:, 0:1, :], poses[:, 2:, :]], 1)
+    # poses = np.moveaxis(poses, -1, 0).astype(np.float32)
+    imgs, factor = load_images_from_disk(basedir, factor, height, width)
+    intri[..., :2, :3] /= factor
+    dist_params = cam_data[:, 21:25].reshape(-1, 4)
+    bounds = cam_data[:, 25:27].reshape(-1, 2)
+
+    # 2. normalize scenes
+    # poses, bounds, center, radius = normalize_scene(poses, n_images, bounds)
+    assert not load_depths, "do not support loading depths"
+    assert len(imgs.shape) == 4, "image shape is not correct!"
+    assert intri[0][0][0] == intri[1][0][0] and intri[1][0][0] == intri[2][0][0], "focal length are varying!"
+
+    hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(imgs.shape[0])])
+    poses = np.concatenate((poses, hwf.reshape((imgs.shape[0], 3, 1))), axis=2)
+    
+    # filter by training_ids
+    if training_ids is not None:
+        poses = np.array([poses[id] for id in training_ids])
+        intri = np.array([intri[id] for id in training_ids])
+        imgs = np.array([imgs[id] for id in training_ids])
+        bounds = bounds[training_ids]
+
+    # 3. load render camera poses
+    poses_render_path = os.path.join(basedir, "poses_render.npy")
+    arr = np.load(poses_render_path)
+    cam_data = torch.from_numpy(arr.astype(np.float64)).to(torch.float32).cuda()
+    n_render_poses = arr.shape[0]
+    cam_data = cam_data.reshape((-1, 3, 4))
+    cam_data = cam_data[:n_render_poses, :, :]
+    render_poses_ = cam_data.clone()  # [n, 3, 4]
+    # render_poses_[:, :3, 3] = (render_poses_[:, :3, 3] - center.unsqueeze(0)) / radius  #commented out for debugging
+    render_poses_ = render_poses_.cpu().numpy()
+    hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(render_poses_.shape[0])])
+    render_poses_ = np.concatenate((render_poses_, hwf.reshape((render_poses_.shape[0], 3, 1))), axis=2)
+    
+    # 4. relax bounds
+    # bounds_factor = [0.5, 4.0]
+    bounds = torch.stack([bounds[:, 0], bounds[:, 1]], dim=-1)
+    bounds.clamp_(1e-2, 1e9)
+    bounds = bounds.cpu().numpy()
+    near = bounds.min().item()
+    # sc = 1 / (near * bd_factor)  # 0.12 by default
+    sc = 1.0  # 0.12 in M360
     poses[:,:3,3] *= sc
-    bds *= sc
-    depths *= sc
-    if recenter:
-        poses = recenter_poses(poses)
-    if spherify:
-        poses, radius, bds, depths = spherify_poses(poses, bds, depths)
-        if rerotate:
-            poses = rerotate_poses(poses)
+    render_poses_[:, :3, 3] *= sc
+    poses, render_poses_ = recenter_poses(poses, render_poses_)
 
-        ### generate spiral poses for rendering fly-through movie
-        centroid = poses[:,:3,3].mean(0)
-        radcircle = movie_render_kwargs.get('scale_r', 1) * np.linalg.norm(poses[:,:3,3] - centroid, axis=-1).mean()
-        centroid[0] += movie_render_kwargs.get('shift_x', 0)
-        centroid[1] += movie_render_kwargs.get('shift_y', 0)
-        centroid[2] += movie_render_kwargs.get('shift_z', 0)
-        new_up_rad = movie_render_kwargs.get('pitch_deg', 0) * np.pi / 180
-        target_y = radcircle * np.tan(new_up_rad)
-
-        render_poses = []
-
-        for th in np.linspace(0., 2.*np.pi, 200):
-            camorigin = np.array([radcircle * np.cos(th), 0, radcircle * np.sin(th)])
-            if movie_render_kwargs.get('flip_up', False):
-                up = np.array([0,1.,0])
-            else:
-                up = np.array([0,-1.,0])
-            vec2 = normalize(camorigin)
-            vec0 = normalize(np.cross(vec2, up))
-            vec1 = normalize(np.cross(vec2, vec0))
-            pos = camorigin + centroid
-            # rotate to align with new pitch rotation
-            lookat = -vec2
-            lookat[1] = target_y
-            lookat = normalize(lookat)
-            vec2 = -lookat
-            vec1 = normalize(np.cross(vec2, vec0))
-
-            p = np.stack([vec0, vec1, vec2, pos], 1)
-
-            render_poses.append(p)
-
-        render_poses = np.stack(render_poses, 0)
-        render_poses = np.concatenate([render_poses, np.broadcast_to(poses[0,:3,-1:], render_poses[:,:3,-1:].shape)], -1)
-
-    else:
-
-        c2w = poses_avg(poses)
-        print('recentered', c2w.shape)
-        print(c2w[:3,:4])
-
-        ## Get spiral
-        # Get average pose
-        up = normalize(poses[:, :3, 1].sum(0))
-
-        # Find a reasonable "focus depth" for this dataset
-        close_depth, inf_depth = bds.min()*.9, bds.max()*5.
-        dt = .75
-        mean_dz = 1./(((1.-dt)/close_depth + dt/inf_depth))
-        focal = mean_dz * movie_render_kwargs.get('scale_f', 1)
-
-        # Get radii for spiral path
-        zdelta = movie_render_kwargs.get('zdelta', 0.5)
-        zrate = movie_render_kwargs.get('zrate', 1.0)
-        tt = poses[:,:3,3] # ptstocam(poses[:3,3,:].T, c2w).T
-        rads = np.percentile(np.abs(tt), 90, 0) * movie_render_kwargs.get('scale_r', 1)
-        c2w_path = c2w
-        N_views = 120
-        N_rots = movie_render_kwargs.get('N_rots', 1)
-        if path_zflat:
-#             zloc = np.percentile(tt, 10, 0)[2]
-            zloc = -close_depth * .1
-            c2w_path[:3,3] = c2w_path[:3,3] + zloc * c2w_path[:3,2]
-            rads[2] = 0.
-            N_rots = 1
-            N_views/=2
-
-        # Generate poses for spiral path
-        render_poses = render_path_spiral(c2w_path, up, rads, focal, zdelta, zrate=zrate, rots=N_rots, N=N_views)
-
-    render_poses = torch.Tensor(render_poses)
-
-    c2w = poses_avg(poses)
-    print('Data:')
-    print(poses.shape, images.shape, bds.shape)
-    # this part is written by DVGO.
-    dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
-    i_test = np.argmin(dists)
-    print('HOLDOUT view is', i_test) 
-
-    images = images.astype(np.float32)
-    poses = poses.astype(np.float32)
-    return images, depths, poses, bds, render_poses, i_test
-
+    # 5. get test ID, this part is written by DVGO.
+    # c2w = poses_avg(poses)
+    # dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
+    # i_test = np.argmin(dists)
+    # i_test = [i_test]
+    if args.llffhold > 0:
+        print('Auto LLFF holdout,', args.llffhold)
+        i_test = np.arange(imgs.shape[0])[::args.llffhold]
+    return imgs, 0, intri, poses, bounds, render_poses_, i_test

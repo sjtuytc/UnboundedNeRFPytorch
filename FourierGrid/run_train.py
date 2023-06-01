@@ -36,12 +36,12 @@ def create_new_model(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, stage, c
     elif cfg.data.ndc:
         model = dmpigo.DirectMPIGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
-            num_voxels=num_voxels_rgb,
+            # num_voxels=num_voxels_rgb,
             **model_kwargs)
     elif cfg.data.unbounded_inward:
         model = dcvgo.DirectContractedVoxGO(
             xyz_min=xyz_min, xyz_max=xyz_max,
-            # num_voxels=num_voxels_rgb, num_voxels_base=model_kwargs['num_voxels_base_rgb'],
+            num_voxels=num_voxels_rgb, num_voxels_base=model_kwargs['num_voxels_base_rgb'],
             **model_kwargs)
     else:
         model = dvgo.DirectVoxGO(
@@ -288,8 +288,8 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
         optimizer.step()
         psnr_lst.append(psnr.item())
 
-        # update lr, continuously decaying, used in baselines only
-        if cfg.model != 'FourierGrid':
+        # update lr, continuously decaying, optional
+        if cfg.model != 'FourierGrid' or cfg.data.dataset_type != 'tankstemple':
             decay_steps = cfg_train.lrate_decay * 1000
             decay_factor = 0.1 ** (1/decay_steps)
             for i_opt_g, param_group in enumerate(optimizer.param_groups):
@@ -333,7 +333,7 @@ def scene_rep_reconstruction(args, cfg, cfg_model, cfg_train, xyz_min, xyz_max, 
     return psnr.item()
 
 
-def run_train(args, cfg, data_dict, export_cam=True, export_geometry=True):
+def run_train(args, cfg, data_dict, export_cam=False, export_geometry=False):
     # init
     running_block_id = args.running_block_id
     if running_block_id >= 0:
