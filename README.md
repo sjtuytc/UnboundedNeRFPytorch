@@ -261,7 +261,7 @@ bash scripts/block_nerf_eval.sh
 </details>
 
 
-## 5. Build your custom large-scale NeRF
+## 5. Build your custom unbounded NeRF (deprecated)
 
 <details>
 <summary>Expand / collapse steps for building custom NeRF world.</summary>
@@ -281,7 +281,7 @@ bash scripts/block_nerf_eval.sh
 2. Run COLMAP to reconstruct scenes. This would probably cost a long time.
 
 	```bash
-	python tools/imgs2poses.py data/Madoka
+	python FourierGrid/tools/imgs2poses.py data/Madoka
 	```
    You can replace data/Madoka by your data folder.
    If your COLMAP version is larger than 3.6 (which should not happen if you use apt-get), you need to change export_path to output_path in the colmap_wrapper.py.
@@ -289,14 +289,14 @@ bash scripts/block_nerf_eval.sh
 3. Training NeRF scenes.
 
 	```bash
-	python run_FourierGrid.py --config configs/custom/Madoka.py
+	python FourierGrid/run_FourierGrid.py --config configs/custom/Madoka.py
 	```
    You can replace configs/custom/Madoka.py by other configs.
 
 4. Validating the training results to generate a fly-through video.
 
 	```bash
-	python run_FourierGrid.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
+	python FourierGrid/run_FourierGrid.py --config configs/custom/Madoka.py --render_only --render_video --render_video_factor 8
 	```
 </details>
 

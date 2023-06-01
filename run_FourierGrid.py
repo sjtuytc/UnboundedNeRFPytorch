@@ -127,4 +127,4 @@ if __name__=='__main__':
         render_notes += "Rendered train. "
     elif args.render_test:
         render_notes += "Rendered test."
-    print(f"Finished running program {program}. " + render_notes)
+    print(f"Finished running program {program}." + render_notes)

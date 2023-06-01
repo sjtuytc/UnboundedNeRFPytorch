@@ -1,7 +1,6 @@
 # Free camera dataset
 python run_FourierGrid.py --program train --config FourierGrid/configs/free_dataset/grass.py --num_per_block -1 --render_train --render_test --render_video --eval_ssim --eval_lpips_vgg --exp_id 7
 
-
 # Unbounded tanks and temples
 python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 57
 python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 13

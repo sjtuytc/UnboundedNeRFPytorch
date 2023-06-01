@@ -6,6 +6,8 @@ import cv2
 import pdb
 from shutil import copy
 from subprocess import check_output
+from FourierGrid.trajectory_generators.interp_traj import *
+
     
 ########## Slightly modified version of LLFF data loading code
 ##########  see https://github.com/Fyusion/LLFF for original
@@ -270,7 +272,7 @@ def spherify_poses(poses, bds, depths):
 def load_free_data(args, basedir, factor=8, width=None, height=None,
                    recenter=True, rerotate=True,
                    bd_factor=.75, spherify=False, path_zflat=False, load_depths=False,
-                   movie_render_kwargs={}, training_ids=None):
+                   movie_render_kwargs={}, training_ids=None, generate_render_poses=True, n_out_poses=200):
     # 1. load and parse poses, images, and bounds
     meta_pose = torch.tensor(np.load(os.path.join(basedir, 'cams_meta.npy')))
     n_images = meta_pose.shape[0]
@@ -294,9 +296,6 @@ def load_free_data(args, basedir, factor=8, width=None, height=None,
     assert len(imgs.shape) == 4, "image shape is not correct!"
     assert intri[0][0][0] == intri[1][0][0] and intri[1][0][0] == intri[2][0][0], "focal length are varying!"
 
-    hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(imgs.shape[0])])
-    poses = np.concatenate((poses, hwf.reshape((imgs.shape[0], 3, 1))), axis=2)
-    
     # filter by training_ids
     if training_ids is not None:
         poses = np.array([poses[id] for id in training_ids])
@@ -304,16 +303,21 @@ def load_free_data(args, basedir, factor=8, width=None, height=None,
         imgs = np.array([imgs[id] for id in training_ids])
         bounds = bounds[training_ids]
 
-    # 3. load render camera poses
-    poses_render_path = os.path.join(basedir, "poses_render.npy")
-    arr = np.load(poses_render_path)
-    cam_data = torch.from_numpy(arr.astype(np.float64)).to(torch.float32).cuda()
-    n_render_poses = arr.shape[0]
-    cam_data = cam_data.reshape((-1, 3, 4))
-    cam_data = cam_data[:n_render_poses, :, :]
-    render_poses_ = cam_data.clone()  # [n, 3, 4]
-    # render_poses_[:, :3, 3] = (render_poses_[:, :3, 3] - center.unsqueeze(0)) / radius  #commented out for debugging
-    render_poses_ = render_poses_.cpu().numpy()
+    # 3. load render camera poses or generate render poses on the fly
+    if generate_render_poses:
+        key_poses_indexs = np.arange(0, poses.shape[0], 5)
+        key_poses = poses[key_poses_indexs]
+        render_poses_ = inter_poses(key_poses, n_out_poses)
+    else:
+        poses_render_path = os.path.join(basedir, "poses_render.npy")
+        arr = np.load(poses_render_path)
+        cam_data = torch.from_numpy(arr.astype(np.float64)).to(torch.float32).cuda()
+        n_render_poses = arr.shape[0]
+        cam_data = cam_data.reshape((-1, 3, 4))
+        cam_data = cam_data[:n_render_poses, :, :]
+        render_poses_ = cam_data.clone()  # [n, 3, 4]
+        # render_poses_[:, :3, 3] = (render_poses_[:, :3, 3] - center.unsqueeze(0)) / radius  #commented out for debugging
+        render_poses_ = render_poses_.cpu().numpy()
     hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(render_poses_.shape[0])])
     render_poses_ = np.concatenate((render_poses_, hwf.reshape((render_poses_.shape[0], 3, 1))), axis=2)
     
@@ -327,8 +331,10 @@ def load_free_data(args, basedir, factor=8, width=None, height=None,
     sc = 1.0  # 0.12 in M360
     poses[:,:3,3] *= sc
     render_poses_[:, :3, 3] *= sc
+    hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(imgs.shape[0])])
+    poses = np.concatenate((poses, hwf.reshape((imgs.shape[0], 3, 1))), axis=2)
     poses, render_poses_ = recenter_poses(poses, render_poses_)
-
+    
     # 5. get test ID, this part is written by DVGO.
     # c2w = poses_avg(poses)
     # dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
