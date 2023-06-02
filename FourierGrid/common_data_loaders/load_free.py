@@ -272,7 +272,7 @@ def spherify_poses(poses, bds, depths):
 def load_free_data(args, basedir, factor=8, width=None, height=None,
                    recenter=True, rerotate=True,
                    bd_factor=.75, spherify=False, path_zflat=False, load_depths=False,
-                   movie_render_kwargs={}, training_ids=None, generate_render_poses=True, n_out_poses=200):
+                   movie_render_kwargs={}, training_ids=None, generate_render_poses=True, n_out_poses=200, sc=1.0):
     # 1. load and parse poses, images, and bounds
     meta_pose = torch.tensor(np.load(os.path.join(basedir, 'cams_meta.npy')))
     n_images = meta_pose.shape[0]
@@ -328,7 +328,6 @@ def load_free_data(args, basedir, factor=8, width=None, height=None,
     bounds = bounds.cpu().numpy()
     near = bounds.min().item()
     # sc = 1 / (near * bd_factor)  # 0.12 by default
-    sc = 1.0  # 0.12 in M360
     poses[:,:3,3] *= sc
     render_poses_[:, :3, 3] *= sc
     hwf = np.array([[imgs.shape[1], imgs.shape[2], intri[0][0][0]]for _ in range(imgs.shape[0])])
@@ -336,11 +335,10 @@ def load_free_data(args, basedir, factor=8, width=None, height=None,
     poses, render_poses_ = recenter_poses(poses, render_poses_)
     
     # 5. get test ID, this part is written by DVGO.
-    # c2w = poses_avg(poses)
-    # dists = np.sum(np.square(c2w[:3,3] - poses[:,:3,3]), -1)
-    # i_test = np.argmin(dists)
-    # i_test = [i_test]
     if args.llffhold > 0:
         print('Auto LLFF holdout,', args.llffhold)
         i_test = np.arange(imgs.shape[0])[::args.llffhold]
+    else:
+        print("LLFF hold is not used!")
+        i_test = [0, 1, 2]
     return imgs, 0, intri, poses, bounds, render_poses_, i_test

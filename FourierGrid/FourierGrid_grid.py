@@ -2,7 +2,7 @@ import os
 import time
 import functools
 import numpy as np
-
+from einops import rearrange
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -50,13 +50,12 @@ class FourierGrid(nn.Module):
             self.nerf_pos_num_freq = fourier_freq_num
             self.nerf_pos = NeRFPosEmbedding(num_freqs=self.nerf_pos_num_freq)
             self.pos_embed_output_dim = 1 + self.nerf_pos_num_freq * 2
-            grid_channels = channels * self.pos_embed_output_dim
+            self.grid = nn.Parameter(torch.zeros([self.pos_embed_output_dim, channels, *world_size]))
         else:
             self.nerf_pos_num_freq = -1
             self.pos_embed_output_dim = -1
             self.nerf_pos = None
-            grid_channels = channels
-        self.grid = nn.Parameter(torch.zeros([1, grid_channels, *world_size]))
+            self.grid = nn.Parameter(torch.zeros([1, channels, *world_size]))
     
     def forward(self, xyz):
         '''
@@ -66,14 +65,11 @@ class FourierGrid(nn.Module):
         xyz = xyz.reshape(1,1,1,-1,3)
         ind_norm = ((xyz - self.xyz_min) / (self.xyz_max - self.xyz_min)).flip((-1,)) * 2 - 1
         if self.nerf_pos is not None:
-            pos_embed = self.nerf_pos(ind_norm).squeeze()
+            pos_embed = self.nerf_pos(ind_norm)
             out = 0
-            for i in range(self.pos_embed_output_dim):
-                cur_grid = self.grid.squeeze()[i * self.channels:(i+1) * self.channels]
-                cur_pos_embed = pos_embed[:, 3*i:3*(i+1)].unsqueeze(0).unsqueeze(0).unsqueeze(0)
-                out += F.grid_sample(cur_grid.unsqueeze(0), cur_pos_embed, mode='bilinear', align_corners=True)
-            out /= self.pos_embed_output_dim
-            out = out.reshape(self.channels, -1).T.reshape(*shape, self.channels)  # only works for channels = 1
+            batch_pos_emb = rearrange(pos_embed, '1 1 1 b (n d) -> n 1 1 b d', d=3)
+            batch_out = F.grid_sample(self.grid, batch_pos_emb, mode='bilinear', align_corners=True)
+            out = batch_out.mean(0).reshape(self.channels, -1).T.reshape(*shape, self.channels)
         else:
             out = F.grid_sample(self.grid, ind_norm, mode='bilinear', align_corners=True)
             out = out.reshape(self.channels,-1).T.reshape(*shape, self.channels)

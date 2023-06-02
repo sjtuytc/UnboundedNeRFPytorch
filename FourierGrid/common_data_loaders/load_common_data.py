@@ -59,7 +59,7 @@ def load_common_data(args):
             recenter=True, bd_factor=args.bd_factor,
             spherify=args.spherify,
             load_depths=args.load_depths,
-            movie_render_kwargs=args.movie_render_kwargs, training_ids=training_ids)
+            movie_render_kwargs=args.movie_render_kwargs, training_ids=training_ids, sc=args.pose_scale)
         i_val = i_test
         i_train = np.array([i for i in np.arange(int(images.shape[0])) if (i not in i_test and i not in i_val)])
         near_clip = max(np.ndarray.min(bds) * .9, 0)

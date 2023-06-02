@@ -9,8 +9,11 @@ data = dict(
     datadir='./data/free_dataset/grass',
     dataset_type='free',
     ndc=False,
-    training_ids=[1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,\
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+    training_ids=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, \
+        22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, \
+            46, 47, 48, 49, 50],
+    pose_scale=0.75,      # scale of pose
+    factor=1,
     # inverse_y=True,
     # load2gpu_on_the_fly=True,
     # white_bkgd=True,
@@ -25,7 +28,7 @@ coarse_train = dict(
 )
 
 fine_train = dict(
-    N_iters=30000,
+    N_iters=100000,
     N_rand=4096,
     weight_distortion=0.0,
     pg_scale=[2000,4000,6000,8000],

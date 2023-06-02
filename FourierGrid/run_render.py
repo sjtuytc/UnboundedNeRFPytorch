@@ -114,7 +114,7 @@ def render_viewpoints(cfg, model, render_poses, HW, Ks, ndc, render_kwargs,
     return rgbs, depths, bgmaps
 
 
-def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
+def run_render(args, cfg, data_dict, device, debug=True, add_info="", visualize_geometry=False):
     # initilize stylizer when needed
     if 'arf' in cfg:
         stylizer = ARF(cfg, data_dict, device)
@@ -240,8 +240,8 @@ def run_render(args, cfg, data_dict, device, debug=True, add_info=""):
                 'render_depth': True,
             },
         }
-        geometry_path = os.path.join(cfg.basedir, cfg.expname, f'geometry.npz')
-        if model_class == FourierGridModel:
+        if visualize_geometry and model_class == FourierGridModel:
+            geometry_path = os.path.join(cfg.basedir, cfg.expname, f'geometry.npz')
             model.export_geometry_for_visualize(geometry_path)
 
     # render trainset and eval
