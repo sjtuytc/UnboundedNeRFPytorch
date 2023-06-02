@@ -1,6 +1,3 @@
-# Free camera dataset
-python run_FourierGrid.py --program train --config FourierGrid/configs/free_dataset/grass.py --num_per_block -1 --render_train --render_test --render_video --eval_ssim --eval_lpips_vgg --exp_id 7
-
 # Unbounded tanks and temples
 python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/playground_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 57
 python run_FourierGrid.py --program train --config FourierGrid/configs/tankstemple_unbounded/train_single.py --num_per_block -1 --render_train --render_test --render_video --exp_id 13
@@ -22,6 +19,9 @@ python run_FourierGrid.py --program train --config FourierGrid/configs/llff/leav
 python run_FourierGrid.py --program train --config FourierGrid/configs/llff/horns.py --num_per_block -1 --eval_ssim --eval_lpips_vgg --render_train --render_test --render_video --exp_id 4
 python FourierGrid/run_colmap2standard.py --data_dir ./data/nerf_llff_data/horns/
 python FourierGrid/run_colmap2standard.py --data_dir ./data/free_dataset/grass/
+
+# Free camera dataset
+python run_FourierGrid.py --program train --config FourierGrid/configs/free_dataset/grass.py --num_per_block -1 --render_train --render_test --render_video --eval_ssim --eval_lpips_vgg --exp_id 7
 
 # nerf-studio dataset
 python run_FourierGrid.py  --program train --config FourierGrid/configs/nerf_studio/Giannini_Hall.py --num_per_block -1 --eval_ssim --render_train --render_test --render_video --exp_id 1
