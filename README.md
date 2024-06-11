@@ -303,6 +303,18 @@ bash scripts/block_nerf_eval.sh
 
 ## 6. Citations & acknowledgements
 
+Our latest theoretical work about grid-based models (**Oral & Best Paper Award Candidate & Full Review Score (5/5/5)** at CVPR24):
+```
+@misc{zhao2024grounding,
+      title={Grounding and Enhancing Grid-based Models for Neural Fields}, 
+      author={Zelin Zhao and Fenglei Fan and Wenlong Liao and Junchi Yan},
+      year={2024},
+      eprint={2403.20002},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
+
 Consider citing the following great works:
 
 ```
